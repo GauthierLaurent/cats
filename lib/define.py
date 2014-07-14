@@ -120,37 +120,37 @@ def buildRanges(model):
     
     ##Variables in Wiedemann 99   [min,max]
     elif int(model) == 99: 
-        rangeW99cc0 = [0.0    , 12.0] ; rangevalues.append(rangeW99cc0)   #min = 0
-        rangeW99cc1 = [0.0    , 12.0] ; rangevalues.append(rangeW99cc1)
-        rangeW99cc2 = [4.0    , 12.0] ; rangevalues.append(rangeW99cc2)   #min = 0
-        rangeW99cc3 = [-8.0   , 12.0] ; rangevalues.append(rangeW99cc3)
-        rangeW99cc4 = [-0.35  , 12.0] ; rangevalues.append(rangeW99cc4)
-        rangeW99cc5 = [0.35   , 12.0] ; rangevalues.append(rangeW99cc5)
-        rangeW99cc6 = [11.44  , 12.0] ; rangevalues.append(rangeW99cc6)
-        rangeW99cc7 = [0.25   , 12.0] ; rangevalues.append(rangeW99cc7)
-        rangeW99cc8 = [3.5    , 12.0] ; rangevalues.append(rangeW99cc8)
-        rangeW99cc9 = [1.5    , 12.0] ; rangevalues.append(rangeW99cc9)
+        rangeW99cc0 = [0.47   , 12.0] ; rangevalues.append(rangeW99cc0)   #min = 0
+        rangeW99cc1 = [0.43   , 3.00] ; rangevalues.append(rangeW99cc1)
+        rangeW99cc2 = [0.0    , 15.0] ; rangevalues.append(rangeW99cc2)   #min = 0
+        rangeW99cc3 = [-30.0  , 0.00] ; rangevalues.append(rangeW99cc3)
+        rangeW99cc4 = [-2.0   , 2.00] ; rangevalues.append(rangeW99cc4)
+        rangeW99cc5 = [-0.35  , 2.00] ; rangevalues.append(rangeW99cc5)
+        rangeW99cc6 = [0.00   , 20.0] ; rangevalues.append(rangeW99cc6)
+        rangeW99cc7 = [0.00   , 1.25] ; rangevalues.append(rangeW99cc7)
+        rangeW99cc8 = [1.6    , 13.0] ; rangevalues.append(rangeW99cc8)
+        rangeW99cc9 = [1.5    , 7.00] ; rangevalues.append(rangeW99cc9)
 
     ##Other variables for the following behavior model     
-    rangeLookAheadDistMin = [0.0     , 12.0] ; rangevalues.append(rangeLookAheadDistMin)        #min = 0, max = 999999
-    rangeLookAheadDistMax = [0.0     , 12.0] ; rangevalues.append(rangeLookAheadDistMax)        #min = 0, max = 999999
-    rangeObsrvdVehs =       [2.0     , 12.0] ; rangevalues.append(rangeObsrvdVehs)              #min = 0, max = 10
-    rangeLookBackDistMin =  [0.0     , 12.0] ; rangevalues.append(rangeLookBackDistMin)         #min = 0, max = 999999
-    rangeLookBackDistMax =  [0.0     , 12.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
+    rangeLookAheadDistMin = [0.0     , 30.0] ; rangevalues.append(rangeLookAheadDistMin)        #min = 0, max = 999999
+    rangeLookAheadDistMax = [200.0  , 300.0] ; rangevalues.append(rangeLookAheadDistMax)        #min = 0, max = 999999
+    rangeObsrvdVehs =       [2.0     , 10.0] ; rangevalues.append(rangeObsrvdVehs)              #min = 0, max = 10
+    rangeLookBackDistMin =  [0.0     , 30.0] ; rangevalues.append(rangeLookBackDistMin)         #min = 0, max = 999999
+    rangeLookBackDistMax =  [100.0  , 200.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
                          
     ##Variables for lane change behavior
-    rangeMaxDecelOwn =         [-4.0  , -1.0 ] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
-    rangeDecelRedDistOwn =     [0.0   , 12.0 ] ; rangevalues.append(rangeDecelRedDistOwn)       #min = 0
-    rangeAccDecelOwn =         [-10.0 , -1.0 ] ; rangevalues.append(rangeAccDecelOwn)           #min = -10, max = -1
-    rangeMaxDecelTrail =       [-10.  , -1.0 ] ; rangevalues.append(rangeMaxDecelTrail)         #min = -10, max = -0.01
-    rangeDecelRedDistTrail =   [0.0   , 12.0 ] ; rangevalues.append(rangeDecelRedDistTrail)     #min = 0
-    rangeAccDecelTrail =       [-10.0 , -1.0 ] ; rangevalues.append(rangeAccDecelTrail)         #min = -10, max = -1
-    rangeDiffusTm =            [0     , 100.0] ; rangevalues.append(rangeDiffusTm)
-    rangeMinHdwy =             [0.5   , 12.0 ] ; rangevalues.append(rangeMinHdwy)
-    rangeSafDistFactLnChg =    [0.6   , 12.0 ] ; rangevalues.append(rangeSafDistFactLnChg)
+    rangeMaxDecelOwn =         [-10.0 , -0.01] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
+    rangeDecelRedDistOwn =     [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistOwn)       #min = 0
+    rangeAccDecelOwn =         [-10.0 ,   0.0] ; rangevalues.append(rangeAccDecelOwn)           #min = -10, max = -1
+    rangeMaxDecelTrail =       [-10.0 , -0.01] ; rangevalues.append(rangeMaxDecelTrail)         #min = -10, max = -0.01
+    rangeDecelRedDistTrail =   [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistTrail)     #min = 0
+    rangeAccDecelTrail =       [-10.0 ,   0.0] ; rangevalues.append(rangeAccDecelTrail)         #min = -10, max = -1
+    rangeDiffusTm =            [60    , 100.0] ; rangevalues.append(rangeDiffusTm)
+    rangeMinHdwy =             [0.5   ,   1.5] ; rangevalues.append(rangeMinHdwy)
+    rangeSafDistFactLnChg =    [0.6   ,   0.9] ; rangevalues.append(rangeSafDistFactLnChg)
     rangeCoopLnChg =           [True  , False] ; rangevalues.append(rangeCoopLnChg)
-    rangeCoopLnChgSpeedDiff =  [3.0   , 12.0 ] ; rangevalues.append(rangeCoopLnChgSpeedDiff) 
-    rangeCoopLnChgCollTm =     [10.0  , 12.0 ] ; rangevalues.append(rangeCoopLnChgCollTm)
-    rangeCoopDecel =           [-10.0 , 0.0  ] ; rangevalues.append(rangeCoopDecel)             #min = -10, max = 0
+    rangeCoopLnChgSpeedDiff =  [5.0   ,  15.0] ; rangevalues.append(rangeCoopLnChgSpeedDiff) 
+    rangeCoopLnChgCollTm =     [7.0   ,  13.0] ; rangevalues.append(rangeCoopLnChgCollTm)
+    rangeCoopDecel =           [-10.65,  -0.9] ; rangevalues.append(rangeCoopDecel)             #min = -10, max = 0
 
     return rangevalues    
