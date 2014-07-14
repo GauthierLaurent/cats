@@ -22,17 +22,18 @@ import lib.outputs as outputs
 #        Student test       
 ################################
 
-def studentTtest(rangevalues, concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters):
+def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters):
     '''Finds the number of iterations needed to achieve a good confidence interval
     
     Base on the ODOT specifications:
         1. run 10 simulations and calculates the median and standard deviation for the outputs
         2. run the Student t-test while fixing the confidence interval to +/- S  --> N = [t(1-alpha/2;N-1)*S]^2 with aplha = 0.975 (bivariate 95% confidence)
-        3. 
+            2a. calculate the confidence interval for the standard deviation
+        3. check if N > number of simulation ran up to this point
+        4. if yes, run one more simulation and repeat steps 2, 3 and 4 until "number of simulations" >= N
+        
     '''
-   
-    #Sim_lenght = config.simulation_time + config.warm_up_time
-    #parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(commands.model), Sim_lenght] 
+
    
     #set the number of runs to 10
     first_seed = parameters[1]    
@@ -62,7 +63,7 @@ def studentTtest(rangevalues, concat_variables, default_values, filename, InpxPa
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(outputspath, config.sim_steps, config.warm_up_time)
         print '*** Output treatment completed *** Runtime: ' + str(time.clock())
        
-    #generating the needed means and std
+    #generating the needed means and std confidence intervals
     N1 = ( t.ppf(0.975,10) * forFMgap.cumul_all.std )**2
     N2 = ( t.ppf(0.975,10) * oppLCagap.cumul_all.std )**2
     N3 = ( t.ppf(0.975,10) * oppLCbgap.cumul_all.std )**2
@@ -77,6 +78,10 @@ def studentTtest(rangevalues, concat_variables, default_values, filename, InpxPa
     
     out.write("Nbr_itt;N1;N2;N3;N4;N5;N;SCI1;SCI2;SCI3;SCI4;SCI5")
     out.write(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
+
+    '''
+    MUST ADD GRAPH OPTION
+    '''
     
     while N > iterrations_ran:
         
@@ -119,9 +124,13 @@ def studentTtest(rangevalues, concat_variables, default_values, filename, InpxPa
         MUST CALCULATE SCI1-SCI5
         '''
         
-        out.write(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")        
+        out.write(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
         
-    return True        
+        '''
+        MUST ADD GRAPH OPTION
+        '''
+        
+    return out        
         
 
 ################################ 
