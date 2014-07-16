@@ -42,10 +42,23 @@ def main():
     ################################    
     commands = config.commands(optparse.OptionParser())
     config   = config.Config()
-
-    ############################ 
+    
+    ################################ 
+    #        Module verifications       
+    ################################
+    '''as -s is on by default, this is presently useless. It will become usefull
+       in the futur when -s is turned off by default '''
+       
+    if not (commands.sensitivity or commands.student or commands.calibration):
+        print '**************************************************************'        
+        print '     No module was chosen, please use -c, -d or -s'
+        print '            ==== Closing program ===                          '
+        print '**************************************************************'
+        sys.exit()
+        
+    ############################################### 
     #        Definition of important variables       
-    ################### ########
+    ###############################################
     #Clock start
     time.clock()
     
@@ -54,12 +67,6 @@ def main():
     InpxName = config.inpx_name
     InpxPath = os.path.join(MainInpxPath, InpxName)
     
-    ##Type of analysis (Sensitivity/Calibration)
-    if commands.calibration:
-        TypeOfAnalysis = 'Calibration'
-    else:
-        TypeOfAnalysis = 'Sensitivity'
-
     #Checking if Vissim is already running and closing it to avoid problems latter on
     running = vissim.isVissimRunning(firstTime = True)    
     if running is not False:
@@ -69,10 +76,11 @@ def main():
     Sim_lenght = config.simulation_time + config.warm_up_time
     parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(commands.model), Sim_lenght] 
 
-    ################### 
-    #        Student test       
-    ################### 
-    if TypeOfAnalysis == 'Student':
+    ###################################### 
+    #        Student t-test       
+    ###################################### 
+    if commands.student:
+        TypeOfAnalysis = 'Student'
         
         #creating the default values from memory
         Default_FM_values, FMvariables = define.createFMValues(int(commands.model), values = [])
@@ -103,22 +111,23 @@ def main():
         '''
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
         
-        out = analysis.studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters)        
+        analysis.studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters)        
         
         out.close()        
      
      
-    ################### 
+    ###################################### 
     #        Sensitivity Analysis       
-    ###################        
-    if TypeOfAnalysis == 'Sensitivity':          
+    ######################################        
+    if commands.sensitivity:
+        TypeOfAnalysis = 'Sensitivity'          
 
         #building the model values ranges        
         rangevalues = define.buildRanges(commands.model)        
 
         #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model), values = [])
-        Default_LC_values, LCvariables = define.createLCValues(values = [])
+        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_LC_values, LCvariables = define.createLCValues()
     
         #creating default values
         default_values =  Default_FM_values  + Default_LC_values
@@ -126,6 +135,8 @@ def main():
 
         #opening the output file and writing the appropriate header       
         out, subdirname = write.writeHeader(MainInpxPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+
+        #creating appropriate output folder and graphic folder (if option is "on")        
         graphspath = None        
         if commands.vis_save:
             graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
@@ -140,20 +151,37 @@ def main():
                     write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
         
-        #simulationChunks = define.toChunks(n,rangevalues)        
+        #treating the simulations        
+        ##calculating the default values
+        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters]
+        text, firstrun_results = analysis.sensitivityAnalysis(rangevalues, inputs, default = True)
         
-        #treating the simulations
-        firstrun = True
-        out = analysis.sensitivityAnalysis(rangevalues, concat_variables, default_values, firstrun, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters)
+        ##Running the rest of the simulations
+        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
+        if commands.multi is True:
+            #the outputs here comes back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = packed_outputs[0][0]            
+            packed_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)       
+            for i in packed_outputs:
+                for j in i:
+                    text.append(j)
+        else:
+            #the outputs here are passed as one chunks, so they comes back with 2 layers: runs in the chunk/text -- ie: text = packed_outputs[0]            
+            unpacked_outputs = analysis.sensitivityAnalysis(rangevalues, inputs)           
+            for i in unpacked_outputs:
+                text.append(j)
         
+        #filling the report
+        for i in range(len(text)):
+            out = write.writeInFile(out, text[i])        
         out.close()
-    return True
 
-    ################### 
+
+    ###################################### 
     #        Calibration Analysis       
-    ###################  
+    ######################################  
       
-    #if TypeOfAnalysis == 'Calibration': 
+    #if commands.calibration: 
+      #TypeOfAnalysis = 'Calibration' 
       
     '''
     ##default values of computed parameters - obtained from video analysis

@@ -59,7 +59,7 @@ def stopVissim(Vissim):
 
 def initializeSimulation(Vissim, parameters, values = [], variables = [], swp = False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
-        the parameter variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs]'''
+        the parameter variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''
     
     try:
         Simulation = Vissim.Simulation
@@ -82,14 +82,13 @@ def initializeSimulation(Vissim, parameters, values = [], variables = [], swp = 
         
         #Setting driving behavior attributes
         if variables != []:   
-            for i in range(len(Vissim.Net.DrivingBehaviors)):
-                Type = parameters[3].upper()
-                #import pdb; pdb.set_trace()
+            for i in range(len(Vissim.Net.DrivingBehaviors)):                       
+                Type = "WIEDEMANN"+str(parameters[3])
                 Vissim.Net.DrivingBehaviors[i].SetAttValue("CarFollowModType",Type)
                 for variable in range(len(variables)):
                     Vissim.Net.DrivingBehaviors[i].SetAttValue(variables[variable],values[variable])
                     
-                    
+        #Starting the simulation            
         Simulation.RunContinuous()
         simulated = True
         

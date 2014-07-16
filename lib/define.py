@@ -39,8 +39,38 @@ def cleanChunks(n, iterable, padvalue=None, asList=True):
     else:
         clean_chunks = chunks
     return clean_chunks
+    
+def intelligentChunks(n, iterable, value_names):
+    '''Cuts the variables into chunks keeping together the variables that need to relate to others'''           
+    
+    keepAssembled_g1 = ("LookAheadDistMin","LookAheadDistMax","LookBackDistMin","LookBackDistMax")    
+    keepAssembled_g2 = ("CoopLnChg","CoopLnChgSpeedDiff","CoopLnChgCollTm")    
 
-def createWorkers(total_number_of_tasks, function, inputs):
+    keptAssembled_g1 = []
+    keptAssembled_g2 = []
+    other_iterables = []    
+    
+    for i in range(len(iterable)):
+        if value_names[i] in keepAssembled_g1:
+            keptAssembled_g1.append([iterable[i],i])
+        elif value_names[i] in keepAssembled_g2:
+            keptAssembled_g2.append([iterable[i],i])            
+        else:
+            other_iterables.append([iterable[i],i])            
+     
+    intelligent_chunk = []
+    if len(keptAssembled_g1) + len(keptAssembled_g2) <= n and len(keptAssembled_g1) + len(keptAssembled_g2) > 0:
+        intelligent_chunk.append(keptAssembled_g1 + keptAssembled_g2)
+    else:
+        if keptAssembled_g1 != []: intelligent_chunk.append(keptAssembled_g1)
+        if keptAssembled_g2 != []: intelligent_chunk.append(keptAssembled_g2)
+    if other_iterables != []:
+        clean_chunks = cleanChunks(n, other_iterables, padvalue=None, asList=True)
+        for i in range(len(clean_chunks)): intelligent_chunk.append(clean_chunks[i]) 
+    
+    return intelligent_chunk
+
+def createWorkers(total_number_of_tasks, function, inputs, variables_names = []):
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
        number of cores that can process it
@@ -48,26 +78,41 @@ def createWorkers(total_number_of_tasks, function, inputs):
        By default, the number of processes it spawns is equal to the number of cores.
        To change it: pool = multiprocessing.pool(processes=4) would spawn 4 processes.
        To get the number of cores: multiprocessing.cpu_count() '''
+    #getting the number of cores:
+    num_cores = multiprocessing.cpu_count() - 1  
     
     #starting the workers
-    pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool(processes = num_cores)
     
     #calculating the number of tasks
     ##number of processes
-    nbr_pro = len(multiprocessing.active_children())
+    nbr_pro = len(multiprocessing.active_children()) #redondant with num_cores, but left there to rmember the function later on
     
     ##calculating the number of chunks needed to have one chunk per process
+    ##this number won't actually be followed as this some variables might have
+    ##to be taken out of the pool of variables to be kept together
     len_chunks = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))
     
     ##breaking into chunks without 'None' values
-    clean_chunks = cleanChunks(len_chunks, total_number_of_tasks)
+    if not variables_names:
+        processed_chunks = cleanChunks(len_chunks, total_number_of_tasks)
+    else:
+        processed_chunks = intelligentChunks(len_chunks, total_number_of_tasks, variables_names)
     
     #Assigning tasks
-    results_async = [pool.apply_async(function, [clean_chunks[i], inputs]) for i in range(len(clean_chunks))]
+    results_async = [pool.apply_async(function, [processed_chunks[i], inputs]) for i in range(len(processed_chunks))]
     pool.close()
     pool.join()
-    
+       
     results = [r.get() for r in results_async]
+    
+    '''
+    to test if the is a a problem is the called function, put everything from
+    "#Assigning task" up to here in comment, and decomment the following lines:
+       
+    for i in range(len(processed_chunks)):
+        print function(processed_chunks[i], inputs)
+    '''
 
     return results
     
@@ -132,11 +177,9 @@ def buildRanges(model):
        
     ##Variables in Wiedemann 74   [min,max]
     if int(model) == 74:        
-        rangeW74ax        = [2.0, 4.0]                       #min = 0    
-        rangeW74bxAdd  = [2.0, 4.0]
-        rangeW74bxMult  = [3.0, 4.0]
-        
-        rangevalues.append(rangeW74ax,rangeW74bxAdd,rangeW74bxMult)
+        rangeW74ax     = [2.0, 4.0] ; rangevalues.append(rangeW74ax)      #min = 0    
+        rangeW74bxAdd  = [2.0, 4.0] ; rangevalues.append(rangeW74bxAdd)
+        rangeW74bxMult = [3.0, 4.0] ; rangevalues.append(rangeW74bxMult)
     
     ##Variables in Wiedemann 99   [min,max]
     elif int(model) == 99: 
@@ -160,10 +203,10 @@ def buildRanges(model):
                          
     ##Variables for lane change behavior
     rangeMaxDecelOwn =         [-10.0 , -0.01] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
-    #rangeDecelRedDistOwn =     [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistOwn)       #min = 0
+   #rangeDecelRedDistOwn =     [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistOwn)       #min = 0
     rangeAccDecelOwn =         [-10.0 ,   0.0] ; rangevalues.append(rangeAccDecelOwn)           #min = -10, max = -1
     rangeMaxDecelTrail =       [-10.0 , -0.01] ; rangevalues.append(rangeMaxDecelTrail)         #min = -10, max = -0.01
-    #rangeDecelRedDistTrail =   [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistTrail)     #min = 0
+   #rangeDecelRedDistTrail =   [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistTrail)     #min = 0
     rangeAccDecelTrail =       [-10.0 ,   0.0] ; rangevalues.append(rangeAccDecelTrail)         #min = -10, max = -1
     rangeDiffusTm =            [60    , 100.0] ; rangevalues.append(rangeDiffusTm)
     rangeMinHdwy =             [0.5   ,   1.5] ; rangevalues.append(rangeMinHdwy)

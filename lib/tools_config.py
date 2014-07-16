@@ -221,8 +221,10 @@ def commands(parser):
     
     ## Analysis, on by default
     parser.add_option('-w', '--wiedemann',                             dest='model',                      default='99',   help='[int]  Set the car following model - Default is Wiedemann 99')
-    parser.add_option('-c', '--cal',                                   dest='calibration',                default=False,  help='[bool] Set the working analisys to "Calibration" - off by default')
-    parser.add_option('-s', '--sen',                                   dest='sensitivity',                default=True,   help='[bool] Set the working analisys to "Sensitivity" - on by default')    
+    parser.add_option('-c', '--cali',                                  dest='calibration',                default=False,  help='[bool] Set the working analysis to "Calibration" - off by default')
+    parser.add_option('-d', '--student',                               dest='student',                    default=False,  help='[bool] Set the working analysis to "Student t-test" - off by default')
+    parser.add_option('-m', '--multi',                                 dest='multi',                      default=True,   help='[bool] Enables or disables multiprocessing while running the analysis')
+    parser.add_option('-s', '--sensi',                                 dest='sensitivity',                default=True,   help='[bool] Set the working analysis to "Sensitivity" - on by default')    
     parser.add_option('-f', '--file',                                  dest='file',                                       help='[str]  Load specific inpx file')
     parser.add_option('-a', '--save-figures',     action='store_true', dest='vis_save',                   default=False,  help='[bool] Save figures')
     parser.add_option(      '--figure-format',                         dest='fig_format',                 default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')

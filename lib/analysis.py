@@ -9,7 +9,7 @@ Created on Thu Jul 10 14:43:44 2014
 #        Importing dependencies       
 ################################ 
 #Natives
-import os, shutil, time, sys
+import os, shutil, time, sys, copy
 import numpy as np
 from scipy.stats import t
 
@@ -72,11 +72,13 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
     
     N =  min(N1, N2, N3, N4, N5)
     
-    '''
-    MUST CALCULATE SCI1-SCI5
+    '''             
+    SCI1 = str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5) +";" + str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5)
+    SCI1 = str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5) +";" + str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5)
+
     '''
     
-    out.write("Nbr_itt;N1;N2;N3;N4;N5;N;SCI1;SCI2;SCI3;SCI4;SCI5")
+    out.write("Nbr_itt;N1;N2;N3;N4;N5;N;SCI1max;SCI1min;SCI2max;SCI2min;SCI3max;SCI3min;SCI4max;SCI4min;SCI5max;SCI5min;")
     out.write(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
 
     '''
@@ -137,63 +139,122 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
 #        Sensitivity Analisis       
 ################################
 
-def sensitivityAnalysis(rangevalues, concat_variables, default_values, firstrun, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters):
-    '''Runs the sensitivity analisys for a set of predetermined values'''    
+def setCalculatingValues(default_values, current_name, nbr_points, current_range = [], default = False):
+    '''Creates the working array to work with for the current iteration 
+       NB: current_range = [[min, max], pos]  | for default_values = True, current_range is not needed'''
     
-    for value in range(len(rangevalues)):
-        firstrun_collateral = False
-        Number_of_points =  config.nbr_points           
-        value_name =  concat_variables[value]            
-        values = default_values[:]
-        print' ================================= '
-        print 'Starting work on variable ' + value_name + ' ( ' + str(value + 1) + '/' + str(len(rangevalues)) + ' )'
-        print' ================================= '
+    working_values = copy.deepcopy(default_values)
+    if default is True:        
+        points_array = [default_values[0]]
+        position = 0
+    else:
+        position = current_range[1]
+        if current_name == "CoopLnChg":
+            points_array = current_range[0]
+        else:
+            points_array = []
+            for point in range(nbr_points):
+                points_array.append(current_range[0][0] + point * (current_range[0][1] - current_range[0][0]) /  (nbr_points - 1) )
+
+    return working_values, points_array, position
         
-        if firstrun is True:
-            Number_of_points += 1
-            firstrun_collateral = True
-        elif value_name == "CoopLnChg":
-            Number_of_points = 2
-        for point in range(Number_of_points):            
-            #all the code parts with "if firstrun == True" only serves to add a single point to compute the result with all default values
-            if firstrun is True:
-                current = values[value]
-            elif firstrun_collateral is True:
-                current =  rangevalues[value][0] + (point - 1) * (rangevalues[value][1] - rangevalues[value][0]) /  (Number_of_points -2)               
-            elif value_name == "CoopLnChg":
-                current = rangevalues[value][point]
-            else:    
-                current =  rangevalues[value][0] + point * (rangevalues[value][1] - rangevalues[value][0]) /  (Number_of_points -1)
-                if value_name == "CoopLnChgSpeedDiff":
-                    values[value -1] = True
-                elif value_name == "CoopLnChgCollTm":
-                    values[value -2] = True
-                elif value_name == "LookAheadDistMin":
-                    if values[value +1] < current:
-                        values[value +1] = current
-                        print 'LookBackDistMax was set to a value lower than the value set to LookAheadDistMin. To avoid a crash of Vissim, both values were set to the same value'
-                elif value_name == "LookAheadDistMax":
-                    if values[value -1] > current:
-                        values[value -1] = current
-                        print 'LookBackDistMin was set to a value higher than the value set to LookAheadDistMax. To avoid a crash of Vissim, both values were set to the same value'
-                elif value_name == "LookBackDistMin":
-                    if values[value +1] < current:
-                        values[value +1] = current
-                        print 'LookBackDistMax was set to a value lower than the value set to LookBackDistMin. To avoid a crash of Vissim, both values were set to the same value'
-                elif value_name == "LookAheadDistMin":
-                    if values[value -1] > current:
-                        values[value -1] = current
-                        print 'LookBackDistMin was set to a value higher than the value set to LookBackDistMax. To avoid a crash of Vissim, both values were set to the same value'
-                                            
-            values[value] = current          
+def varDict(variable_names, default_values):
+    '''creates a dictionary for faster search of variables'''
+    
+    var_dict = {}
+    for i in range(len(variable_names)):
+        var_dict[variable_names[i]] = [default_values[i], i]
+        
+    return var_dict    
+        
+def correctingValues(default_values, current_value, current_name, var_dict):
+    
+    message = []
+    working_values = copy.deepcopy(default_values)
+    if current_name == "CoopLnChgSpeedDiff":
+        working_values[var_dict["CoopLnChg"][1]] = True
+    elif current_name == "CoopLnChgCollTm":
+        working_values[var_dict["CoopLnChg"][1]] = True
+    elif current_name == "LookAheadDistMin":
+        if working_values[var_dict["LookBackDistMax"][1]] < current_value:
+            working_values[var_dict["LookBackDistMax"][1]] = current_value + 0.1
+            message.append('LookBackDistMax was set to a value lower than the value set to LookAheadDistMin. To avoid a crash of Vissim, the value was adjusted')
+    elif current_name == "LookAheadDistMax":
+        if working_values[var_dict["LookBackDistMin"][1]] > current_value:
+            working_values[var_dict["LookBackDistMin"][1]] = current_value - 0.1
+            message.append('LookBackDistMin was set to a value higher than the value set to LookAheadDistMax. To avoid a crash of Vissim, the value was adjusted')
+    elif current_name == "LookBackDistMin":
+        if working_values[var_dict["LookBackDistMax"][1]] < current_value:
+            working_values[var_dict["LookBackDistMax"][1]] = current_value + 0.1
+            message.append('LookBackDistMax was set to a value lower than the value set to LookBackDistMin. To avoid a crash of Vissim, the value was adjusted')
+    elif current_name == "LookAheadDistMax":
+        if working_values[var_dict["LookBackDistMin"][1]] > current_value:
+            working_values[var_dict["LookBackDistMin"][1]] = current_value - 0.1
+            message.append('LookBackDistMin was set to a value higher than the value set to LookBackDistMax. To avoid a crash of Vissim, the value was adjusted')
+        
+    return working_values, message
+        
+def sensitivityAnalysis(rangevalues, inputs, default = False):
+    '''Runs the sensitivity analysis for a set of predetermined values
+    
+       note: rangevalues = [range, position in the complete list]
+    '''    
+
+    #unpacking inputs - should eventually be changed directly in the code
+    concat_variables    = inputs [0]
+    default_values      = inputs [1]
+    InpxPath            = inputs [2]
+    InpxName            = inputs [3]
+    outputspath         = inputs [4]
+    graphspath          = inputs [5]
+    config              = inputs [6]
+    commands            = inputs [7]
+    running             = inputs [8]
+    parameters          = inputs [9]
+    if default is False:
+        firstrun_results = inputs[10]      
+    
+    #preparing the outputs    
+    text = []
+    
+    #creating a dictionnary
+    var_dict = varDict(concat_variables, default_values)    
+    
+    #treating the values given in rangevalues    
+    for value in range(len(rangevalues)):        
+        #defining the variable being worked on and the range of values it can take
+        if default is True:
+            current_range = []
+            value_name = "Default"
+        else:
+            current_range = rangevalues[value]            
+            value_name = concat_variables[rangevalues[value][1]]
+        
+        #defining the the values needed for the current cycle
+        working_values, points_array, position = setCalculatingValues(default_values, value_name, config.nbr_points, current_range, default)
+        
+        #iterating on the number points
+        for point in points_array:
+            
+            iteration_values = copy.deepcopy(working_values)
+            iteration_values[position] = point
+            
+            #correcting the value array for variables that need to interact with others
+            corrected_values, message = correctingValues(default_values, point, value_name, var_dict)
+            
+            if message != []:
+                print'*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***' 
+                print message
+                print' occured for variable ' + str(value_name) + ' = ' + str(point) 
+                print'*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***'
             
             #creating a folder containing the files for that iteration
-            if firstrun is True:
+            if default is True:
                 filename = 'Default_values.inpx'
                 folder = 'Default_values'
             else:
-                filename = value_name + '_' + str(round(current,3)) + '.inpx'
-                folder = value_name + '_' + str(round(current, 3))
+                filename = value_name + '_' + str(round(point,3)) + '.inpx'
+                folder = value_name + '_' + str(round(point, 3))
     
             folderpath = os.path.join(outputspath, folder)
             newfolderpath = write.createSubFolder(folderpath, folder)
@@ -214,8 +275,8 @@ def sensitivityAnalysis(rangevalues, concat_variables, default_values, firstrun,
                 Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))
                                     
                 #Vissim initialisation and simulation running
-                simulated = vissim.initializeSimulation(Vissim, parameters, values, concat_variables, commands.save_swp)
-                print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
+                simulated = vissim.initializeSimulation(Vissim, parameters, corrected_values, concat_variables, commands.save_swp)
+                #print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
                 
                 if simulated is False:
                     print 'could not simulate ' + filename
@@ -224,31 +285,34 @@ def sensitivityAnalysis(rangevalues, concat_variables, default_values, firstrun,
                 
                 #output treatment
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(folderpath, config.sim_steps, config.warm_up_time)
-                print '*** Output treatment completed *** Runtime: ' + str(time.clock())
+                #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
             
-            if firstrun is True:
-                firstrun_mean_fgap = float(forFMgap.cumul_all.mean)
-                firstrun_mean_Aoppgap = float(oppLCagap.cumul_all.mean)
-                firstrun_mean_Boppgap = float(oppLCbgap.cumul_all.mean)
-                firstrun_mean_Amangap = float(manLCagap.cumul_all.mean)
-                firstrun_mean_Bmangap = float(manLCbgap.cumul_all.mean)
-                firstrun_oppLCcount = float(oppLCcount)
-                firstrun_manLCcount = float(manLCcount)
-            
-            delta_mean_fgap = (forFMgap.cumul_all.mean - firstrun_mean_fgap)/firstrun_mean_fgap
-            delta_mean_Aoppgap = (oppLCagap.cumul_all.mean - firstrun_mean_Aoppgap)/firstrun_mean_Aoppgap
-            delta_mean_Boppgap = (oppLCbgap.cumul_all.mean - firstrun_mean_Boppgap)/firstrun_mean_Boppgap
-            delta_mean_Amangap = (manLCagap.cumul_all.mean - firstrun_mean_Amangap)/firstrun_mean_Amangap
-            delta_mean_Bmangap = (manLCbgap.cumul_all.mean - firstrun_mean_Bmangap)/firstrun_mean_Bmangap
-            delta_oppLCcount = (oppLCcount - firstrun_oppLCcount)/firstrun_oppLCcount
-            delta_manLCcount = (manLCcount - firstrun_manLCcount)/firstrun_manLCcount
+            if default is True:
+                firstrun_results = []
+                firstrun_results.append(float(forFMgap.cumul_all.mean))
+                firstrun_results.append(float(oppLCagap.cumul_all.mean))
+                firstrun_results.append(float(oppLCbgap.cumul_all.mean))
+                firstrun_results.append(float(manLCagap.cumul_all.mean))
+                firstrun_results.append(float(manLCbgap.cumul_all.mean))
+                firstrun_results.append(float(oppLCcount))
+                firstrun_results.append(float(manLCcount))
+
+                
+            else:           
+                delta_mean_fgap = (forFMgap.cumul_all.mean - firstrun_results[0])/firstrun_results[0]
+                delta_mean_Aoppgap = (oppLCagap.cumul_all.mean - firstrun_results[1])/firstrun_results[1]
+                delta_mean_Boppgap = (oppLCbgap.cumul_all.mean - firstrun_results[2])/firstrun_results[2]
+                delta_mean_Amangap = (manLCagap.cumul_all.mean - firstrun_results[3])/firstrun_results[3]
+                delta_mean_Bmangap = (manLCbgap.cumul_all.mean - firstrun_results[4])/firstrun_results[4]
+                delta_oppLCcount = (oppLCcount - firstrun_results[5])/firstrun_results[5]
+                delta_manLCcount = (manLCcount - firstrun_results[6])/firstrun_results[6]
             
             #printing graphs
             if commands.vis_save:
                 variables = [forFMgap,oppLCagap,oppLCbgap,manLCagap,manLCbgap]
                 variables_name =["Forward_gaps","Opportunistic_lane_change_'after'_gaps","Opportunistic_lane_change_'before'_gaps","Mandatory_lane_change_'after'_gaps","Mandatory_lane_change_'before'_gaps"]
                 for var in range(len(variables)):
-                    if firstrun is True:
+                    if default is True:
                         name = "Default_values"
                         subpath = "Default_values"
                     else:
@@ -258,10 +322,16 @@ def sensitivityAnalysis(rangevalues, concat_variables, default_values, firstrun,
                     write.printStatGraphs(graphspath,variables[var], name, variables_name[var], commands.fig_format, subpath)
                 
             #writing to file
-            if firstrun is True:
-                out = write.writeInFile(out, "Default_values", values, flow, oppLCcount, "---", manLCcount, "---", forFMgap.cumul_all.mean, "---", oppLCagap.cumul_all.mean, "---", oppLCbgap.cumul_all.mean, "---", manLCagap.cumul_all.mean, "---", manLCbgap.cumul_all.mean,  "---")
-                firstrun = False
+            if default is True:
+                text.append(["Default_values", corrected_values, flow, oppLCcount, "---", manLCcount, "---", forFMgap.cumul_all.mean, "---", oppLCagap.cumul_all.mean, "---", oppLCbgap.cumul_all.mean, "---", manLCagap.cumul_all.mean, "---", manLCbgap.cumul_all.mean,  "---"])
             else:
-                out = write.writeInFile(out, value_name, values, flow, oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount, forFMgap.cumul_all.mean, delta_mean_fgap, oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCbgap.cumul_all.mean, delta_mean_Boppgap, manLCagap.cumul_all.mean, delta_mean_Amangap, manLCbgap.cumul_all.mean, delta_mean_Bmangap)       
-
-    return out
+                text.append([value_name, corrected_values, flow, oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount, forFMgap.cumul_all.mean, delta_mean_fgap, oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCbgap.cumul_all.mean, delta_mean_Boppgap, manLCagap.cumul_all.mean, delta_mean_Amangap, manLCbgap.cumul_all.mean, delta_mean_Bmangap])       
+        
+        #breaking the outer loop because the default only needs to be ran once
+        if default is True:
+            break
+    
+    if default is True:    
+        return text, firstrun_results
+    else:
+        return text

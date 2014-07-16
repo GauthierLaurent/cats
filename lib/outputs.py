@@ -151,7 +151,7 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
                 files.pop(f)        
         
     for filename in files:
-        print ' === Starting calculations for ' + filename + ' ==='
+        #print ' === Starting calculations for ' + filename + ' ==='
         objects = TraffIntStorage.loadTrajectoriesFromVissimFile(folderpath+"/"+filename, simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
         raw_flow.append(len(objects))
         
@@ -171,7 +171,7 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
 
         #lane change count by type        
         oppObj, manObj = laneChange(objects)
-        print ' == Lane change compilation done == '
+        #print ' == Lane change compilation done == '
         raw_opportunisticLC.append(len(oppObj))
         raw_mandatoryLC.append(len(manObj))
                     
@@ -179,20 +179,20 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
         for index,lane in enumerate(lanes):  
             s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
             raw_forward_gaps.append(forwardGaps(objects, s, lane))		
-            print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
+            #print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
         #mandatory lane change gaps
         agaps, bgaps = laneChangeGaps(manObj, objects)
         raw_man_LC_agaps.append(agaps)
         raw_man_LC_bgaps.append(bgaps)
-        print ' == Mandatory lane change gaps calculation done == '
+        #print ' == Mandatory lane change gaps calculation done == '
 	
         #opportunistic lane change gaps
         agaps, bgaps = laneChangeGaps(oppObj, objects)
         raw_opp_LC_agaps.append(agaps)
         raw_opp_LC_bgaps.append(bgaps)
-        print ' == Oppurtunistic lane change gaps calculation done == '
+        #print ' == Oppurtunistic lane change gaps calculation done == '
          
-        print ' === Calculations for ' + filename + ' done ==='
+        #print ' === Calculations for ' + filename + ' done ==='
         
     #Treating raw outputs to compute means
     mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
