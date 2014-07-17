@@ -136,14 +136,21 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
    
     return out, subdirname
     
+def intoList(out, mylist):
+    for i in mylist:
+        if isinstance(i, list) is True:
+            intoList(out, i)            
+        else:
+            if isinstance(i,float) is True:
+                out.write(str(round(i,4)) + ";")
+            else:
+                out.write(str(i) +";")
+    return out   
+
 def writeInFile(out, *args):
     for arg in args:
         if isinstance(arg, list) is True:
-            for i in arg:
-                if isinstance(i,float) is True:
-                    out.write(str(round(i,4)) + ";")
-                else:
-                    out.write(str(i) +";")
+            out = intoList(out, arg)
         else:
             if isinstance(arg,float) is True:
                     out.write(str(round(arg,4)) + ";")
@@ -211,9 +218,7 @@ def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, 
     plt.xlim(min(variable.cumul_all.raw) -1, max(variable.cumul_all.raw) +1 )      
     plt.savefig(os.path.join(graphspath, "distribution_graphs", subpath, value_name + "_simulations_distributions_for_"+ variable_name + "." + graphformat), format =  graphformat)    
     plt.clf()                  
-    import pdb;pdb.set_trace()
     return True
-    
     
 #######   Legacy  ############
 '''    
