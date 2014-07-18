@@ -12,16 +12,13 @@ def main():
     ################################ 
     
     #Native dependencies
-    import os, shutil, sys, time, optparse
-    import numpy as np
-    import multiprocessing
+    import os, sys, time, optparse
     
     #from scipy.stats.mstats import kruskalwallis
     
     #import pdb; pdb.set_trace()
     #Internal
     import lib.vissim as vissim
-    import lib.outputs as outputs
     import lib.tools_write as write 
     import lib.define as define
     import lib.tools_config as config
@@ -172,7 +169,7 @@ def main():
         
         #filling the report
         for i in range(len(text)):
-            out = write.writeInFile(out, text[i])        
+            write.writeInFile(out, text[i])        
         out.close()
 
 

@@ -22,7 +22,7 @@ import lib.outputs as outputs
 #        Student test       
 ################################
 
-def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters):
+def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters):
     '''Finds the number of iterations needed to achieve a good confidence interval
     
     Base on the ODOT specifications:
@@ -33,7 +33,7 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
         4. if yes, run one more simulation and repeat steps 2, 3 and 4 until "number of simulations" >= N
         
     '''
-
+    text = []
    
     #set the number of runs to 10
     first_seed = parameters[1]    
@@ -78,8 +78,10 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
 
     '''
     
-    out.write("Nbr_itt;N1;N2;N3;N4;N5;N;SCI1max;SCI1min;SCI2max;SCI2min;SCI3max;SCI3min;SCI4max;SCI4min;SCI5max;SCI5min;")
-    out.write(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
+    '''SHOULD USE write.writeInFile | consider concatenating all the outs and writing only in pvctools directly'''
+    
+    text.append(["Nbr_itt;N1;N2;N3;N4;N5;N;SCI1max;SCI1min;SCI2max;SCI2min;SCI3max;SCI3min;SCI4max;SCI4min;SCI5max;SCI5min;"])
+    text.append([iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n"])    
 
     '''
     MUST ADD GRAPH OPTION

@@ -56,6 +56,7 @@ def createSubFolder(folderpath, filename, Archives = True):
     return newfolderpath
 
 def defineName(dirname, TypeOfAnalysis):
+    '''Finds the folders named after the analysis type and find the greatest increment'''
     last_num = 0
     
     past_analysis  = [f for f in os.listdir(dirname) if "Analysis" in f]
@@ -140,27 +141,32 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     return out, subdirname
     
 def intoList(out, mylist):
+    '''iterates over mylist to write it's content into the list given in out'''
     for i in mylist:
         if isinstance(i, list) is True:
             intoList(out, i)            
         else:
-            if isinstance(i,float) is True:
-                out.write(str(round(i,4)) + ";")
-            else:
-                out.write(str(i) +";")
+            out.append(i)
     return out   
 
-def writeInFile(out, *args):
+def writeToOneList(out, *args):
+    '''Take any number of arguments and returns a single list'''
     for arg in args:
         if isinstance(arg, list) is True:
             out = intoList(out, arg)
         else:
-            if isinstance(arg,float) is True:
-                    out.write(str(round(arg,4)) + ";")
-            else:
-                out.write(str(arg) +";")
-    out.write("\n")
+            out.append(arg)
     return out
+    
+def writeInFile(out, *args):
+    '''Writes any number of arguments into the file given in out'''
+    variables = writeToOneList(out, args)
+    for var in variables:
+        if isinstance(var,float) is True:
+                out.write(str(round(var,4)) + ";")
+        else:
+            out.write(str(var) +";")
+    out.write("\n")
     
 def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, nsim, subpath = ""):
     '''create graphs for a type 'Stats' variable'''
