@@ -153,9 +153,12 @@ def setCalculatingValues(default_values, current_name, nbr_points, current_range
             points_array = current_range[0]
         else:
             points_array = []
-            for point in range(nbr_points):
-                points_array.append(current_range[0][0] + point * (current_range[0][1] - current_range[0][0]) /  (nbr_points - 1) )
-
+            if nbr_points > 1:
+                for point in range(nbr_points):
+                    points_array.append(current_range[0][0] + point * (current_range[0][1] - current_range[0][0]) /  (nbr_points - 1) )
+            else:
+                points_array.append((current_range[0][0] + current_range[0][1]) / 2)
+                
     return working_values, points_array, position
         
 def varDict(variable_names, default_values):
@@ -230,7 +233,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
             current_range = rangevalues[value]            
             value_name = concat_variables[rangevalues[value][1]]
         
-        #defining the the values needed for the current cycle
+        #defining the values needed for the current cycle
         working_values, points_array, position = setCalculatingValues(default_values, value_name, config.nbr_points, current_range, default)
         
         #iterating on the number points
@@ -319,7 +322,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                         name = folder[:]
                         subpath = value_name[:]
                     
-                    write.printStatGraphs(graphspath,variables[var], name, variables_name[var], commands.fig_format, subpath)
+                    write.printStatGraphs(graphspath,variables[var], name, variables_name[var], commands.fig_format, config.nbr_runs, subpath)
                 
             #writing to file
             if default is True:

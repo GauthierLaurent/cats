@@ -6,13 +6,16 @@ Created on Thu Jul 03 11:32:08 2014
 """
 
 ##################
-# Import Native Libraries
+# Import Libraries
 ##################
-
+#Native
 import os, time, shutil
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+
+#Internal
+import lib.define as define
 
 ##################
 # Writing tools
@@ -159,65 +162,88 @@ def writeInFile(out, *args):
     out.write("\n")
     return out
     
-def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, subpath = ""):
+def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, nsim, subpath = ""):
     '''create graphs for a type 'Stats' variable'''
 
     #creating the cumulative graph                         
-    plt.plot(variable.distributions[0].value, variable.distributions[0].cumul)
-    plt.xlabel(variable_name.replace("_"," "))
-    plt.ylabel("Count")
-    plt.title("Cumulated distribution for " + variable_name.replace("_"," "))
-    plt.savefig(os.path.join(graphspath, "cumul_dist_graphs", subpath, value_name + "_cumulative_distribution_for_"+ variable_name + "." + graphformat), format =  graphformat)
-    plt.clf()
+    if variable.distributions[0].value != []:    #checks if the variable is empty
+        plt.plot(variable.distributions[0].value, variable.distributions[0].cumul)
+        plt.xlabel(variable_name.replace("_"," "))
+        plt.ylabel("Count")
+        plt.title("Cumulated distribution for " + variable_name.replace("_"," "))
+        plt.savefig(os.path.join(graphspath, "cumul_dist_graphs", subpath, value_name + "_cumulative_distribution_for_"+ variable_name + "." + graphformat), format =  graphformat)
+        plt.clf()
+        plt.close()
     
     #creating the distributions graph
     ##concatenated distributions
-    fig = plt.figure()
-    fig.add_axes((0.1,0.1,0.70,0.80))
-    nbr, bins, patches = plt.hist(variable.cumul_all.raw,100,histtype = 'step')
-    kde = stats.gaussian_kde(variable.cumul_all.raw)
-    test = np.arange(min(variable.cumul_all.raw) -1,max(variable.cumul_all.raw) +1,0.1)
-    line = plt.plot(test, 100*kde(test), '--')
-    plt.xlabel(variable_name.replace("_"," "))
-    plt.ylabel("Count")
-    plt.title("Concatenated distributions for " + variable_name.replace("_"," "))
-    plt.xlim(min(variable.cumul_all.raw) -1, max(variable.cumul_all.raw) +1 )
-    plt.ylim(ymax = max(nbr) +2)
-    plt.figlegend([patches[0], line[0]],["Raw","Best fit"],"center right")
-    plt.savefig(os.path.join(graphspath, "distribution_graphs", subpath, value_name + "_concatenated_distributions_for_"+ variable_name + "." + graphformat), format =  graphformat) 
-    plt.clf()
+    if variable.cumul_all.raw != []:                                                        #checks if the variable is empty  
+        fig = plt.figure()
+        fig.add_axes((0.1,0.1,0.65,0.80))
+        nbr, bins, patches = plt.hist(variable.cumul_all.raw,100,histtype = 'step')
+        #kde is the equation of the cumulated gaussians
+        kde = stats.gaussian_kde(variable.cumul_all.raw)                                    
+        test = np.arange(min(variable.cumul_all.raw) -1,max(variable.cumul_all.raw) +1,0.1)
+        #kde(array) returns the probability (0..1) for each variables in the array.
+        #The integral of the resulting curve = 1, so to scale it with the raw data, we multiply it by the number of variables in the data... ie: len(raw_data)       
+        line = plt.plot(test, len(variable.cumul_all.raw)*kde(test), '--')                            
+        plt.xlabel(variable_name.replace("_"," "))
+        plt.ylabel("Count")
+        plt.title("Concatenated distributions for\n" + variable_name.replace("_"," "))
+        plt.xlim(min(variable.cumul_all.raw) -1, max(variable.cumul_all.raw) +1 )
+        plt.ylim(ymax = max(nbr) +2)
+        plt.figlegend([patches[0], line[0]],["Raw","Best fit"],"center right")
+        plt.savefig(os.path.join(graphspath, "distribution_graphs", subpath, value_name + "_concatenated_distributions_for_"+ variable_name + "." + graphformat), format =  graphformat) 
+        plt.clf()
+        plt.close(fig)
     
-    ##all simulations
-    simline = []
-    simtext = []
-    bestline = []
-    besttext = []
-    find_ymax = 0
-    fig = plt.figure()
-    fig.add_axes((0.1,0.1,0.63,0.80))
-    for i in range(len(variable.distributions)):
-        nbr, bins, patches = plt.hist(variable.distributions[i].raw,range=(bins[0],bins[-1]),histtype = 'step')
-        simtext.append("Simulation "+ str(i+1))
-        simline.append(patches[0])
-        if max(nbr) > find_ymax:
-            find_ymax = max(nbr)
-        kde = stats.gaussian_kde(variable.distributions[i].raw)
-        dist = np.arange(min(variable.distributions[i].raw) -1,max(variable.distributions[i].raw) +1,0.1)
-        lines = plt.plot(dist, len(variable.distributions[i].raw)*kde(dist), '--')            
-        besttext.append("Best fit for\nsimulation "+ str(i+1))
-        bestline.append(lines[0])
-    handles = simline + bestline
-    labels = simtext + besttext       
+        ##all simulations - linked to the concatenated because it allows us to have bins that convers equally each distributions and so make them comparable   
+        simline = []
+        simtext = []
+        bestline = []
+        besttext = []
+        find_ymax = 0
+        fig = plt.figure()
+        fig.add_axes((0.1,0.1,0.63,0.80))
+        
+        if variable_name == "Forward_gaps":
+            chunks = define.toChunks(len(variable.distributions)//nsim, range(len(variable.distributions)))
+        for i in range(len(variable.distributions)):
+            if variable.distributions[i].raw != []: #checks if the variable is empty
+                nbr, bins, patches = plt.hist(variable.distributions[i].raw,range=(bins[0],bins[-1]),histtype = 'step')
+                
+                if variable_name == "Forward_gaps":
+                    for chunk in chunks:
+                        if i in chunk:                    
+                            simtext.append("Simulation "+ str(i//(len(variable.distributions)//nsim) + 1) +"\nLane " + str(i - chunk[0] +1) + "/" + str(len(variable.distributions)//nsim) )
+
+                else:
+                    simtext.append("Simulation "+ str(i+1))
+                
+                simline.append(patches[0])
+                if max(nbr) > find_ymax:
+                    find_ymax = max(nbr)
+                kde = stats.gaussian_kde(variable.distributions[i].raw)
+                dist = np.arange(min(variable.distributions[i].raw) -1,max(variable.distributions[i].raw) +1,0.1)
+                lines = plt.plot(dist, len(variable.distributions[i].raw)*kde(dist), '--')            
+                if variable_name == "Forward_gaps":
+                    besttext.append("Best fit for\nHUM... "+ str(i+1))
+                else:
+                    besttext.append("Best fit for\nsimulation "+ str(i+1))
+                bestline.append(lines[0])
+        handles = simline + bestline
+        labels = simtext + besttext       
             
-    plt.xlabel(variable_name.replace("_"," "))
-    plt.ylabel("Count")
-    plt.title("Individual distributions of all simulations for\n" + variable_name.replace("_"," "))
-    plt.figlegend(handles, labels,"center right")
-    #plt.legend(bbox_to_anchor = (1.3, 0.5))
-    plt.ylim(ymax = find_ymax + 2) 
-    plt.xlim(min(variable.cumul_all.raw) -1, max(variable.cumul_all.raw) +1 )      
-    plt.savefig(os.path.join(graphspath, "distribution_graphs", subpath, value_name + "_simulations_distributions_for_"+ variable_name + "." + graphformat), format =  graphformat)    
-    plt.clf()                  
+        plt.xlabel(variable_name.replace("_"," "))
+        plt.ylabel("Count")
+        plt.title("Individual distributions of all simulations for\n" + variable_name.replace("_"," "))
+        plt.figlegend(handles, labels,"center right")
+        #plt.legend(bbox_to_anchor = (1.3, 0.5))
+        plt.ylim(ymax = find_ymax + 2) 
+        plt.xlim(min(variable.cumul_all.raw) -1, max(variable.cumul_all.raw) +1 )      
+        plt.savefig(os.path.join(graphspath, "distribution_graphs", subpath, value_name + "_simulations_distributions_for_"+ variable_name + "." + graphformat), format =  graphformat)    
+        plt.clf()
+        plt.close(fig)                  
     return True
     
 #######   Legacy  ############

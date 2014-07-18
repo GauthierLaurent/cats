@@ -182,24 +182,33 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
             #print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
         #mandatory lane change gaps
         agaps, bgaps = laneChangeGaps(manObj, objects)
-        raw_man_LC_agaps.append(agaps)
-        raw_man_LC_bgaps.append(bgaps)
+        if agaps != []: raw_man_LC_agaps.append(agaps)
+        if bgaps != []: raw_man_LC_bgaps.append(bgaps)
         #print ' == Mandatory lane change gaps calculation done == '
 	
         #opportunistic lane change gaps
         agaps, bgaps = laneChangeGaps(oppObj, objects)
-        raw_opp_LC_agaps.append(agaps)
-        raw_opp_LC_bgaps.append(bgaps)
+        if agaps != []: raw_opp_LC_agaps.append(agaps)
+        if bgaps != []: raw_opp_LC_bgaps.append(bgaps)
         #print ' == Oppurtunistic lane change gaps calculation done == '
          
         #print ' === Calculations for ' + filename + ' done ==='
         
     #Treating raw outputs to compute means
-    mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
-    mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)  
-    mean_flow =  scipy.mean(raw_flow)
-    
-    forward_followgap = stats(raw_forward_gaps)   
+    if raw_opportunisticLC != []:
+        mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
+    else:
+        mean_opportunisticLC = None
+    if raw_mandatoryLC != []:
+        mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)
+    else:
+        mean_mandatoryLC = None
+    if raw_flow != []:
+        mean_flow =  scipy.mean(raw_flow)
+    else:
+        mean_flow = None
+        
+    forward_followgap = stats(raw_forward_gaps)
     opportunistic_LCagap = stats(raw_opp_LC_agaps)
     opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
     mandatory_LCagap = stats(raw_man_LC_agaps)
@@ -250,7 +259,7 @@ def generateRandomOutputs(parameters):
     mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)  
     mean_flow =  scipy.mean(raw_flow)
     
-    forward_followgap = stats(raw_forward_gaps)   
+    forward_followgap = stats(raw_forward_gaps)
     opportunistic_LCagap = stats(raw_opp_LC_agaps)
     opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
     mandatory_LCagap = stats(raw_man_LC_agaps)
