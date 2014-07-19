@@ -40,6 +40,13 @@ def main():
     commands = config.commands(optparse.OptionParser())
     config   = config.Config()
     
+    #override default inpx file if command -f was sued
+    if commands.file:
+        if not commands.file.endswith('inpx'):
+            config.file = commands.file + '.inpx' 
+        else:
+            config.file = commands.file   
+    
     ################################ 
     #        Module verifications       
     ################################
