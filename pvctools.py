@@ -16,7 +16,6 @@ def main():
     
     #from scipy.stats.mstats import kruskalwallis
     
-    #import pdb; pdb.set_trace()
     #Internal
     import lib.vissim as vissim
     import lib.tools_write as write 
@@ -40,7 +39,7 @@ def main():
     commands = config.commands(optparse.OptionParser())
     config   = config.Config()
     
-    #override default inpx file if command -f was sued
+    #overrides default inpx file if command -f was used
     if commands.file:
         if not commands.file.endswith('inpx'):
             config.file = commands.file + '.inpx' 
@@ -95,7 +94,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(MainInpxPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)        
+        out, subdirname = write.writeHeader(MainInpxPath, concat_variables, InpxName, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)        
         filename = subdirname.split(os.sep)[-1]        
         
         #generating the graphic and output folder
@@ -138,7 +137,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(MainInpxPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+        out, subdirname = write.writeHeader(MainInpxPath, concat_variables, InpxName, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
 
         #creating appropriate output folder and graphic folder (if option is "on")        
         graphspath = None        

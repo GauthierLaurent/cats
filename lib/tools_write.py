@@ -55,7 +55,7 @@ def createSubFolder(folderpath, filename, Archives = True):
         
     return newfolderpath
 
-def defineName(dirname, TypeOfAnalysis):
+def defineName(dirname, InpxName, TypeOfAnalysis):
     '''Finds the folders named after the analysis type and find the greatest increment'''
     last_num = 0
     
@@ -63,18 +63,19 @@ def defineName(dirname, TypeOfAnalysis):
     if past_analysis != []:
         for f in past_analysis:
             striped = f.strip('.csv')
-            num = int(striped.split('_')[2])
-            if num > last_num: last_num = num
+            if TypeOfAnalysis in f and InpxName in f:
+                num = int(striped.split('_')[-1])
+                if num > last_num: last_num = num
     
     last_num += 1  
-    filename = TypeOfAnalysis + '_Analysis_' + str(last_num)
+    filename = InpxName + '_' + TypeOfAnalysis + '_Analysis_' + str(last_num)
     
     return filename, last_num
     
-def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
+def writeHeader(dirname, variables, InpxName, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
      
-    name, last_num = defineName(dirname, TypeOfAnalysis)
+    name, last_num = defineName(dirname, InpxName, TypeOfAnalysis)
     #import pdb; pdb.set_trace()    
     subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)  
     filename = '{}/'+ name + '.csv'
@@ -149,9 +150,10 @@ def intoList(out, mylist):
             out.append(i)
     return out   
 
-def writeToOneList(out, *args):
-    '''Take any number of arguments and returns a single list'''
-    for arg in args:
+def writeToOneList(*args):
+    '''Take any number of arguments and returns a single list'''  
+    out = []    
+    for arg in list(args):
         if isinstance(arg, list) is True:
             out = intoList(out, arg)
         else:
@@ -160,7 +162,8 @@ def writeToOneList(out, *args):
     
 def writeInFile(out, *args):
     '''Writes any number of arguments into the file given in out'''
-    variables = writeToOneList(out, args)
+    
+    variables = writeToOneList(list(args))
     for var in variables:
         if isinstance(var,float) is True:
                 out.write(str(round(var,4)) + ";")

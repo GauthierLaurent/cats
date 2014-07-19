@@ -152,7 +152,7 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
         
     for filename in files:
         #print ' === Starting calculations for ' + filename + ' ==='
-        objects = TraffIntStorage.loadTrajectoriesFromVissimFile(folderpath+"/"+filename, simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
+        objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
         raw_flow.append(len(objects))
         
         #lane building block

@@ -128,13 +128,13 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
         MUST CALCULATE SCI1-SCI5
         '''
         
-        out.write(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
+        text.append(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
         
         '''
         MUST ADD GRAPH OPTION
         '''
         
-    return out        
+    return text        
         
 
 ################################ 
@@ -173,6 +173,7 @@ def varDict(variable_names, default_values):
     return var_dict    
         
 def correctingValues(default_values, current_value, current_name, var_dict):
+    '''Checks if the value is in the following list and corrects the linked values accordingly'''
     
     message = []
     working_values = copy.deepcopy(default_values)
