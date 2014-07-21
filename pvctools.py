@@ -39,16 +39,14 @@ def main():
     commands = config.commands(optparse.OptionParser())
     config   = config.Config()
     
-    #overrides default inpx file if command -f was used
+    #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
     if commands.file:
         if not commands.file.endswith('inpx'):
             config.file = commands.file + '.inpx'
-            
+            config.inpx_name = commands.file + str('.inpx')
         else:
             config.file = commands.file 
-        
-        #Updating the default inpx name to match the file
-        config.inpx_name = commands.file.strip
+            config.inpx_name = commands.file                
         
     ################################ 
     #        Module verifications       
