@@ -42,10 +42,14 @@ def main():
     #overrides default inpx file if command -f was used
     if commands.file:
         if not commands.file.endswith('inpx'):
-            config.file = commands.file + '.inpx' 
+            config.file = commands.file + '.inpx'
+            
         else:
-            config.file = commands.file   
-    
+            config.file = commands.file 
+        
+        #Updating the default inpx name to match the file
+        config.inpx_name = commands.file.strip('.inpx')
+        
     ################################ 
     #        Module verifications       
     ################################
@@ -75,7 +79,7 @@ def main():
     MainInpxPath = config.path_to_inpx
     InpxName = config.inpx_name
     InpxPath = os.path.join(MainInpxPath, InpxName)
-    
+
     #creating an output folder for that named inpx being studied
     if not os.path.isdir(os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))):
         os.makedirs(os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))) 
@@ -126,7 +130,7 @@ def main():
         '''
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
                 
-        text = analysis.studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters)        
+        text = analysis.statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters)        
         
         #filling the report
         for i in range(len(text)):
@@ -177,14 +181,12 @@ def main():
         ##Running the rest of the simulations
         inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
         if commands.multi is True:            
-            packed_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)       
-            for i in packed_outputs:
-                for j in i:
-                    text.append(j)
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)       
+
         else:                                
             unpacked_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
 
-        #unpacking the aoutputs -- the outputs come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = packed_outputs[0][0]
+        #unpacking the outputs -- the outputs come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = packed_outputs[0][0]
         for i in unpacked_outputs:
             for j in i:
                 text.append(j)
