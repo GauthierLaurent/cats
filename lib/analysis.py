@@ -11,7 +11,7 @@ Created on Thu Jul 10 14:43:44 2014
 #Natives
 import os, shutil, time, sys, copy
 import numpy as np
-from scipy.stats import t
+from scipy.stats import t, chi2
 
 #Internal
 import lib.tools_write as write
@@ -19,17 +19,19 @@ import lib.vissim as vissim
 import lib.outputs as outputs
 
 ################################ 
-#        Student test       
+#        Statistical precision analysis       
 ################################
 
-def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters):
+def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters):
     '''Finds the number of iterations needed to achieve a good confidence interval
     
     Base on the ODOT specifications:
         1. run 10 simulations and calculates the median and standard deviation for the outputs
-        2. run the Student t-test while fixing the confidence interval to +/- S  --> N = [t(1-alpha/2;N-1)*S]^2 with aplha = 0.975 (bivariate 95% confidence)
+        2. run the Student t-test while fixing the confidence interval to +/- err*mu
+                   where err is the %error on the mean value, specified in the cfg file.
+                   --> N = [t(1-alpha/2;N-1)*S/(err*mu)]^2 with aplha = 0.975 (bivariate 95% confidence)
             2a. calculate the confidence interval for the standard deviation
-        3. check if N > number of simulation ran up to this point
+        3. check if N > number of simulations ran up to this point
         4. if yes, run one more simulation and repeat steps 2, 3 and 4 until "number of simulations" >= N
         
     '''
@@ -65,27 +67,28 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(outputspath, config.sim_steps, config.warm_up_time)
         print '*** Output treatment completed *** Runtime: ' + str(time.clock())
        
-    #generating the needed means and std confidence intervals
+    #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
-    err = 0.20
+    err = config.desired_pct_error/100
+
     N1 = ( t_student * forFMgap.cumul_all.std / (err * forFMgap.cumul_all.mean) )**2
     N2 = ( t_student * oppLCagap.cumul_all.std / (err * oppLCagap.cumul_all.mean) )**2
     N3 = ( t_student * oppLCbgap.cumul_all.std / (err * oppLCbgap.cumul_all.mean)  )**2
     N4 = ( t_student * manLCagap.cumul_all.std / (err * manLCagap.cumul_all.mean)  )**2
     N5 = ( t_student * manLCbgap.cumul_all.std / (err * manLCbgap.cumul_all.mean)  )**2
     
-    N =  max(N1, N2, N3, N4, N5)
+    #if all variables are to be statisticaly significant to 95% confidance, they must all pass the test, thus N1...N5 must be < than the number of runs
+    N =  max(N1, N2, N3, N4, N5)    
     
-    '''             
-    SCI1 = str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5) +";" + str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5)
-    SCI1 = str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5) +";" + str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5)
-
-    '''
-    
-    '''SHOULD USE write.writeInFile | consider concatenating all the outs and writing only in pvctools directly'''
+    #std confidence intervals             
+    SCI1 = [forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 ,  forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI2 = [oppLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]   
+    SCI3 = [oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI4 = [manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI5 = [manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
     
     text.append(["Nbr_itt","Student-t","Std1","Mean1","N1","Std2","Mean2","N2","Std3","Mean3","N3","Std4","Mean4","N4","Std5","Mean5","N5","N","SCI1max","SCI1min","SCI2max","SCI2min","SCI3max","SCI3min","SCI4max","SCI4min","SCI5max","SCI5min"])
-    text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N])    
+    text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])    
 
     '''
     MUST ADD GRAPH OPTION
@@ -131,11 +134,14 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
         
         N =  max(N1, N2, N3, N4, N5)        
         
-        '''
-        MUST CALCULATE SCI1-SCI5
-        '''
+        #std confidence intervals             
+        SCI1 = [forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 ,  forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI2 = [oppLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]   
+        SCI3 = [oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI4 = [manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI5 = [manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
         
-        text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N])    
+        text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])     
         
         '''
         MUST ADD GRAPH OPTION

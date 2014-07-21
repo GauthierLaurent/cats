@@ -155,6 +155,8 @@ class Config():
         self.warm_up_time             = self.parse('loop_radius',        '120',                   c_type='int')
         self.nbr_points               = self.parse('nbr_points',         '5'  ,                   c_type='int')
         
+        self.section = 'Statistical precision'
+        self.desired_pct_error        = self.parse('desired_pct_error',  '20' ,                   c_type='float')
         '''                                                                                        
         self.section = 'Parameters'                                                               
         self.draw_max_traj            = self.parse('draw_max_traj',      '300')                                                     # Maximum trajectories to work with with visual tools
@@ -187,6 +189,9 @@ class Config():
                            'nbr_runs           = '+str(self.nbr_runs)+'\n'
                            'simulation_time    = '+str(self.simulation_time)+'\n'
                            'warm_up_time       = '+str(self.warm_up_time)+'\n'
+                           '\n'
+                           '[Statistical precision]'
+                           'desired_pct_error  = '+str(self.desired_pct_error)+'\n'
                            '\n'
                            )
         
