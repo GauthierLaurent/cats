@@ -176,16 +176,17 @@ def main():
         
         ##Running the rest of the simulations
         inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
-        if commands.multi is True:
-            #the outputs here comes back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = packed_outputs[0][0]            
+        if commands.multi is True:            
             packed_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)       
             for i in packed_outputs:
                 for j in i:
                     text.append(j)
-        else:
-            #the outputs here are passed as one chunks, so they comes back with 2 layers: runs in the chunk/text -- ie: text = packed_outputs[0]            
-            unpacked_outputs = analysis.sensitivityAnalysis(rangevalues, inputs)           
-            for i in unpacked_outputs:
+        else:                                
+            unpacked_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
+
+        #unpacking the aoutputs -- the outputs come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = packed_outputs[0][0]
+        for i in unpacked_outputs:
+            for j in i:
                 text.append(j)
         
         #filling the report
@@ -203,7 +204,7 @@ def main():
       
     '''
     ##default values of computed parameters - obtained from video analysis
-    # default_forFMgap = np.asarray([NUMBERS])
+    #default_forFMgap = np.asarray([NUMBERS])
     #default_oppLCgap = np.asarray([NUMBERS])
     #default_manLCgap = np.asarray([NUMBERS])     
     #

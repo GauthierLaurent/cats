@@ -39,30 +39,35 @@ def cleanChunks(n, iterable, padvalue=None, asList=True):
 def intelligentChunks(n, iterable, value_names):
     '''Cuts the variables into chunks keeping together the variables that need to relate to others'''           
     
-    keepAssembled_g1 = ("LookAheadDistMin","LookAheadDistMax","LookBackDistMin","LookBackDistMax")    
-    keepAssembled_g2 = ("CoopLnChg","CoopLnChgSpeedDiff","CoopLnChgCollTm")    
-
-    keptAssembled_g1 = []
-    keptAssembled_g2 = []
-    other_iterables = []    
-    
-    for i in range(len(iterable)):
-        if value_names[i] in keepAssembled_g1:
-            keptAssembled_g1.append([iterable[i],i])
-        elif value_names[i] in keepAssembled_g2:
-            keptAssembled_g2.append([iterable[i],i])            
-        else:
-            other_iterables.append([iterable[i],i])            
-     
     intelligent_chunk = []
-    if len(keptAssembled_g1) + len(keptAssembled_g2) <= n and len(keptAssembled_g1) + len(keptAssembled_g2) > 0:
-        intelligent_chunk.append(keptAssembled_g1 + keptAssembled_g2)
+    
+    if len(iterable) != n:
+        keepAssembled_g1 = ("LookAheadDistMin","LookAheadDistMax","LookBackDistMin","LookBackDistMax")    
+        keepAssembled_g2 = ("CoopLnChg","CoopLnChgSpeedDiff","CoopLnChgCollTm")    
+    
+        keptAssembled_g1 = []
+        keptAssembled_g2 = []
+        other_iterables = []    
+        
+        for i in range(len(iterable)):
+            if value_names[i] in keepAssembled_g1:
+                keptAssembled_g1.append([iterable[i],i])
+            elif value_names[i] in keepAssembled_g2:
+                keptAssembled_g2.append([iterable[i],i])            
+            else:
+                other_iterables.append([iterable[i],i])            
+                 
+        if len(keptAssembled_g1) + len(keptAssembled_g2) <= n and len(keptAssembled_g1) + len(keptAssembled_g2) > 0:
+            intelligent_chunk.append(keptAssembled_g1 + keptAssembled_g2)
+        else:
+            if keptAssembled_g1 != []: intelligent_chunk.append(keptAssembled_g1)
+            if keptAssembled_g2 != []: intelligent_chunk.append(keptAssembled_g2)
+        if other_iterables != []:
+            clean_chunks = cleanChunks(n, other_iterables, padvalue=None, asList=True)
+            for i in range(len(clean_chunks)): intelligent_chunk.append(clean_chunks[i])
     else:
-        if keptAssembled_g1 != []: intelligent_chunk.append(keptAssembled_g1)
-        if keptAssembled_g2 != []: intelligent_chunk.append(keptAssembled_g2)
-    if other_iterables != []:
-        clean_chunks = cleanChunks(n, other_iterables, padvalue=None, asList=True)
-        for i in range(len(clean_chunks)): intelligent_chunk.append(clean_chunks[i]) 
+        for i in range(len(iterable)):
+            intelligent_chunk.append([iterable[i],i])
     
     return intelligent_chunk
 
