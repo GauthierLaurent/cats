@@ -24,8 +24,9 @@ import lib.define as define
 def createSubFolder(folderpath, filename, Archives = True):
     '''Creates a folder named "filename"
     
-       If such a folder already exists at the designated location, creates a subfolder named "Archives"
-       and another subfolder named "yyyymmdd_hhmmss" and moves all files in the folder to that subfolder'''
+       If such a folder already exists at the designated location and Archives = True, creates a subfolder 
+       named "Archives" and another subfolder named "yyyymmdd_hhmmss" and moves all files in the folder 
+       to that subfolder'''
        
     newfolderpath = folderpath
 
@@ -55,7 +56,7 @@ def createSubFolder(folderpath, filename, Archives = True):
         
     return newfolderpath
 
-def defineName(dirname, InpxName, TypeOfAnalysis):
+def defineName(dirname, TypeOfAnalysis):
     '''Finds the folders named after the analysis type and find the greatest increment'''
     last_num = 0
     
@@ -63,19 +64,19 @@ def defineName(dirname, InpxName, TypeOfAnalysis):
     if past_analysis != []:
         for f in past_analysis:
             striped = f.strip('.csv')
-            if TypeOfAnalysis in f and InpxName in f:
+            if TypeOfAnalysis in f:
                 num = int(striped.split('_')[-1])
                 if num > last_num: last_num = num
     
     last_num += 1  
-    filename = InpxName + '_' + TypeOfAnalysis + '_Analysis_' + str(last_num)
+    filename = TypeOfAnalysis + '_Analysis_' + str(last_num)
     
     return filename, last_num
     
-def writeHeader(dirname, variables, InpxName, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
+def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
      
-    name, last_num = defineName(dirname, InpxName, TypeOfAnalysis)
+    name, last_num = defineName(dirname, TypeOfAnalysis)
     #import pdb; pdb.set_trace()    
     subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)  
     filename = '{}/'+ name + '.csv'

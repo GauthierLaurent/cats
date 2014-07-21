@@ -64,8 +64,14 @@ if len(sys.argv) == 3:
 #        Actual program code       
 ################################
 
-#
-dirpath = os.path.join(config.path_to_inpx, dirname)
+#getting the name of the file associated with the graphs
+if commands.file:
+    mainfile = commands.file.strip('.inpx') 
+else:
+    mainfile = config.file.strip('.inpx')
+
+#working path
+dirpath = os.path.join(config.path_to_inpx, "Analysis_on__" + mainfile, dirname)
 
 #looking if the outputs subfolder exists
 if not os.path.isdir(os.path.join(dirpath , "outputs")):

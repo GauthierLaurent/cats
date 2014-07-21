@@ -53,10 +53,16 @@ def main():
        in the futur when -s is turned off by default '''
        
     if not (commands.sensitivity or commands.student or commands.calibration):
-        print '**************************************************************'        
-        print '     No module was chosen, please use -c, -d or -s'
-        print '            ==== Closing program ===                          '
-        print '**************************************************************'
+        print '****************************************************************'     
+        print '*   No module was chosen, please use:                          *'
+        print '*                                                              *'
+        print '*        -c to start the Calibration Analysis,                 *'
+        print '*        -d to start the Statistical precision Analysis,       *'
+        print '*   or                                                         *'
+        print '*        -s to start the Sensitivity Analysis                  *'
+        print '*                                                              *'
+        print '*                 ==== Closing program ===                     *'
+        print '****************************************************************'
         sys.exit()
         
     ############################################### 
@@ -70,6 +76,12 @@ def main():
     InpxName = config.inpx_name
     InpxPath = os.path.join(MainInpxPath, InpxName)
     
+    #creating an output folder for that named inpx being studied
+    if not os.path.isdir(os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))):
+        os.makedirs(os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))) 
+        
+    WorkingPath = os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))
+    
     #Checking if Vissim is already running and closing it to avoid problems latter on
     running = vissim.isVissimRunning(firstTime = True)    
     if running is not False:
@@ -77,24 +89,24 @@ def main():
         
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
-    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(commands.model), Sim_lenght] 
-
+    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(commands.model), Sim_lenght]
+                    
     ###################################### 
-    #        Student t-test       
+    #        Statistical precision Analysis       
     ###################################### 
     if commands.student:
         TypeOfAnalysis = 'Student'
         
         #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model), values = [])
-        Default_LC_values, LCvariables = define.createLCValues(values = [])        
+        Default_FM_values, FMvariables = define.createFMValues(int(commands.model) )
+        Default_LC_values, LCvariables = define.createLCValues()        
         
         #creating default values
         default_values =  Default_FM_values  + Default_LC_values
         concat_variables = FMvariables + LCvariables
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(MainInpxPath, concat_variables, InpxName, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)        
         filename = subdirname.split(os.sep)[-1]        
         
         #generating the graphic and output folder
@@ -113,9 +125,12 @@ def main():
                     write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
         '''
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
+                
+        text = analysis.studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters)        
         
-        analysis.studentTtest(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, out, config, commands, running, parameters)        
-        
+        #filling the report
+        for i in range(len(text)):
+            write.writeInFile(out, text[i])  
         out.close()        
      
      
@@ -137,7 +152,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(MainInpxPath, concat_variables, InpxName, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
 
         #creating appropriate output folder and graphic folder (if option is "on")        
         graphspath = None        

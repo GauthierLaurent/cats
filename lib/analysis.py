@@ -41,14 +41,16 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
     iterrations_ran = 10
     
     #renaming the inpx and moving it to the output folder
-    if os.path.exists(os.path.join(outputspath, filename)) is False:
+    if os.path.exists(os.path.join(outputspath, "Statistical_test.inpx")) is False:
         shutil.copy(InpxPath, os.path.join(outputspath, InpxName))
-        os.rename(os.path.join(outputspath, InpxName), os.path.join(outputspath, filename))
-   
+        os.rename(os.path.join(outputspath, InpxName), os.path.join(outputspath, "Statistical_test.inpx"))
+    
+    print 'Starting the first 10 runs'
+    
     if commands.mode:  #this serves to bypass Vissim while testing the code
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
     else:
-        Vissim = vissim.startVissim(running, os.path.join(outputspath, filename))
+        Vissim = vissim.startVissim(running, os.path.join(outputspath,  "Statistical_test.inpx"))
                             
         #Vissim initialisation and simulation running                                                   
         simulated = vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)
@@ -64,13 +66,14 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
         print '*** Output treatment completed *** Runtime: ' + str(time.clock())
        
     #generating the needed means and std confidence intervals
-    N1 = ( t.ppf(0.975,10) * forFMgap.cumul_all.std )**2
-    N2 = ( t.ppf(0.975,10) * oppLCagap.cumul_all.std )**2
-    N3 = ( t.ppf(0.975,10) * oppLCbgap.cumul_all.std )**2
-    N4 = ( t.ppf(0.975,10) * manLCagap.cumul_all.std )**2
-    N5 = ( t.ppf(0.975,10) * manLCbgap.cumul_all.std )**2
+    t_student = t.ppf(0.975,9)
+    N1 = ( t_student * forFMgap.cumul_all.std  )**2
+    N2 = ( t_student * oppLCagap.cumul_all.std )**2
+    N3 = ( t_student * oppLCbgap.cumul_all.std )**2
+    N4 = ( t_student * manLCagap.cumul_all.std )**2
+    N5 = ( t_student * manLCbgap.cumul_all.std )**2
     
-    N =  min(N1, N2, N3, N4, N5)
+    N =  max(N1, N2, N3, N4, N5)
     
     '''             
     SCI1 = str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5) +";" + str(forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5)
@@ -80,14 +83,16 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
     
     '''SHOULD USE write.writeInFile | consider concatenating all the outs and writing only in pvctools directly'''
     
-    text.append(["Nbr_itt;N1;N2;N3;N4;N5;N;SCI1max;SCI1min;SCI2max;SCI2min;SCI3max;SCI3min;SCI4max;SCI4min;SCI5max;SCI5min;"])
-    text.append([iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n"])    
+    text.append(["Nbr_itt","N1","N2","N3","N4","N5","N","SCI1max","SCI1min","SCI2max","SCI2min","SCI3max","SCI3min","SCI4max","SCI4min","SCI5max","SCI5min"])
+    text.append([iterrations_ran, t_student, forFMgap.cumul_all.std, N1, oppLCagap.cumul_all.std, N2, oppLCbgap.cumul_all.std, N3, manLCagap.cumul_all.std, N4, manLCbgap.cumul_all.std, N5, N])    
 
     '''
     MUST ADD GRAPH OPTION
     '''
     
-    while N > iterrations_ran:
+    while N > iterrations_ran and iterrations_ran < 100:
+        
+        print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
         
         old_data = [forFMgap.cumul_all.raw, forFMgap.cumul_all.raw, oppLCbgap.cumul_all.raw, manLCagap.cumul_all.raw, manLCbgap.cumul_all.raw]        
         
@@ -116,24 +121,27 @@ def studentTtest(concat_variables, default_values, filename, InpxPath, InpxName,
             print '*** Output treatment completed *** Runtime: ' + str(time.clock())        
         
         #generating the needed means and std
-        N1 = ( t.ppf(0.975,10) * forFMgap.cumul_all.std )**2
-        N2 = ( t.ppf(0.975,10) * forFMgap.cumul_allstd )**2
-        N3 = ( t.ppf(0.975,10) * oppLCbgap.cumul_all.std )**2
-        N4 = ( t.ppf(0.975,10) * manLCagap.cumul_all.std )**2
-        N5 = ( t.ppf(0.975,10) * manLCbgap.cumul_all.std )**2
+        t_student = t.ppf(0.975, iterrations_ran -1)
+        N1 = ( t_student * forFMgap.cumul_all.std  )**2
+        N2 = ( t_student * oppLCagap.cumul_all.std )**2
+        N3 = ( t_student * oppLCbgap.cumul_all.std )**2
+        N4 = ( t_student * manLCagap.cumul_all.std )**2
+        N5 = ( t_student * manLCbgap.cumul_all.std )**2
         
-        N =  min(N1, N2, N3, N4, N5)        
+        N =  max(N1, N2, N3, N4, N5)        
         
         '''
         MUST CALCULATE SCI1-SCI5
         '''
         
-        text.append(iterrations_ran+";"+N1+";"+N2+";"+N3+";"+N4+";"+N5+";"+N+"\n")    
+        text.append([iterrations_ran, t_student, forFMgap.cumul_all.std, N1, oppLCagap.cumul_all.std, N2, oppLCbgap.cumul_all.std, N3, manLCagap.cumul_all.std, N4, manLCbgap.cumul_all.std, N5, N])     
         
         '''
         MUST ADD GRAPH OPTION
         '''
         
+    print "Statistical precision achieved - generating report"
+    
     return text        
         
 

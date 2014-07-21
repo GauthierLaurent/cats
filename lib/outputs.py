@@ -215,6 +215,17 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
     mandatory_LCbgap = stats(raw_man_LC_bgaps)
 
     return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap
+
+def randomGaussRange(low, high, n):
+    out = []    
+    mu = random.uniform(low, high)
+    sigma = random.uniform(0, (mu - low) )
+    while len(out) < n:
+        num = (random.normalvariate(mu, sigma))
+        if num < high and num > low:
+            out.append(num)
+        
+    return out
      
 def generateRandomOutputs(parameters):
     '''This fonction serves to bypass everything produced by Vissim to gain speed while testing the code'''
@@ -232,28 +243,14 @@ def generateRandomOutputs(parameters):
         
     for i in range(NumRuns):
         random.seed(RandSeed + i)
-        opportunisticLC = random.uniform(2,30)
-        mandatoryLC = random.uniform(2,30) 
-        flow = random.uniform(1200,2000)
-        forward_gaps = []
-        opp_LC_agaps = []
-        opp_LC_bgaps = []
-        man_LC_agaps =[]
-        man_LC_bgaps =[]
-        for j in range(100):
-            forward_gaps.append(random.uniform(1,20))
-            opp_LC_agaps.append(random.uniform(1,20))
-            opp_LC_bgaps.append(random.uniform(1,20))
-            man_LC_agaps.append(random.normalvariate(5,10))
-            man_LC_bgaps.append(random.normalvariate(7,10))
-        raw_opportunisticLC.append(opportunisticLC)
-        raw_mandatoryLC.append(mandatoryLC) 
-        raw_flow.append(flow)
-        raw_forward_gaps.append(forward_gaps)
-        raw_opp_LC_agaps.append(opp_LC_agaps)
-        raw_opp_LC_bgaps.append(opp_LC_bgaps)
-        raw_man_LC_agaps.append(man_LC_agaps)
-        raw_man_LC_bgaps.append(man_LC_bgaps)
+        raw_opportunisticLC.append(random.uniform(2,30))
+        raw_mandatoryLC.append(random.uniform(2,30)) 
+        raw_flow.append(random.uniform(1200,2000))
+        raw_forward_gaps.append(randomGaussRange(1,20,100))
+        raw_opp_LC_agaps.append(randomGaussRange(1,20,100))
+        raw_opp_LC_bgaps.append(randomGaussRange(1,20,100))
+        raw_man_LC_agaps.append(randomGaussRange(5,10,100))
+        raw_man_LC_bgaps.append(randomGaussRange(7,10,100))
     
     mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
     mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)  

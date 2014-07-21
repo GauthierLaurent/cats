@@ -213,24 +213,24 @@ class Config():
 ##################
 def commands(parser):
     ## Trajectory extraction (Traffic Intelligence), off by default
-    parser.add_option(      '--concat',           action='store_true', dest='concat',                     default=False,  help='[bool] Run concatenation functions')
-    parser.add_option(      '--undistort',        action='store_true', dest='undistort',                  default=False,  help='[bool] Run undistortion functions')
-    parser.add_option(      '--homo',             type='int',          dest='homo',                       default=0,      help='[int]  Run homography functions with this many points')
-    parser.add_option(      '--trafint',          action='store_true', dest='trafint',                    default=False,  help='[bool] Run trajectory extraction functions')
-    parser.add_option(      '--trafint-watch',    action='store_true', dest='trafint_watch',              default=False,  help='[bool] Watch trajectory extraction')
+    parser.add_option(      '--concat',         action='store_true',   dest='concat',         default=False,  help='[bool] Run concatenation functions')
+    parser.add_option(      '--undistort',      action='store_true',   dest='undistort',      default=False,  help='[bool] Run undistortion functions')
+    parser.add_option(      '--homo',           type='int',            dest='homo',           default=0,      help='[int]  Run homography functions with this many points')
+    parser.add_option(      '--trafint',        action='store_true',   dest='trafint',        default=False,  help='[bool] Run trajectory extraction functions')
+    parser.add_option(      '--trafint-watch',  action='store_true',   dest='trafint_watch',  default=False,  help='[bool] Watch trajectory extraction')
     
     ## Analysis, on by default
-    parser.add_option('-w', '--wiedemann',                             dest='model',                      default='99',   help='[int]  Set the car following model - Default is Wiedemann 99')
-    parser.add_option('-c', '--cali',                                  dest='calibration',                default=False,  help='[bool] Set the working analysis to "Calibration" - off by default')
-    parser.add_option('-d', '--student',                               dest='student',                    default=False,  help='[bool] Set the working analysis to "Student t-test" - off by default')
-    parser.add_option('-m', '--multi',                                 dest='multi',                      default=True,   help='[bool] Enables or disables multiprocessing while running the analysis')
-    parser.add_option('-s', '--sensi',                                 dest='sensitivity',                default=True,   help='[bool] Set the working analysis to "Sensitivity" - on by default')    
-    parser.add_option('-f', '--file',                                  dest='file',                                       help='[str]  Load specific inpx file')
-    parser.add_option('-a', '--save-figures',     action='store_true', dest='vis_save',                   default=False,  help='[bool] Save figures')
-    parser.add_option(      '--figure-format',                         dest='fig_format',                 default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')
-    parser.add_option('-l', '--save-swp',         action='store_true', dest='save_swp',                   default=False,  help='[bool] Enables Vissim lane change (.swp) outputs')
-    parser.add_option('-v', '--verbose',          type='int' ,         dest='verbose',                    default=1,      help='[int]  Level of detail of results')
-    parser.add_option('-t', '--test',             action='store_true', dest='mode',                       default=False,  help='[int]  Put the code into test mode, bypassing Vissim and generating random outputs')
+    parser.add_option('-w', '--wiedemann',      action='store_true',   dest='model',          default='99',   help='[int]  Set the car following model - Default is Wiedemann 99')
+    parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration" - off by default')
+    parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test" - off by default')
+    parser.add_option('-m', '--multi',          action='store_false',  dest='multi',          default=True,   help='[bool] Enables or disables multiprocessing while running the analysis')
+    parser.add_option('-s', '--sensi',          action='store_false',  dest='sensitivity',    default=True,   help='[bool] Set the working analysis to "Sensitivity" - on by default')    
+    parser.add_option('-f', '--file',                                  dest='file',                          help='[str]  Load specific inpx file')
+    parser.add_option('-a', '--save-figures',   action='store_true',   dest='vis_save',       default=False,  help='[bool] Save figures')
+    parser.add_option(      '--figure-format',                         dest='fig_format',     default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')
+    parser.add_option('-l', '--save-swp',       action='store_true',   dest='save_swp',       default=False,  help='[bool] Enables Vissim lane change (.swp) outputs')
+    parser.add_option('-v', '--verbose',        type='int' ,           dest='verbose',        default=1,      help='[int]  Level of detail of results')
+    parser.add_option('-t', '--test',           action='store_true',   dest='mode',           default=False,  help='[int]  Put the code into test mode, bypassing Vissim and generating random outputs')
     (commands, args) = parser.parse_args() 
 
     return commands
