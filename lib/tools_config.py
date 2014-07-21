@@ -138,9 +138,11 @@ def path_slashes(string):
 # Configuration
 ##################
 class Config():
+    config_name = 'pvc.cfg'
+    
     def __init__(self):
         self.config = ConfigParser.ConfigParser()        
-        self.config.read('pvc.cfg')
+        self.config.read(Config.config_name)
         
         self.section = 'Main'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
@@ -148,11 +150,11 @@ class Config():
         self.path_to_trafint          = self.parse('path_to_trafint',    '',        c_type='string')                    
                                                                                                 
         self.section = 'Simulation'                                                              
-        self.sim_steps                = self.parse('sim_steps',          '10' ,                   c_type='int')                     #10 recommended
-        self.first_seed               = self.parse('mps_kmh',            '42' ,                   c_type='int')  
+        self.sim_steps                = self.parse('steps_per_sec',      '10' ,                   c_type='int')                     #10 recommended
+        self.first_seed               = self.parse('first_seed',         '42' ,                   c_type='int')  
         self.nbr_runs                 = self.parse('nbr_runs',           '10' ,                   c_type='int')                     #May eventually build up something to test this
-        self.simulation_time          = self.parse('timehorizon',        '900',                   c_type='int')
-        self.warm_up_time             = self.parse('loop_radius',        '120',                   c_type='int')
+        self.simulation_time          = self.parse('simulation_time',    '900',                   c_type='int')
+        self.warm_up_time             = self.parse('warm_up_time',       '120',                   c_type='int')
         self.nbr_points               = self.parse('nbr_points',         '5'  ,                   c_type='int')
         
         self.section = 'Statistical precision'
@@ -177,7 +179,7 @@ class Config():
 
         
     def write(self):
-        with open('pva.cfg', 'w') as new_file:
+        with open(Config.config_name, 'w') as new_file:
             new_file.write('[Main]\n'
                            'path_to_inpx       = '+self.path_to_inpx+'\n'
                            'inpx_name          = '+self.inpx_name+'\n'
