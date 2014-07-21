@@ -180,20 +180,20 @@ def main():
         inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
         if commands.multi is True:            
             unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)       
-
+            #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
+            for i in unpacked_outputs:
+                for j in i:
+                    text.append(j)
         else:                                
-            unpacked_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
-
-        #unpacking the outputs -- the outputs come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = packed_outputs[0][0]
-        for i in unpacked_outputs:
-            for j in i:
-                text.append(j)
-        
+            packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
+            #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
+            for i in packed_outputs:
+                text.append(i)
+      
         #filling the report
         for i in range(len(text)):
             write.writeInFile(out, text[i])        
         out.close()
-
 
     ###################################### 
     #        Calibration Analysis       

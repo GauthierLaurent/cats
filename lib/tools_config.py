@@ -191,6 +191,7 @@ class Config():
                            'nbr_runs           = '+str(self.nbr_runs)+'\n'
                            'simulation_time    = '+str(self.simulation_time)+'\n'
                            'warm_up_time       = '+str(self.warm_up_time)+'\n'
+                           'nbr_points         = '+str(self.nbr_points)+'\n'
                            '\n'
                            '[Statistical precision]'
                            'desired_pct_error  = '+str(self.desired_pct_error)+'\n'
