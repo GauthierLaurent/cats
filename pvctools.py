@@ -48,7 +48,7 @@ def main():
             config.file = commands.file 
         
         #Updating the default inpx name to match the file
-        config.inpx_name = commands.file.strip('.inpx')
+        config.inpx_name = commands.file.strip
         
     ################################ 
     #        Module verifications       
