@@ -2,7 +2,7 @@
 #  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
 #  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
 #  Dependencies listed in Libraries; 
-Version = 'R1.0.0.1 u. 22-07-2014'
+Version = 'R1.0.0.2 u. 22-07-2014'
 ################################################################################
 '''Dev stuff
 import pdb; pdb.set_trace()
@@ -198,7 +198,16 @@ def main():
          
             for i in packed_outputs:
                 text.append(i)
-      
+                
+        #Adding a time marker and performance indicators -- the append([]) serves to add an empty line before the time marker
+        total_time = time.clock()
+        avg_per_point = total_time/(len(rangevalues) * config.nbr_points + 1 ) 
+        avg_per_sim   = total_time/((len(rangevalues) * config.nbr_points + 1 )*config.nbr_runs)
+        text.append([])
+        text.append(["Total elapsed time (sec) :",total_time])
+        text.append(["Average time per point :",avg_per_point])
+        text.append(["Average time per simulation :",avg_per_sim])
+        
         #filling the report
         for i in range(len(text)):
             write.writeInFile(out, text[i])        
