@@ -175,7 +175,7 @@ def setCalculatingValues(default_values, current_name, nbr_points, current_range
                     points_array.append(current_range[0][0] + point * (current_range[0][1] - current_range[0][0]) /  (nbr_points - 1) )
             else:
                 points_array.append((current_range[0][0] + current_range[0][1]) / 2)
-                
+            
     return working_values, points_array, position
         
 def varDict(variable_names, default_values):
@@ -240,7 +240,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     
     #creating a dictionnary
     var_dict = varDict(concat_variables, default_values)    
-    
+
     #treating the values given in rangevalues    
     for value in range(len(rangevalues)):        
         #defining the variable being worked on and the range of values it can take
@@ -253,15 +253,14 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
         
         #defining the values needed for the current cycle
         working_values, points_array, position = setCalculatingValues(default_values, value_name, config.nbr_points, current_range, default)
-        
+
         #iterating on the number points
         for point in points_array:
-            
             iteration_values = copy.deepcopy(working_values)
             iteration_values[position] = point
             
             #correcting the value array for variables that need to interact with others
-            corrected_values, message = correctingValues(default_values, point, value_name, var_dict)
+            corrected_values, message = correctingValues(iteration_values, point, value_name, var_dict)
             
             if message != []:
                 print'*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***' 
