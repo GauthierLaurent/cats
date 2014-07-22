@@ -1,9 +1,17 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jun 09 16:20:16 2014
+#!/usr/bin/env python
+#  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
+#  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
+#  Dependencies listed in Libraries; 
+Version = 'R1.0.0.1 u. 22-07-2014'
+################################################################################
+'''Dev stuff
+import pdb; pdb.set_trace()
+'''
+################################################################################
 
-@author: Laurent
-"""
+#################### 
+#        Main       
+#################### 
 
 def main():
     
@@ -187,6 +195,7 @@ def main():
         else:                                
             packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
+         
             for i in packed_outputs:
                 text.append(i)
       
