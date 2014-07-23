@@ -35,10 +35,10 @@ def main():
     #        Os verification       
     ################################        
     if os.name != 'nt':
-        print '**************************************************************'        
-        print 'Vissim 6.0 and older do not work with an other OS than Windows'
-        print '            ==== Closing program ===                          '
-        print '**************************************************************'
+        print '****************************************************************'        
+        print '*           Vissim 6.0 and older requires Windows              *'
+        print '*               ==== Closing program ===                       *'
+        print '****************************************************************'
         sys.exit()
     
     ################################ 
@@ -46,7 +46,7 @@ def main():
     ################################    
     commands = config.commands(optparse.OptionParser())
     config   = config.Config()
-    
+        
     #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
     if commands.file:
         if not commands.file.endswith('inpx'):
@@ -55,6 +55,21 @@ def main():
         else:
             config.file = commands.file 
             config.inpx_name = commands.file                
+
+    ################################ 
+    #        Car following model verification        
+    ################################
+    if commands.model not in ['74','99']:
+        commands.model = '99'
+        
+        print '****************************************************************'
+        print '*   The car-following model has to be one of the following:    *'
+        print '*                                                              *'        
+        print '*           -> Wiedemann 99 (-w 99 or nothing)                 *'
+        print '*           -> Wiedemann 74 (-w 74)                            *'
+        print '*                                                              *'
+        print '*           Reverting to the default value (99)                *'        
+        print '****************************************************************'
         
     ################################ 
     #        Module verifications       
@@ -105,7 +120,7 @@ def main():
     #        Statistical precision Analysis       
     ###################################### 
     if commands.student:
-        TypeOfAnalysis = 'Student'
+        TypeOfAnalysis = 'Statistical-precision'
         
         #creating the default values from memory
         Default_FM_values, FMvariables = define.createFMValues(int(commands.model) )
@@ -137,6 +152,10 @@ def main():
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
                 
         text = analysis.statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters)        
+
+        #Adding a time marker and performance indicators
+        report = write.timeStamp(default_values, 1, config.nbr_runs) 
+        for i in report: text.append(i)
         
         #filling the report
         for i in range(len(text)):
@@ -187,7 +206,7 @@ def main():
         ##Running the rest of the simulations
         inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
         if commands.multi is True:            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)       
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
@@ -199,14 +218,9 @@ def main():
             for i in packed_outputs:
                 text.append(i)
                 
-        #Adding a time marker and performance indicators -- the append([]) serves to add an empty line before the time marker
-        total_time = time.clock()
-        avg_per_point = total_time/(len(rangevalues) * config.nbr_points + 1 ) 
-        avg_per_sim   = total_time/((len(rangevalues) * config.nbr_points + 1 )*config.nbr_runs)
-        text.append([])
-        text.append(["Total elapsed time (sec) :",total_time])
-        text.append(["Average time per point :",avg_per_point])
-        text.append(["Average time per simulation :",avg_per_sim])
+        #Adding a time marker and performance indicators
+        report = write.timeStamp(rangevalues, config.nbr_points, config.nbr_runs) 
+        for i in report: text.append(i)
         
         #filling the report
         for i in range(len(text)):

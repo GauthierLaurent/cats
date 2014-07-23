@@ -127,7 +127,7 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                   "*flow: Vehicular flow\n"
                   "*nbr_opp: Number of opportunistic lane changes\n"
                   "*nbr_man: Number of mandatory lane changes\n"
-                  "*m_forward: Mean calculated forward gap\n"
+                  "*m_forward: Mean calculated forward gaps (all lanes concatenated, calculated at the middle of each link)\n"
                   "*m_LC_Aopp: Mean calculated opportunistic lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
                   "*m_LC_Bopp: Mean calculated opportunistic lane change gap calculated before the lane changing vehicule began changing lane\n"
                   "*m_LC_Aman: Mean calculated mandatory lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
@@ -172,6 +172,20 @@ def writeInFile(out, *args):
             out.write(str(var) +";")
     out.write("\n")
     
+def timeStamp(variables, points, sim):
+    text = []
+    total_time = time.clock()
+    avg_per_point = total_time/(len(variables) * points + 1 ) 
+    avg_per_sim   = total_time/((len(variables) * points + 1 )*sim)
+    
+    #the append([]) serves to add an empty line before the time marker when using writeInFile
+    text.append([])
+    text.append(["Total elapsed time (sec) :",total_time])
+    text.append(["Average time per point (sec) :",avg_per_point])
+    text.append(["Average time per simulation (sec): ",avg_per_sim])
+    
+    return text
+        
 def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, nsim, subpath = ""):
     '''create graphs for a type 'Stats' variable'''
 
