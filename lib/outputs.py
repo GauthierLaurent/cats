@@ -31,14 +31,19 @@ class stats:
     def __init__(self, raw):
         self.distributions  = []
         allvalues = []
-        for l in raw:
-            for m in l:
-                allvalues.append(m)
-            cumul,nlist,mean,median,var  = dist(l)
-            self.distributions.append(sublvl(l, nlist,cumul,mean,median,var))
+        if raw != []:
+            for l in raw:
+                for m in l:
+                    allvalues.append(m)
+                cumul,nlist,mean,median,var  = dist(l)
+                self.distributions.append(sublvl(l, nlist,cumul,mean,median,var))
+                
+            cumul,nlist,mean,median,var  = dist(allvalues)
+            self.cumul_all = sublvl(allvalues,nlist,cumul,mean,median,var)                
+                
+        else:
+            self.append(sublvl(raw))
 
-        cumul,nlist,mean,median,var  = dist(allvalues)
-        self.cumul_all = sublvl(allvalues,nlist,cumul,mean,median,var)
 
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
@@ -54,61 +59,102 @@ def forwardGaps(objects, s, lane):
     
     return gaps	
 	
-def laneChangeGaps(lists, objects):
+def laneChangeGaps(lists, listDict, laneDict, objects):
     '''Determines the width of lane change gaps for a list of objects who make lane changes
         agaps represent the gap present after the insertion of the lane changing vehicule
         bgaps reprensent the gap present before the insertion of the lane changing vehicule'''
-	
+    
     x = []  #agaps construction variable
     y = []  #bgaps construction variable
     for obj in lists:
-        for pos in range(len(objects[obj].curvilinearPositions.lanes)-1):
-            if objects[obj].curvilinearPositions.lanes[pos] != objects[obj].curvilinearPositions.lanes[pos +1]: 
-                lane = objects[obj].curvilinearPositions.lanes[pos +1]
-                stepNum = objects[obj].getFirstInstant()+obj
-                s = objects[obj].curvilinearPositions.getXCoordinates()[pos +1]
+        
+        for change in range(len(listDict[obj])):
+            lane = listDict[obj][change][1]                                                     #Dict[i][1] = lane after lane change
+            stepNum = objects[obj].getFirstInstant()+listDict[obj][change][2]                   #Dict[i][2] = position of the lane change in the objects list 
+            s = objects[obj].curvilinearPositions.getXCoordinates()[listDict[obj][change][2]]
 				
-                #determining the gap
-                instants = []
-                for candidate in range(len(objects)):
-                    if candidate != obj:
-                        t = objects[candidate].curvilinearPositions.getIntersections(s, lane)
-                        if t != []:
-                            #if objects[candidate].getFirstInstant()+t[0] > stepNum:
-                            instants.append(objects[candidate].getFirstInstant()+t[0] - stepNum)
+            #determining the gap
+            instants = []
+            for candidate in laneDict[lane]:
+                if candidate != obj:
+                    t = objects[candidate].curvilinearPositions.getIntersections(s, lane)
+                    if t != []:
+                        #if objects[candidate].getFirstInstant()+t[0] > stepNum:
+                        instants.append(objects[candidate].getFirstInstant()+t[0] - stepNum)
 	
-                instants.sort()
-                if instants != []: 
-                    for i in range(len(instants)):
-                        if instants[i] > 0:
-                            x.append(instants[i])
-                            y.append(instants[i] - instants[i -1])
-                            break
+            instants.sort() 
+            if instants != []: 
+                for i in range(len(instants)):
+                    if instants[i] > 0:
+                        x.append(instants[i])
+                        y.append(instants[i] - instants[i -1])
+                        break
 
     agaps = np.asarray(x)
     bgaps = np.asarray(y)
-    
+
     return agaps, bgaps
 							
 def laneChange(objects):
-    '''Calculates whether an object makes a mandatory or an opportunistic lane change'''  
-    oppObj  = []
-    manObj = []  
+    '''Calculates whether an object makes a mandatory or an opportunistic lane change creates 3 dictionnaries and two lists
+    
+    The two list (oppObj and manObj) are the objects respectively doing opportunistic lane changes and mandatory lane changes      
+    
+                                *************************
+                                
+    The fist two dictionnaries (oppObjDict and manObjDict) present, for each lane change:
+                    - lane before the lane change
+                    - lane after the lane change
+                    - position of the last lane in the lane vector
+    
+                      dict =  {obj | [ [start_lane, end_lane, end_pos], [start_lane, end_lane, end_pos], ... ] }
+                        
+                                *************************
+                                
+    The last dictionnary presents the list of objects present on a lane
+                      dict =  {lane | [ obj1, obj2, ... ] }
+    
+    '''  
+
+    #Lists
+    oppObj = []    
+    manObj = []
+
+    #Dictionanries    
+    oppObjDict = {}    
+    manObjDict = {}
+    laneDict   = {}
+    
     for o in range(len(objects)):
+        
+        for i in set(objects[o].curvilinearPositions.lanes):
+            if i not in laneDict: laneDict[i] = []
+            if o not in laneDict[i]: laneDict[i].append(o)            
+            
         #lanes are named "link_lane"
         #as of now, the assumption is that if a vehicle ends it's trajectory on a different link as it started, all the lane changes are considered mandatory.
         #this will have to be tried visually to be confirmed. Put Vissim's Simulation very low with a high density (2100+ veh/h/ln) and watch both the simulation and the outputs
-        if objects[o].curvilinearPositions.lanes[0].split("_") == objects[o].curvilinearPositions.lanes[-1].split("_"):
+        if objects[o].curvilinearPositions.lanes[0].split("_")[0] == objects[o].curvilinearPositions.lanes[-1].split("_")[0]:
             for lane in range(len(objects[o].curvilinearPositions.lanes) -1):
+                                    
                 if objects[o].curvilinearPositions.lanes[lane] != objects[o].curvilinearPositions.lanes[lane + 1]:
-                    oppObj.append(o)
+                    if o not in oppObj: oppObj.append(o)                    
+                    if o in oppObjDict:
+                        oppObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                    else:
+                        oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
                     
         else:                            
             for lane in range(len(objects[o].curvilinearPositions.lanes) -1):
+                    
                 if objects[o].curvilinearPositions.lanes[lane] != objects[o].curvilinearPositions.lanes[lane + 1]:
-                    manObj.append(o)
+                    if o not in manObj: manObj.append(o)                    
+                    if o in manObjDict:
+                        manObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                    else:
+                        manObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
 
-    return oppObj, manObj
+    return oppObj, manObj, oppObjDict, manObjDict, laneDict
 
 def dist(x):
     nlist = np.unique(x)
@@ -119,9 +165,18 @@ def dist(x):
     var = np.var(np.asarray(x))      
     return cumul,nlist,mean,median,var
 
-def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_data = [], first_file = None):
+def treatVissimOutputs(files, inputs):
     '''Treat outputs in the given folder 
        If Old_data exists, it must be transfered as the raw list'''
+    
+    folderpath                 = inputs[0]
+    simulationStepsPerTimeUnit = inputs[1]
+    warmUpTime                 = inputs[2]
+    if len(inputs) == 4:
+        old_data = inputs[3]
+    else:
+        old_data = []
+    
     
     if old_data == []:
         raw_opportunisticLC = []
@@ -142,59 +197,81 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
         raw_man_LC_agaps    = old_data[6]
         raw_man_LC_bgaps    = old_data[7]
 	
-    files = [f for f in os.listdir(folderpath) if f.endswith("fzp")]
+    '''
+    #Legacy code used the skip some files while looping during the Statistical precision analysis
+    #Was removed when working to implement multiprocessing with this function    
     if first_file != None:
         for f in files:
             striped = f.strip('.csv')
             num = int(striped.split('_')[2])
             if num < first_file:
                 files.pop(f)        
-        
-    for filename in files:
-        #print ' === Starting calculations for ' + filename + ' ==='
-        objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
-        raw_flow.append(len(objects))
-        
-        #lane building block
-        lanes = {}
-        for o in objects:
-            for i in range(len(o.curvilinearPositions.lanes)):
-                lane = o.curvilinearPositions.lanes[i]
-                s = o.curvilinearPositions.getXCoordinates()[i]
-                if lane not in lanes:
-                    lanes[lane] = [s, s]
-                else:
-                    if s < lanes[str(lane)][0]:
-                        lanes[str(lane)][0] = s
-                    elif s > lanes[str(lane)][1]:
-                        lanes[str(lane)][1] = s
-
-        #lane change count by type        
-        oppObj, manObj = laneChange(objects)
-        #print ' == Lane change compilation done == '
-        raw_opportunisticLC.append(len(oppObj))
-        raw_mandatoryLC.append(len(manObj))
-                    
-        #forward gap analysis                    
-        for index,lane in enumerate(lanes):  
-            s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
-            raw_forward_gaps.append(forwardGaps(objects, s, lane))		
-            #print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
-        #mandatory lane change gaps
-        agaps, bgaps = laneChangeGaps(manObj, objects)
-        if agaps != []: raw_man_LC_agaps.append(agaps)
-        if bgaps != []: raw_man_LC_bgaps.append(bgaps)
-        #print ' == Mandatory lane change gaps calculation done == '
-	
-        #opportunistic lane change gaps
-        agaps, bgaps = laneChangeGaps(oppObj, objects)
-        if agaps != []: raw_opp_LC_agaps.append(agaps)
-        if bgaps != []: raw_opp_LC_bgaps.append(bgaps)
-        #print ' == Oppurtunistic lane change gaps calculation done == '
-         
-        #print ' === Calculations for ' + filename + ' done ==='
+    '''
+    if file is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
+        for filename in files:
+            print ' === Starting calculations for ' + filename + ' ==='       
+            objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
+            raw_flow.append(len(objects))
+            
+            #lane building block
+            lanes = {}
+            for o in objects:
+                for i in range(len(o.curvilinearPositions.lanes)):
+                    lane = o.curvilinearPositions.lanes[i]
+                    s = o.curvilinearPositions.getXCoordinates()[i]
+                    if lane not in lanes:
+                        lanes[lane] = [s, s]
+                    else:
+                        if s < lanes[str(lane)][0]:
+                            lanes[str(lane)][0] = s
+                        elif s > lanes[str(lane)][1]:
+                            lanes[str(lane)][1] = s
+    
+            #lane change count by type        
+            oppObj, manObj, oppObjDict, manObjDict, laneDict = laneChange(objects)
+            print ' == Lane change compilation done == '
+            raw_opportunisticLC.append(sum([len(oppObjDict[i]) for i in oppObjDict]))
+            raw_mandatoryLC.append(sum([len(manObjDict[i]) for i in manObjDict]))
+            
+            '''
+            #Reserved code: calculates if an objects returns to the same lane he previously departed
+            #May serve to check the results of the laneChange fct
+            #Functionality proven on a random output file
+            returns = []
+            test = [i for i in manObjDict if len(manObjDict[i]) > 0]
+            for j in range(len(test)):
+                ori = []
+                for f in range(len(manObjDict[test[j]])):                
+                    if manObjDict[test[j]][f][0] not in ori: ori.append(manObjDict[test[j]][f][0])
+                    if manObjDict[test[j]][f][1] in ori:
+                        if test[j] not in returns: returns.append(test[j])
+            
+            print returns
+            '''
+              
+            #forward gap analysis                    
+            for index,lane in enumerate(lanes):  
+                s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
+                raw_gaps = forwardGaps(objects, s, lane) 
+                if raw_gaps != []: raw_forward_gaps.append(raw_gaps)		
+                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
+                
+            #mandatory lane change gaps
+            agaps, bgaps = laneChangeGaps(manObj, manObjDict, laneDict, objects)
+            if agaps != []: raw_man_LC_agaps.append(agaps)
+            if bgaps != []: raw_man_LC_bgaps.append(bgaps)
+            print ' == Mandatory lane change gaps calculation done == '
+    	
+            #opportunistic lane change gaps
+            agaps, bgaps = laneChangeGaps(oppObj, oppObjDict, laneDict, objects)
+            if agaps != []: raw_opp_LC_agaps.append(agaps)
+            if bgaps != []: raw_opp_LC_bgaps.append(bgaps)
+            print ' == Opportunistic lane change gaps calculation done == '
+             
+            print ' === Calculations for ' + filename + ' done ==='
         
     #Treating raw outputs to compute means
+    
     if raw_opportunisticLC != []:
         mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
     else:
@@ -207,7 +284,7 @@ def treatVissimOutputs(folderpath, simulationStepsPerTimeUnit, warmUpTime, old_d
         mean_flow =  scipy.mean(raw_flow)
     else:
         mean_flow = None
-        
+       
     forward_followgap = stats(raw_forward_gaps)
     opportunistic_LCagap = stats(raw_opp_LC_agaps)
     opportunistic_LCbgap = stats(raw_opp_LC_bgaps)

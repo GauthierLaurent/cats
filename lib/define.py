@@ -74,7 +74,10 @@ def intelligentChunks(n, iterable, value_names):
 def createWorkers(total_number_of_tasks, function, inputs, variables_names = []):
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
-       number of cores that can process it
+       number of cores that can process it.
+       
+       Total number of task is a list of the tasks to be performed by function
+               ie: values in function(values, input)
     
        By default, the number of processes it spawns is equal to the number of cores.
        To change it: pool = multiprocessing.pool(processes=4) would spawn 4 processes.

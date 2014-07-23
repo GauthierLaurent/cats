@@ -17,6 +17,7 @@ from scipy.stats import t, chi2
 import lib.tools_write as write
 import lib.vissim as vissim
 import lib.outputs as outputs
+import lib.define as define
 
 ################################ 
 #        Statistical precision analysis       
@@ -55,17 +56,28 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         Vissim = vissim.startVissim(running, os.path.join(outputspath,  "Statistical_test.inpx"))
                             
         #Vissim initialisation and simulation running                                                   
-        simulated = vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)
-        print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
-        
-        if simulated is False:
-            print 'could not simulate ' + filename
+        vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)                  
         
         vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
         
         #output treatment
-        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(outputspath, config.sim_steps, config.warm_up_time)
-        print '*** Output treatment completed *** Runtime: ' + str(time.clock())
+        if commands.multi is True:
+            inputs = [outputspath, config.sim_steps, config.warm_up_time]
+            results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, variables_names = [])
+            for i in range(len(results)):
+                if i == 0:
+                    old_data = []
+                else:
+                    old_data = [flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap]
+                
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, old_data]
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
+                
+                
+        else:
+            inputs = [outputspath, config.sim_steps, config.warm_up_time]
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
+
        
     #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
@@ -97,9 +109,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
     while N > iterrations_ran and iterrations_ran < 100:
         
         print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
-        
-        old_data = [forFMgap.cumul_all.raw, forFMgap.cumul_all.raw, oppLCbgap.cumul_all.raw, manLCagap.cumul_all.raw, manLCbgap.cumul_all.raw]        
-        
+                
         #incrementing the number of iteration do by 1                
         parameters[1] = first_seed + iterrations_ran
         parameters[2] = 1
@@ -109,20 +119,18 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         if commands.mode:  #this serves to bypass Vissim while testing the code
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
         else:
-            Vissim = vissim.startVissim(running, os.path.join(outputspath, filename))
+            Vissim = vissim.startVissim(running, os.path.join(outputspath, "Statistical_test.inpx"))
                                 
             #Vissim initialisation and simulation running
-            simulated = vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)
-            print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
-            
-            if simulated is False:
-                print 'could not simulate ' + filename
+            vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)                    
             
             vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
             
+            file_to_run = "Statistical_test.inpx" + str(iterrations_ran).zfill(3)            
+            
             #output treatment
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(outputspath, config.sim_steps, config.warm_up_time, old_data, first_file = iterrations_ran)
-            print '*** Output treatment completed *** Runtime: ' + str(time.clock())        
+            inputs = [outputspath, config.sim_steps, config.warm_up_time]
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(file_to_run, inputs)
         
         #generating the needed means and std
         t_student = t.ppf(0.975, iterrations_ran -1)
@@ -280,8 +288,8 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
             newfolderpath = write.createSubFolder(folderpath, folder)
             
             if newfolderpath is False:
-                sys.exit()
-                print 'newfolderpath = Newfolderpath = False, must find a way to handle this issue'   
+                print 'Newfolderpath = False, must find a way to handle this issue'
+                sys.exit()                   
             
             #renaming the inpx and moving it to the new folder
             if os.path.exists(os.path.join(folderpath, filename)) is False:
@@ -295,16 +303,14 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                 Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))
                                     
                 #Vissim initialisation and simulation running
-                simulated = vissim.initializeSimulation(Vissim, parameters, corrected_values, concat_variables, commands.save_swp)
+                vissim.initializeSimulation(Vissim, parameters, corrected_values, concat_variables, commands.save_swp)
                 #print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
-                
-                if simulated is False:
-                    print 'could not simulate ' + filename
                 
                 vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
                 
                 #output treatment
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(folderpath, config.sim_steps, config.warm_up_time)
+                inputs = [folderpath, config.sim_steps, config.warm_up_time]
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
                 #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
             
             if default is True:
