@@ -77,7 +77,6 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         else:
             inputs = [outputspath, config.sim_steps, config.warm_up_time]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
-
        
     #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
@@ -124,10 +123,12 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             #Vissim initialisation and simulation running
             vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)                    
             
+            #closing vissim
             vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
             
-            file_to_run = "Statistical_test.inpx" + str(iterrations_ran).zfill(3)            
-            
+            #determining current file
+            file_to_run = ["Statistical_test_" + str(iterrations_ran).zfill(3) + ".fzp"]            
+
             #output treatment
             inputs = [outputspath, config.sim_steps, config.warm_up_time]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(file_to_run, inputs)
