@@ -116,6 +116,7 @@ def createWorkers(total_number_of_tasks, function, inputs, variables_names = [])
        
     for i in range(len(processed_chunks)):
         print function(processed_chunks[i], inputs)
+    import pdb;pdb.set_trace()
     '''
 
     return results

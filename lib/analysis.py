@@ -9,8 +9,7 @@ Created on Thu Jul 10 14:43:44 2014
 #        Importing dependencies       
 ################################ 
 #Natives
-import os, shutil, time, sys, copy
-import numpy as np
+import os, shutil, sys, copy
 from scipy.stats import t, chi2
 
 #Internal
@@ -36,6 +35,8 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         4. if yes, run one more simulation and repeat steps 2, 3 and 4 until "number of simulations" >= N
         
     '''
+    max_itt = 25    #might consider adding it to the cfg file    
+    
     text = []
    
     #set the number of runs to 10
@@ -56,24 +57,45 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         Vissim = vissim.startVissim(running, os.path.join(outputspath,  "Statistical_test.inpx"))
                             
         #Vissim initialisation and simulation running                                                   
-        vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)                  
-        
-        vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
+        vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)
         
         #output treatment
         if commands.multi is True:
             inputs = [outputspath, config.sim_steps, config.warm_up_time]
-            results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, variables_names = [])
+            results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs)            
+            #building the old_data            
             for i in range(len(results)):
                 if i == 0:
-                    old_data = []
+                                        
+                    old_nb_opp = [ results[i][1] ]
+                    old_nb_man = [ results[i][2] ]
+                    old_flow   = [ results[i][0] ]
+                    old_FM     = [ results[i][3].distributions[j].raw for j in range(len(results[i][3].distributions)) if results[i][3].distributions[j] != [] ]
+                    old_oppA   = [ results[i][4].distributions[j].raw for j in range(len(results[i][4].distributions)) if results[i][4].distributions[j] != [] ]
+                    old_oppB   = [ results[i][5].distributions[j].raw for j in range(len(results[i][5].distributions)) if results[i][5].distributions[j] != [] ]
+                    old_manA   = [ results[i][6].distributions[j].raw for j in range(len(results[i][6].distributions)) if results[i][6].distributions[j] != [] ]
+                    old_manB   = [ results[i][7].distributions[j].raw for j in range(len(results[i][7].distributions)) if results[i][7].distributions[j] != [] ]
+                                       
                 else:
-                    old_data = [flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap]
-                
-                inputs = [outputspath, config.sim_steps, config.warm_up_time, old_data]
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
-                
-                
+                    old_nb_opp.append(results[i][1])
+                    old_nb_man.append(results[i][2])
+                    old_flow.append(results[i][0])
+                    for j in range(len(results[i][3].distributions)):
+                        if results[i][3].distributions[j] != []: old_FM.append(results[i][3].distributions[j].raw)
+                    for j in range(len(results[i][4].distributions)):
+                        if results[i][4].distributions[j] != []: old_oppA.append(results[i][4].distributions[j].raw)
+                    for j in range(len(results[i][5].distributions)):
+                        if results[i][5].distributions[j] != []: old_oppB.append(results[i][5].distributions[j].raw)
+                    for j in range(len(results[i][6].distributions)):
+                        if results[i][6].distributions[j] != []: old_manA.append(results[i][6].distributions[j].raw)
+                    for j in range(len(results[i][7].distributions)):
+                        if results[i][7].distributions[j] != []: old_manB.append(results[i][7].distributions[j].raw)
+                   
+            old_num    = iterrations_ran
+            old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]
+            inputs = [outputspath, config.sim_steps, config.warm_up_time, old_data]
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
+                                
         else:
             inputs = [outputspath, config.sim_steps, config.warm_up_time]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
@@ -100,37 +122,46 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
     
     text.append(["Nbr_itt","Student-t","Std1","Mean1","N1","Std2","Mean2","N2","Std3","Mean3","N3","Std4","Mean4","N4","Std5","Mean5","N5","N","SCI1max","SCI1min","SCI2max","SCI2min","SCI3max","SCI3min","SCI4max","SCI4min","SCI5max","SCI5min"])
     text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])    
-
-    '''
-    MUST ADD GRAPH OPTION
-    '''
     
-    while N > iterrations_ran and iterrations_ran < 100:
+    while N > iterrations_ran and iterrations_ran < max_itt:
         
         print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
-                
-        #incrementing the number of iteration do by 1                
-        parameters[1] = first_seed + iterrations_ran
-        parameters[2] = 1
+        
+        #building the old_data
+        old_nb_opp = [oppLCcount]
+        old_nb_man = [manLCcount]
+        old_flow   = [flow]
+        old_FM     = [ forFMgap.distributions[i].raw for i in range(len(forFMgap.distributions)) ]
+        old_oppA   = [ oppLCagap.distributions[i].raw for i in range(len(oppLCagap.distributions)) ]
+        old_oppB   = [ oppLCbgap.distributions[i].raw for i in range(len(oppLCbgap.distributions)) ]
+        old_manA   = [ manLCagap.distributions[i].raw for i in range(len(manLCagap.distributions)) ]
+        old_manB   = [ manLCbgap.distributions[i].raw for i in range(len(manLCbgap.distributions)) ]
+        old_num    = iterrations_ran
+        old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]        
+        
+        #incrementing needed parameters                
+        parameters[1] = first_seed + iterrations_ran    #need to increment the starting Rand Seed by the number of it. already ran
+        parameters[2] = 1                               #need to do only one simulation
         iterrations_ran += 1
         
         #calling vissim
         if commands.mode:  #this serves to bypass Vissim while testing the code
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
         else:
-            Vissim = vissim.startVissim(running, os.path.join(outputspath, "Statistical_test.inpx"))
-                                
-            #Vissim initialisation and simulation running
-            vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)                    
             
-            #closing vissim
-            vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
+            #Initialize the new Vissim simulation
+            Simulation = Vissim.Simulation
+            Simulation.SetAttValue("RandSeed", parameters[1])
+            Simulation.SetAttValue("NumRuns", parameters[2])
+                                
+            #Starting the simulation            
+            Simulation.RunContinuous()                                
             
             #determining current file
             file_to_run = ["Statistical_test_" + str(iterrations_ran).zfill(3) + ".fzp"]            
 
             #output treatment
-            inputs = [outputspath, config.sim_steps, config.warm_up_time]
+            inputs = [outputspath, config.sim_steps, config.warm_up_time, old_data]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(file_to_run, inputs)
         
         #generating the needed means and std
@@ -152,11 +183,17 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         
         text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])     
         
-        '''
-        MUST ADD GRAPH OPTION
-        '''
-        
-    print "Statistical precision achieved - generating report"
+    if iterrations_ran == max_itt:
+        print "Maximum number of iterations reached - Stoping calculations and generating report"
+    else:
+        print "Statistical precision achieved - generating report"    
+                
+    #closing vissim
+    vissim.stopVissim(Vissim)
+
+    '''
+    MUST ADD GRAPH OPTION
+    '''
     
     return text        
         

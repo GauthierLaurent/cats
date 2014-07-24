@@ -19,14 +19,17 @@ import random
 
 class sublvl:
     def __init__(self, raw = [], value = None, cumul = None, mean = None, median = None, var = None):
-        self.raw    = raw        
-        self.value  = value
-        self.cumul  = cumul
-        self.mean   = mean
-        self.median = median
-        self.var    = var
-        self.std    = var**0.5 
-
+        self.raw     = raw        
+        self.value   = value
+        self.cumul   = cumul
+        self.mean    = mean
+        self.median  = median
+        self.var     = var
+        if var != None:
+            self.std = var**0.5
+        else:
+            self.std = None
+            
 class stats:
     def __init__(self, raw):
         self.distributions  = []
@@ -42,7 +45,7 @@ class stats:
             self.cumul_all = sublvl(allvalues,nlist,cumul,mean,median,var)                
                 
         else:
-            self.append(sublvl(raw))
+            self.cumul_all = sublvl(raw)
 
 
 def forwardGaps(objects, s, lane):
@@ -164,6 +167,11 @@ def dist(x):
     median = np.median(np.asarray(x))
     var = np.var(np.asarray(x))      
     return cumul,nlist,mean,median,var
+    
+def computeMeanfromOld(data,old_num):
+    '''data must be provided as a list: [old_mean, a,b,c,...]'''
+    new_mean = (data[0] * old_num + sum(data[1:]) ) / ( old_num + len(data[1:]) )                
+    return new_mean
 
 def treatVissimOutputs(files, inputs):
     '''Treat outputs in the given folder 
@@ -196,6 +204,7 @@ def treatVissimOutputs(files, inputs):
         raw_opp_LC_bgaps    = old_data[5]
         raw_man_LC_agaps    = old_data[6]
         raw_man_LC_bgaps    = old_data[7]
+        old_num             = old_data[8]   #Number of previous data. Is used to calculate the new means (old_mean*N+new_stuff)/(N+nbr_new_stuff)
 	
     '''
     #Legacy code used the skip some files while looping during the Statistical precision analysis
@@ -207,7 +216,7 @@ def treatVissimOutputs(files, inputs):
             if num < first_file:
                 files.pop(f)        
     '''
-    if file is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
+    if files is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
         for filename in files:
             print ' === Starting calculations for ' + filename + ' ==='       
             objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
@@ -269,19 +278,29 @@ def treatVissimOutputs(files, inputs):
             print ' == Opportunistic lane change gaps calculation done == '
              
             print ' === Calculations for ' + filename + ' done ==='
-        
+            
     #Treating raw outputs to compute means
-    
     if raw_opportunisticLC != []:
-        mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
+        if old_data == []:
+            mean_opportunisticLC = scipy.mean(raw_opportunisticLC)
+        else:
+            mean_opportunisticLC = computeMeanfromOld(raw_opportunisticLC,old_num)
     else:
         mean_opportunisticLC = None
+    
     if raw_mandatoryLC != []:
-        mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)
+        if old_data == []:
+            mean_mandatoryLC = scipy.mean(raw_mandatoryLC)
+        else:
+            mean_mandatoryLC = computeMeanfromOld(raw_mandatoryLC,old_num)
     else:
         mean_mandatoryLC = None
+    
     if raw_flow != []:
-        mean_flow =  scipy.mean(raw_flow)
+        if old_data == []:
+            mean_flow = scipy.mean(raw_flow)
+        else:
+            mean_flow = computeMeanfromOld(raw_flow,old_num)
     else:
         mean_flow = None
        
