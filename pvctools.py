@@ -154,7 +154,8 @@ def main():
         text = analysis.statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters)        
 
         #Adding a time marker and performance indicators
-        report = write.timeStamp(default_values, 1, config.nbr_runs) 
+        report = write.timeStamp([1], 1, text[-1][0]) 
+        report.pop(2)        
         for i in report: text.append(i)
         
         #filling the report

@@ -93,8 +93,8 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     out.write("Date: " + str(time.localtime().tm_year) + '/' + str(time.localtime().tm_mon).zfill(2) + '/'  + str(time.localtime().tm_mday).zfill(2) + "\n")
     out.write("\n")
     
-    #Student header
-    if TypeOfAnalysis == "Student":  
+    #Statistical-precision header
+    if TypeOfAnalysis == "Statistical-precision":  
         out.write("Test based on a desired confidance interval of +/- S\n"
                   "       **  N = [t(1-alpha/2;N-1)*S]^2  **\n"
                   "\n"
