@@ -286,8 +286,8 @@ def verifyRanges(rangevalues, variables):
             if rangevalues[i][0] < -10.0:
                 print "Minimal value for MaxDecelOwn not respected | min = -10 | Closing PvcTools"
                 closing = True        
-            if rangevalues[i][1] > -0.01:
-                print "Maximum value for MaxDecelOwn not respected | max = -0.01 | Closing PvcTools"
+            if rangevalues[i][1] > -0.02:
+                print "Maximum value for MaxDecelOwn not respected | max = -0.01* but Vissim refuses it, blocking any values higher than -0.02 | Closing PvcTools"
                 closing = True
                 
         if variables[i] == "DecelRedDistOwn":
@@ -307,8 +307,8 @@ def verifyRanges(rangevalues, variables):
             if rangevalues[i][0] < -10.0:
                 print "Minimal value for MaxDecelTrail not respected | min = -10 | Closing PvcTools"
                 closing = True        
-            if rangevalues[i][1] > -0.01:
-                print "Maximum value for MaxDecelTrail not respected | max = -0.01 | Closing PvcTools"
+            if rangevalues[i][1] > -0.02:
+                print "Maximum value for MaxDecelTrail not respected | max = -0.01* but Vissim refuses it, blocking any values higher than -0.02 | Closing PvcTools"
                 closing = True
                 
         if variables[i] == "DecelRedDistTrail":   
