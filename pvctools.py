@@ -182,7 +182,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #verifying the ranges
-        define.verifyRanges(rangevalues, default_values)
+        define.verifyRanges(rangevalues, concat_variables)
 
         #opening the output file and writing the appropriate header       
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        

@@ -224,7 +224,7 @@ def buildRanges(model):
     return rangevalues
     
 def verifyRanges(rangevalues, variables):
-     
+    
     closing = False    
     for i in range(len(rangevalues)):
         if variables[i] == "W74ax":
