@@ -243,18 +243,18 @@ def correctingValues(default_values, current_value, current_name, var_dict):
     elif current_name == "CoopLnChgCollTm":
         working_values[var_dict["CoopLnChg"][1]] = True
     elif current_name == "LookAheadDistMin":
-        if working_values[var_dict["LookBackDistMax"][1]] < current_value:
-            working_values[var_dict["LookBackDistMax"][1]] = current_value + 0.1
-            message.append('LookBackDistMax was set to a value lower than the value set to LookAheadDistMin. To avoid a crash of Vissim, the value was adjusted')
+        if working_values[var_dict["LookAheadDistMax"][1]] < current_value:
+            working_values[var_dict["LookAheadDistMax"][1]] = current_value + 0.1
+            message.append('LookAheadDistMax was set to a value lower than the value set to LookAheadDistMin. To avoid a crash of Vissim, the value was adjusted')
     elif current_name == "LookAheadDistMax":
-        if working_values[var_dict["LookBackDistMin"][1]] > current_value:
-            working_values[var_dict["LookBackDistMin"][1]] = current_value - 0.1
-            message.append('LookBackDistMin was set to a value higher than the value set to LookAheadDistMax. To avoid a crash of Vissim, the value was adjusted')
+        if working_values[var_dict["LookAheadDistMin"][1]] > current_value:
+            working_values[var_dict["LookAheadDistMin"][1]] = current_value - 0.1
+            message.append('LookAheadDistMin was set to a value higher than the value set to LookAheadDistMax. To avoid a crash of Vissim, the value was adjusted')
     elif current_name == "LookBackDistMin":
         if working_values[var_dict["LookBackDistMax"][1]] < current_value:
             working_values[var_dict["LookBackDistMax"][1]] = current_value + 0.1
             message.append('LookBackDistMax was set to a value lower than the value set to LookBackDistMin. To avoid a crash of Vissim, the value was adjusted')
-    elif current_name == "LookAheadDistMax":
+    elif current_name == "LookBackDistMax":
         if working_values[var_dict["LookBackDistMin"][1]] > current_value:
             working_values[var_dict["LookBackDistMin"][1]] = current_value - 0.1
             message.append('LookBackDistMin was set to a value higher than the value set to LookBackDistMax. To avoid a crash of Vissim, the value was adjusted')
