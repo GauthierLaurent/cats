@@ -171,7 +171,7 @@ def main():
         TypeOfAnalysis = 'Sensitivity'          
 
         #building the model values ranges        
-        rangevalues = define.buildRanges(commands.model)        
+        rangevalues = define.buildRanges(commands.model)
 
         #creating the default values from memory
         Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
@@ -180,6 +180,9 @@ def main():
         #creating default values
         default_values =  Default_FM_values  + Default_LC_values
         concat_variables = FMvariables + LCvariables
+
+        #verifying the ranges
+        define.verifyRanges(rangevalues, default_values)
 
         #opening the output file and writing the appropriate header       
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
@@ -250,7 +253,7 @@ def main():
 ###################
 # Launch main
 ###################
-if __name__ == "__main__":
+if __name__ == "__main__": 
 
     main()
 
