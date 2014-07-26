@@ -71,7 +71,7 @@ def intelligentChunks(n, iterable, value_names):
     
     return intelligent_chunk
 
-def createWorkers(total_number_of_tasks, function, inputs, variables_names = []):
+def createWorkers(total_number_of_tasks, function, inputs, multi_test, variables_names = []):
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
        number of cores that can process it.
@@ -104,22 +104,20 @@ def createWorkers(total_number_of_tasks, function, inputs, variables_names = [])
         processed_chunks = intelligentChunks(len_chunks, total_number_of_tasks, variables_names)
     
     #Assigning tasks
-    results_async = [pool.apply_async(function, [processed_chunks[i], inputs]) for i in range(len(processed_chunks))]
-    pool.close()
-    pool.join()
-       
-    results = [r.get() for r in results_async]
-    
-    '''
-    to test if the is a a problem is the called function, put everything from
-    "Assigning task" up to here in comment, and decomment the following lines:
-       
-    for i in range(len(processed_chunks)):
-        print function(processed_chunks[i], inputs)
-    import pdb;pdb.set_trace()
-    '''
-
-    return results
+    if multi_test is False:
+        results_async = [pool.apply_async(function, [processed_chunks[i], inputs]) for i in range(len(processed_chunks))]
+        pool.close()
+        pool.join()
+           
+        results = [r.get() for r in results_async]
+        
+        return results
+        
+    else:
+        #to test if the is a a problem is the called function
+        for i in range(len(processed_chunks)):
+            print function(processed_chunks[i], inputs)
+            import pdb;pdb.set_trace()   
     
 def createFMValues(model):
     ''' CarFollowModType must be Wiedemann74 OR Wiedemann99 

@@ -210,7 +210,7 @@ def main():
         ##Running the rest of the simulations
         inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
         if commands.multi is True:            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, concat_variables)                  
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands.multi_test, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:

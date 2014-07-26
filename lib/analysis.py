@@ -62,7 +62,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         #output treatment
         if commands.multi is True:
             inputs = [outputspath, config.sim_steps, config.warm_up_time]
-            results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs)            
+            results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands.multi_test)            
             #building the old_data            
             for i in range(len(results)):
                 if i == 0:
