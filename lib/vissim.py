@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:25:24 2014
 # Import Native Libraries
 ##################
 
-import psutil
+import psutil, sys
 import win32com.client
 
 ##################
@@ -61,36 +61,42 @@ def initializeSimulation(Vissim, parameters, values = [], variables = [], swp = 
     ''' Defines the Vissim Similuation parameters
         the parameter variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''
     
-    Simulation = Vissim.Simulation
-    Evaluation = Vissim.Evaluation
+    simulated = True    
     
-    if Simulation.AttValue("IsRunning") is True:
-        Simulation.Stop()
-    
-    #Setting Simulation attributes        
-    Simulation.SetAttValue("SimRes", parameters[0])         #ODOT p.45 (56 in the pdf)
-    Simulation.SetAttValue("useMaxSimSpeed", True)
-    Simulation.SetAttValue("RandSeed", parameters[1])       #Hitchhiker's Guide to the Galaxy!
-    Simulation.SetAttValue("RandSeedIncr", 1)
-    Simulation.SetAttValue("NumRuns", parameters[2])        #To be verified
-    Simulation.SetAttValue("SimPeriod",parameters[4])
-    
-    #Enabling the Quick Mode
-    Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
-    
-    #Setting Evaluation outputs
-    Evaluation.SetAttValue("VehRecWriteFile",True)               #Enable .fzp outputs
-    if swp: Evaluation.SetAttValue("LaneChangesWriteFile",True)  #Enable .swp outputs
-    
-    #Setting driving behavior attributes
-    if variables != []:   
-        for i in range(len(Vissim.Net.DrivingBehaviors)):                       
-            Type = "WIEDEMANN"+str(parameters[3])
-            Vissim.Net.DrivingBehaviors[i].SetAttValue("CarFollowModType",Type)
-            for variable in range(len(variables)):
-                Vissim.Net.DrivingBehaviors[i].SetAttValue(variables[variable],values[variable])
-                
-    #Starting the simulation            
-    Simulation.RunContinuous()
+    try:
+        Simulation = Vissim.Simulation
+        Evaluation = Vissim.Evaluation
         
-    
+        if Simulation.AttValue("IsRunning") is True:
+            Simulation.Stop()
+        
+        #Setting Simulation attributes        
+        Simulation.SetAttValue("SimRes", parameters[0])         #ODOT p.45 (56 in the pdf)
+        Simulation.SetAttValue("useMaxSimSpeed", True)
+        Simulation.SetAttValue("RandSeed", parameters[1])       #Hitchhiker's Guide to the Galaxy!
+        Simulation.SetAttValue("RandSeedIncr", 1)
+        Simulation.SetAttValue("NumRuns", parameters[2])        #To be verified
+        Simulation.SetAttValue("SimPeriod",parameters[4])
+        
+        #Enabling the Quick Mode
+        Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
+        
+        #Setting Evaluation outputs
+        Evaluation.SetAttValue("VehRecWriteFile",True)               #Enable .fzp outputs
+        if swp: Evaluation.SetAttValue("LaneChangesWriteFile",True)  #Enable .swp outputs
+        
+        #Setting driving behavior attributes
+        if variables != []:   
+            for i in range(len(Vissim.Net.DrivingBehaviors)):                       
+                Type = "WIEDEMANN"+str(parameters[3])
+                Vissim.Net.DrivingBehaviors[i].SetAttValue("CarFollowModType",Type)
+                for variable in range(len(variables)):
+                    Vissim.Net.DrivingBehaviors[i].SetAttValue(variables[variable],values[variable])
+                    
+        #Starting the simulation            
+        Simulation.RunContinuous()
+        
+    except:
+        simulated = sys.exc_info()
+        
+    return simulated

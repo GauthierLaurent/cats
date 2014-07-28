@@ -114,7 +114,7 @@ def createWorkers(total_number_of_tasks, function, inputs, multi_test, variables
         return results
         
     else:
-        #to test if the is a a problem is the called function
+        #to test if there is a problem inside the called function
         for i in range(len(processed_chunks)):
             print function(processed_chunks[i], inputs)
             import pdb;pdb.set_trace()   

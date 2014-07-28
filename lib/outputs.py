@@ -115,10 +115,8 @@ def laneChange(objects):
                                 *************************
                                 
     The last dictionnary presents the list of objects present on a lane
-                      dict =  {lane | [ obj1, obj2, ... ] }
-    
+                      dict =  {lane | [ obj1, obj2, ... ] }   
     '''  
-
     #Lists
     oppObj = []    
     manObj = []
@@ -216,6 +214,7 @@ def treatVissimOutputs(files, inputs):
             if num < first_file:
                 files.pop(f)        
     '''
+
     if files is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
         for filename in files:
             print ' === Starting calculations for ' + filename + ' ==='       
@@ -278,7 +277,7 @@ def treatVissimOutputs(files, inputs):
             print ' == Opportunistic lane change gaps calculation done == '
              
             print ' === Calculations for ' + filename + ' done ==='
-            
+           
     #Treating raw outputs to compute means
     if raw_opportunisticLC != []:
         if old_data == []:
