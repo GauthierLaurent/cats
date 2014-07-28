@@ -232,7 +232,7 @@ def commands(parser):
     parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration" - off by default')
     parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test" - off by default')
     parser.add_option('-m', '--multi',          action='store_false',  dest='multi',          default=True,   help='[bool] Enables or disables multiprocessing while running the analysis')
-    parser.add_option('-mt','--multi_testing',  action='store_true',   dest='multi_test',     default=False,  help='[bool] Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback')
+    parser.add_option('-u','--multi_testing',  action='store_true',   dest='multi_test',     default=False,  help='[bool] Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback')
     parser.add_option('-s', '--sensi',          action='store_false',  dest='sensitivity',    default=True,   help='[bool] Set the working analysis to "Sensitivity" - on by default')    
     parser.add_option('-f', '--file',                                  dest='file',                           help='[str]  Load specific inpx file')
     parser.add_option('-a', '--save-figures',   action='store_true',   dest='vis_save',       default=False,  help='[bool] Save figures')
