@@ -59,46 +59,51 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         #Vissim initialisation and simulation running                                                   
         simulated = vissim.initializeSimulation(Vissim, parameters, default_values, concat_variables, commands.save_swp)
         
-        #output treatment
-        if commands.multi is True:
-            inputs = [outputspath, config.sim_steps, config.warm_up_time]
-            results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands.multi_test)            
-            #building the old_data            
-            for i in range(len(results)):
-                if i == 0:
-                                        
-                    old_nb_opp = [ results[i][1] ]
-                    old_nb_man = [ results[i][2] ]
-                    old_flow   = [ results[i][0] ]
-                    old_FM     = [ results[i][3].distributions[j].raw for j in range(len(results[i][3].distributions)) if results[i][3].distributions[j] != [] ]
-                    old_oppA   = [ results[i][4].distributions[j].raw for j in range(len(results[i][4].distributions)) if results[i][4].distributions[j] != [] ]
-                    old_oppB   = [ results[i][5].distributions[j].raw for j in range(len(results[i][5].distributions)) if results[i][5].distributions[j] != [] ]
-                    old_manA   = [ results[i][6].distributions[j].raw for j in range(len(results[i][6].distributions)) if results[i][6].distributions[j] != [] ]
-                    old_manB   = [ results[i][7].distributions[j].raw for j in range(len(results[i][7].distributions)) if results[i][7].distributions[j] != [] ]
-                                       
-                else:
-                    old_nb_opp.append(results[i][1])
-                    old_nb_man.append(results[i][2])
-                    old_flow.append(results[i][0])
-                    for j in range(len(results[i][3].distributions)):
-                        if results[i][3].distributions[j] != []: old_FM.append(results[i][3].distributions[j].raw)
-                    for j in range(len(results[i][4].distributions)):
-                        if results[i][4].distributions[j] != []: old_oppA.append(results[i][4].distributions[j].raw)
-                    for j in range(len(results[i][5].distributions)):
-                        if results[i][5].distributions[j] != []: old_oppB.append(results[i][5].distributions[j].raw)
-                    for j in range(len(results[i][6].distributions)):
-                        if results[i][6].distributions[j] != []: old_manA.append(results[i][6].distributions[j].raw)
-                    for j in range(len(results[i][7].distributions)):
-                        if results[i][7].distributions[j] != []: old_manB.append(results[i][7].distributions[j].raw)
-                   
-            old_num    = iterrations_ran
-            old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]
-            inputs = [outputspath, config.sim_steps, config.warm_up_time, old_data]
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
-                                
+        if simulated is not True:
+            print simulated
+            sys.exit()
+            
         else:
-            inputs = [outputspath, config.sim_steps, config.warm_up_time]
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
+            #output treatment
+            if commands.multi is True:
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose]
+                results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands.multi_test)            
+                #building the old_data            
+                for i in range(len(results)):
+                    if i == 0:
+                                            
+                        old_nb_opp = [ results[i][1] ]
+                        old_nb_man = [ results[i][2] ]
+                        old_flow   = [ results[i][0] ]
+                        old_FM     = [ results[i][3].distributions[j].raw for j in range(len(results[i][3].distributions)) if results[i][3].distributions[j] != [] ]
+                        old_oppA   = [ results[i][4].distributions[j].raw for j in range(len(results[i][4].distributions)) if results[i][4].distributions[j] != [] ]
+                        old_oppB   = [ results[i][5].distributions[j].raw for j in range(len(results[i][5].distributions)) if results[i][5].distributions[j] != [] ]
+                        old_manA   = [ results[i][6].distributions[j].raw for j in range(len(results[i][6].distributions)) if results[i][6].distributions[j] != [] ]
+                        old_manB   = [ results[i][7].distributions[j].raw for j in range(len(results[i][7].distributions)) if results[i][7].distributions[j] != [] ]
+                                           
+                    else:
+                        old_nb_opp.append(results[i][1])
+                        old_nb_man.append(results[i][2])
+                        old_flow.append(results[i][0])
+                        for j in range(len(results[i][3].distributions)):
+                            if results[i][3].distributions[j] != []: old_FM.append(results[i][3].distributions[j].raw)
+                        for j in range(len(results[i][4].distributions)):
+                            if results[i][4].distributions[j] != []: old_oppA.append(results[i][4].distributions[j].raw)
+                        for j in range(len(results[i][5].distributions)):
+                            if results[i][5].distributions[j] != []: old_oppB.append(results[i][5].distributions[j].raw)
+                        for j in range(len(results[i][6].distributions)):
+                            if results[i][6].distributions[j] != []: old_manA.append(results[i][6].distributions[j].raw)
+                        for j in range(len(results[i][7].distributions)):
+                            if results[i][7].distributions[j] != []: old_manB.append(results[i][7].distributions[j].raw)
+                       
+                old_num    = iterrations_ran
+                old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, old_data]
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
+                                    
+            else:
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose]
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
        
     #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
@@ -161,7 +166,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             file_to_run = ["Statistical_test_" + str(iterrations_ran).zfill(3) + ".fzp"]            
 
             #output treatment
-            inputs = [outputspath, config.sim_steps, config.warm_up_time, old_data]
+            inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, old_data]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(file_to_run, inputs)
         
         #generating the needed means and std
@@ -278,8 +283,9 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     commands            = inputs [7]
     running             = inputs [8]
     parameters          = inputs [9]
+    verbose             = inputs [10]
     if default is False:
-        firstrun_results = inputs[10]      
+        firstrun_results = inputs[11]      
     
     #preparing the outputs    
     text = []
@@ -351,7 +357,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                     vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
                     
                     #output treatment
-                    inputs = [folderpath, config.sim_steps, config.warm_up_time]
+                    inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose]
                     flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
                     #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                 

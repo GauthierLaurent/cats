@@ -232,14 +232,14 @@ def commands(parser):
     parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration" - off by default')
     parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test" - off by default')
     parser.add_option('-m', '--multi',          action='store_false',  dest='multi',          default=True,   help='[bool] Enables or disables multiprocessing while running the analysis')
-    parser.add_option('-u','--multi_testing',  action='store_true',   dest='multi_test',     default=False,  help='[bool] Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback')
+    parser.add_option('-u', '--multi_testing',  action='store_true',   dest='multi_test',     default=False,  help='[bool] Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback')
     parser.add_option('-s', '--sensi',          action='store_false',  dest='sensitivity',    default=True,   help='[bool] Set the working analysis to "Sensitivity" - on by default')    
     parser.add_option('-f', '--file',                                  dest='file',                           help='[str]  Load specific inpx file')
     parser.add_option('-a', '--save-figures',   action='store_true',   dest='vis_save',       default=False,  help='[bool] Save figures')
     parser.add_option(      '--figure-format',                         dest='fig_format',     default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')
     parser.add_option('-l', '--save-swp',       action='store_true',   dest='save_swp',       default=False,  help='[bool] Enables Vissim lane change (.swp) outputs')
-    parser.add_option('-v', '--verbose',        type='int' ,           dest='verbose',        default=1,      help='[int]  Level of detail of results')
-    parser.add_option('-t', '--test',           action='store_true',   dest='mode',           default=False,  help='[int]  Put the code into test mode, bypassing Vissim and generating random outputs')
+    parser.add_option('-v', '--verbose',        action='store_true',   dest='verbose',        default=False,  help='[bool]  Level of detail of results')
+    parser.add_option('-t', '--test',           action='store_true',   dest='mode',           default=False,  help='[bool]  Put the code into test mode, bypassing Vissim and generating random outputs')
     (commands, args) = parser.parse_args() 
 
     return commands

@@ -71,7 +71,7 @@ def intelligentChunks(n, iterable, value_names):
     
     return intelligent_chunk
 
-def createWorkers(total_number_of_tasks, function, inputs, multi_test, variables_names = []):
+def createWorkers(total_number_of_tasks, function, inputs, commands, variables_names = []):
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
        number of cores that can process it.
@@ -97,14 +97,25 @@ def createWorkers(total_number_of_tasks, function, inputs, multi_test, variables
     ##to be taken out of the pool of variables to be kept together
     len_chunks = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))
     
+
     ##breaking into chunks without 'None' values
     if not variables_names:
         processed_chunks = cleanChunks(len_chunks, total_number_of_tasks)
+            
     else:
         processed_chunks = intelligentChunks(len_chunks, total_number_of_tasks, variables_names)
+
+    if commands.verbose:
+        print ('    ###  Spawning additionnal processes    ### \n'
+               'Number of cores:             ' + str(num_cores) + '\n'
+               'Number or processes spawned: ' + str(nbr_pro) + '\n'
+               '\n'
+               '    ### Spliting the inputs into subgroups ### \n'
+               'Number of subgroups: '+ str(len(processed_chunks)) + '\n'
+               )
     
     #Assigning tasks
-    if multi_test is False:
+    if commands.multi_test is False:
         results_async = [pool.apply_async(function, [processed_chunks[i], inputs]) for i in range(len(processed_chunks))]
         pool.close()
         pool.join()
@@ -149,8 +160,8 @@ def createFMValues(model):
     LookAheadDistMin = 0.0    ; FMvariables.append('LookAheadDistMin')  ; FMvalues.append(LookAheadDistMin)   #min = 0, max = 999999
     LookAheadDistMax = 250.0  ; FMvariables.append('LookAheadDistMax')  ; FMvalues.append(LookAheadDistMax)   #min = 0, max = 999999
     ObsrvdVehs = 2.0          ; FMvariables.append('ObsrvdVehs')        ; FMvalues.append(ObsrvdVehs)         #min = 0, max = 10
-    LookBackDistMin = 0.0     ; FMvariables.append('LookBackDistMin')   ; FMvalues.append(LookBackDistMin)    #min = 0, max = 999999
-    LookBackDistMax = 150.0   ; FMvariables.append('LookBackDistMax')   ; FMvalues.append(LookBackDistMax)    #min = 0, max = 999999
+    #LookBackDistMin = 0.0     ; FMvariables.append('LookBackDistMin')   ; FMvalues.append(LookBackDistMin)    #min = 0, max = 999999
+    #LookBackDistMax = 150.0   ; FMvariables.append('LookBackDistMax')   ; FMvalues.append(LookBackDistMax)    #min = 0, max = 999999
     
     return FMvalues, FMvariables       
 
@@ -205,19 +216,19 @@ def buildRanges(model):
     rangeLookBackDistMax =  [100.0  , 200.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
                          
     ##Variables for lane change behavior
-    rangeMaxDecelOwn =         [-10.0 , -0.01] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
+    rangeMaxDecelOwn =         [-10.0 , -1.00] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
    #rangeDecelRedDistOwn =     [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistOwn)       #min = 0
-    rangeAccDecelOwn =         [-10.0 ,   0.0] ; rangevalues.append(rangeAccDecelOwn)           #min = -10, max = -1
-    rangeMaxDecelTrail =       [-10.0 , -0.01] ; rangevalues.append(rangeMaxDecelTrail)         #min = -10, max = -0.01
+    rangeAccDecelOwn =         [-10.0 , -1.00] ; rangevalues.append(rangeAccDecelOwn)           #min = -10, max = -1
+    rangeMaxDecelTrail =       [-10.0 , -1.00] ; rangevalues.append(rangeMaxDecelTrail)         #min = -10, max = -0.01
    #rangeDecelRedDistTrail =   [100.0 , 100.0] ; rangevalues.append(rangeDecelRedDistTrail)     #min = 0
-    rangeAccDecelTrail =       [-10.0 ,   0.0] ; rangevalues.append(rangeAccDecelTrail)         #min = -10, max = -1
+    rangeAccDecelTrail =       [-10.0 , -1.00] ; rangevalues.append(rangeAccDecelTrail)         #min = -10, max = -1
     rangeDiffusTm =            [60    , 100.0] ; rangevalues.append(rangeDiffusTm)
     rangeMinHdwy =             [0.5   ,   1.5] ; rangevalues.append(rangeMinHdwy)
     rangeSafDistFactLnChg =    [0.6   ,   0.9] ; rangevalues.append(rangeSafDistFactLnChg)
     rangeCoopLnChg =           [True  , False] ; rangevalues.append(rangeCoopLnChg)
     rangeCoopLnChgSpeedDiff =  [5.0   ,  15.0] ; rangevalues.append(rangeCoopLnChgSpeedDiff) 
     rangeCoopLnChgCollTm =     [7.0   ,  13.0] ; rangevalues.append(rangeCoopLnChgCollTm)
-    rangeCoopDecel =           [-10.65,  -0.9] ; rangevalues.append(rangeCoopDecel)             #min = -10, max = 0
+    rangeCoopDecel =           [-10.0,   -0.9] ; rangevalues.append(rangeCoopDecel)             #min = -10, max = 0
 
     return rangevalues
     
