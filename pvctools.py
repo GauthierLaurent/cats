@@ -120,6 +120,8 @@ def main():
     if commands.student:
         TypeOfAnalysis = 'Statistical-precision'
         
+        if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
+           
         #creating the default values from memory
         Default_FM_values, FMvariables = define.createFMValues(int(commands.model) )
         Default_LC_values, LCvariables = define.createLCValues()        
@@ -168,28 +170,7 @@ def main():
     if commands.sensitivity:
         TypeOfAnalysis = 'Sensitivity'
         
-        if commands.verbose is True:
-            print ('--> Starting a Sensibility Analysis with the following options: \n')
-            if commands.multi or commands.multi_test or commands.mode or commands.vis_save:
-                print ('                    ***       ***       ***                  ')
-                if commands.multi:
-                    print (' |-> Multiprocessing activated ')
-                if commands.multi_test:
-                    print (' |-> Multiprocessing debug mode activated ')
-                if commands.mode:
-                    print (' |-> Test mode activated ')
-                if commands.vis_save:
-                    print (' |-> Graphic saving mode activated \n'
-                           '        files will be saved as ' + str(config.fig_format))                   
-                    
-            print ('                    ***       ***       ***                 \n'
-                   'Inpx to process:       ' + str(config.inpx_name)         + '\n'
-                   'Number of points:      ' + str(config.nbr_points)        + '\n'
-                   '                    ***       ***       ***                  n'
-                   'Number of points:      ' + str(config.nbr_points)        + '\n'
-                   'Number of simulations: ' + str(config.nbr_runs)          + '\n'
-                   'Simulation time:       ' + str(config.simulation_time)   + '\n'
-                   'Simulation warm up:    ' + str(config.warm_up_time)      + '\n')                 
+        if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
        
         #building the model values ranges
         if commands.verbose is True:

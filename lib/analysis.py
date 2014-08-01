@@ -49,7 +49,8 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         shutil.copy(InpxPath, os.path.join(outputspath, InpxName))
         os.rename(os.path.join(outputspath, InpxName), os.path.join(outputspath, "Statistical_test.inpx"))
     
-    print 'Starting the first 10 runs'
+    if commands.verbose is True:
+        print 'Starting the first 10 runs'
     
     if commands.mode:  #this serves to bypass Vissim while testing the code
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
@@ -130,7 +131,8 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
     
     while N > iterrations_ran and iterrations_ran < max_itt:
         
-        print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
+        if commands.verbose is True:
+            print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
         
         #building the old_data
         old_nb_opp = [oppLCcount]
@@ -188,10 +190,10 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         
         text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])     
         
-    if iterrations_ran == max_itt:
+    if iterrations_ran == max_itt and commands.verbose is True:
         print "Maximum number of iterations reached - Stoping calculations and generating report"
-    else:
-        print "Statistical precision achieved - generating report"    
+    elif commands.verbose is True:
+        print "Statistical precision achieved - generating report"     
                 
     #closing vissim
     vissim.stopVissim(Vissim)

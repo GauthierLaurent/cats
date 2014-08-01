@@ -171,6 +171,36 @@ def writeInFile(out, *args):
         else:
             out.write(str(var) +";")
     out.write("\n")
+
+def verboseIntro(commands, config, TypeOfAnalysis):
+    print ('--> Starting a ' + TypeOfAnalysis + ' Analysis with the following options: ')
+    if commands.multi or commands.multi_test or commands.mode or commands.vis_save:
+        print ('      -- -- -- -- -- -- -- -- -- -- -- -- -- --   ')
+        if commands.multi:
+            print (' |-> Multiprocessing activated ')
+        if commands.multi_test:
+            print (' |-> Multiprocessing debug mode activated ')
+        if commands.mode:
+            print (' |-> Test mode activated ')
+        if commands.vis_save:
+            print (' |-> Graphic saving mode activated \n'
+                   '        *files will be saved as ' + str(commands.fig_format))                   
+            
+    print ('      -- -- -- -- -- -- -- -- -- -- -- -- -- --    \n'
+           'Inpx to process:       ' + str(config.inpx_name)         )
+           
+    if TypeOfAnalysis == 'Sensitivity':       
+        print('Number of points:      ' + str(config.nbr_points)     )
+    print ('      -- -- -- -- -- -- -- -- -- -- -- -- -- --         ')
+    if TypeOfAnalysis == 'Sensitivity': 
+        print('Number of points:      ' + str(config.nbr_points)    + '\n'
+              'Number of simulations: ' + str(config.nbr_runs)       )
+    print ('Simulation time:       ' + str(config.simulation_time)   + '\n'
+           'Simulation warm up:    ' + str(config.warm_up_time)      )
+    if TypeOfAnalysis == 'Statistical-precision':
+        print('      -- -- -- -- -- -- -- -- -- -- -- -- -- --         \n'
+              'Desired pourcentage error on the mean confidence interval: ' + str(config.desired_pct_error) +' %')
+    print'\n'
     
 def timeStamp(variables, points, sim):
     text = []
