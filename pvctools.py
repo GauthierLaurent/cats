@@ -44,14 +44,12 @@ def main():
     ################################    
     commands = config.commands(optparse.OptionParser())
     config   = config.Config()
-        
+    
     #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
     if commands.file:
         if not commands.file.endswith('inpx'):
-            config.file = commands.file + '.inpx'
             config.inpx_name = commands.file + str('.inpx')
         else:
-            config.file = commands.file 
             config.inpx_name = commands.file                
 
     ################################ 
@@ -120,6 +118,8 @@ def main():
     if commands.student:
         TypeOfAnalysis = 'Statistical-precision'
         
+        if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
+           
         #creating the default values from memory
         Default_FM_values, FMvariables = define.createFMValues(int(commands.model) )
         Default_LC_values, LCvariables = define.createLCValues()        
@@ -166,9 +166,14 @@ def main():
     #        Sensitivity Analysis       
     ######################################        
     if commands.sensitivity:
-        TypeOfAnalysis = 'Sensitivity'          
-
-        #building the model values ranges        
+        TypeOfAnalysis = 'Sensitivity'
+        
+        if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
+       
+        #building the model values ranges
+        if commands.verbose is True:
+            print '-> Generating the range values and default values from memory'
+            
         rangevalues = define.buildRanges(commands.model)
 
         #creating the default values from memory
@@ -184,9 +189,12 @@ def main():
         define.verifyRanges(rangevalues, concat_variables)
 
         #opening the output file and writing the appropriate header       
+        if commands.verbose is True:
+            print '-> Generating relevant subfolders for the analysis'
+
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
 
-        #creating appropriate output folder and graphic folder (if option is "on")        
+        #creating appropriate output folder and graphic folder (if option is "on")
         graphspath = None        
         if commands.vis_save:
             graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
@@ -207,14 +215,15 @@ def main():
         text, firstrun_results = analysis.sensitivityAnalysis(rangevalues, inputs, default = True)
         
         ##Running the rest of the simulations
-        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, firstrun_results]
         if commands.multi is True:            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands.multi_test, concat_variables)                  
+            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, firstrun_results]            
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
                     text.append(j)
-        else:                                
+        else:   
+            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, firstrun_results]                             
             packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          

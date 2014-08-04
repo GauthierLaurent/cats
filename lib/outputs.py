@@ -178,8 +178,10 @@ def treatVissimOutputs(files, inputs):
     folderpath                 = inputs[0]
     simulationStepsPerTimeUnit = inputs[1]
     warmUpTime                 = inputs[2]
-    if len(inputs) == 4:
-        old_data = inputs[3]
+    verbose                    = inputs[3] 
+    
+    if len(inputs) == 5:
+        old_data = inputs[4]
     else:
         old_data = []
     
@@ -217,7 +219,8 @@ def treatVissimOutputs(files, inputs):
 
     if files is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
         for filename in files:
-            print ' === Starting calculations for ' + filename + ' ==='       
+            if verbose:
+                print ' === Starting calculations for ' + filename + ' ==='       
             objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
             raw_flow.append(len(objects))
             
@@ -237,7 +240,8 @@ def treatVissimOutputs(files, inputs):
     
             #lane change count by type        
             oppObj, manObj, oppObjDict, manObjDict, laneDict = laneChange(objects)
-            print ' == Lane change compilation done == '
+            if verbose:
+                print ' == Lane change compilation done == '
             raw_opportunisticLC.append(sum([len(oppObjDict[i]) for i in oppObjDict]))
             raw_mandatoryLC.append(sum([len(manObjDict[i]) for i in manObjDict]))
             
@@ -261,23 +265,26 @@ def treatVissimOutputs(files, inputs):
             for index,lane in enumerate(lanes):  
                 s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
                 raw_gaps = forwardGaps(objects, s, lane) 
-                if raw_gaps != []: raw_forward_gaps.append(raw_gaps)		
-                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
+                if raw_gaps != []: raw_forward_gaps.append(raw_gaps)
+                if verbose:
+                    print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' == '
                 
             #mandatory lane change gaps
             agaps, bgaps = laneChangeGaps(manObj, manObjDict, laneDict, objects)
             if agaps != []: raw_man_LC_agaps.append(agaps)
             if bgaps != []: raw_man_LC_bgaps.append(bgaps)
-            print ' == Mandatory lane change gaps calculation done == '
+            if verbose:
+                print ' == Mandatory lane change gaps calculation done == '
     	
             #opportunistic lane change gaps
             agaps, bgaps = laneChangeGaps(oppObj, oppObjDict, laneDict, objects)
             if agaps != []: raw_opp_LC_agaps.append(agaps)
             if bgaps != []: raw_opp_LC_bgaps.append(bgaps)
-            print ' == Opportunistic lane change gaps calculation done == '
-             
-            print ' === Calculations for ' + filename + ' done ==='
-           
+            if verbose:
+                print ' == Opportunistic lane change gaps calculation done == '
+                 
+                print ' === Calculations for ' + filename + ' done ==='
+               
     #Treating raw outputs to compute means
     if raw_opportunisticLC != []:
         if old_data == []:
