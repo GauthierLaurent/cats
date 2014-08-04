@@ -2,7 +2,7 @@
 #  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
 #  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
 #  Dependencies listed in Libraries; 
-Version = 'R1.0.0.2 u. 22-07-2014'
+Version = 'R1.0.1.2 u. 22-07-2014'
 ################################################################################
 '''Dev stuff
 import pdb; pdb.set_trace()
@@ -21,8 +21,6 @@ def main():
     
     #Native dependencies
     import os, sys, time, optparse
-    
-    #from scipy.stats.mstats import kruskalwallis
     
     #Internal
     import lib.vissim as vissim
@@ -178,6 +176,7 @@ def main():
         Default_LC_values, LCvariables = define.createLCValues()
     
         #creating default values
+    
         default_values =  Default_FM_values  + Default_LC_values
         concat_variables = FMvariables + LCvariables
 
@@ -235,9 +234,49 @@ def main():
     #        Calibration Analysis       
     ######################################  
       
-    #if commands.calibration: 
-      #TypeOfAnalysis = 'Calibration' 
-      
+    
+    if commands.calibration: 
+        TypeOfAnalysis = 'Calibration'     
+    
+        #opening the output file and writing the appropriate header
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)
+        filename = subdirname.split(os.sep)[-1]
+        
+        #generating the graphic and output folder
+        graphspath = None        
+        '''        
+        if commands.vis_save:
+            graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
+            write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs"), "cumul_dist_graphs")
+            write.createSubFolder(os.path.join(graphspath, "distribution_graphs"), "distribution_graphs")
+            for i in range(len(default_values) +1):            
+                if i == 0:
+                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
+                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
+                else:                    
+                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
+                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
+        '''
+        outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
+        
+        #building the model values ranges - these serve as boundaries for the calculation universe        
+        rangevalues = define.buildRanges(commands.model)
+    
+        #creating the default values from memory
+        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_LC_values, LCvariables = define.createLCValues()    
+        
+        #creating default values - Default values are the starting point of the algorythm
+        default_values =  Default_FM_values  + Default_LC_values
+        concat_variables = FMvariables + LCvariables
+        
+        #verifying the ranges
+        define.verifyRanges(rangevalues, concat_variables)
+		
+		######### HERE MUST BE ADDED THE REAL VALUES FROM THE VIDEO
+        ## probably a loadTrajectoryfromSQLITE function from traffic intelligence
+        
+		
     '''
     ##default values of computed parameters - obtained from video analysis
     #default_forFMgap = np.asarray([NUMBERS])

@@ -15,7 +15,18 @@ import math, sys
 ##################
 # Define tools
 ##################
-
+def sort2lists(list1,list2):
+    '''Sorts list2 according to the sorting of the content of list1
+       list1 must contain values that can be sorted while
+       list2 may containany kind of data'''
+       
+    indexes = range(len(list1))
+    indexes.sort(key=list1.__getitem__)
+    sorted_list1 = map(list1.__getitem__, indexes)
+    sorted_list2 = map(list2.__getitem__, indexes)
+    
+    return sorted_list1, sorted_list2
+    
 def toChunks(n, iterable, padvalue=None, asList=True):
     ''' Split an iterable into chunks of n size
         toChunks(3, 'abcdefg', 'x')
