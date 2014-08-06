@@ -246,8 +246,30 @@ def main():
     
     if commands.calibration: 
         TypeOfAnalysis = 'Calibration'     
+        
+        #building the model values ranges - these serve as boundaries for the calculation universe        
+        if commands.verbose is True:
+            print '-> Generating the range values and default values from memory'
+        rangevalues = define.buildRanges(commands.model)
     
+        #creating the default values from memory
+        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_LC_values, LCvariables = define.createLCValues()    
+        
+        #creating default values - Default values are the starting point of the algorythm
+        default_values =  Default_FM_values  + Default_LC_values
+        concat_variables = FMvariables + LCvariables
+
+        #creating the universe boundaries        
+        hard_bounds = define.hard_boundaries(commands.model)
+        
+        #verifying the ranges
+        define.verifyRanges(rangevalues, concat_variables)
+        
         #opening the output file and writing the appropriate header
+        if commands.verbose is True:
+            print '-> Generating relevant subfolders for the analysis'
+            
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)
         filename = subdirname.split(os.sep)[-1]
         
@@ -267,25 +289,22 @@ def main():
                     write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
         '''
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
-        
-        #building the model values ranges - these serve as boundaries for the calculation universe        
-        rangevalues = define.buildRanges(commands.model)
-    
-        #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
-        Default_LC_values, LCvariables = define.createLCValues()    
-        
-        #creating default values - Default values are the starting point of the algorythm
-        default_values =  Default_FM_values  + Default_LC_values
-        concat_variables = FMvariables + LCvariables
-        
-        #verifying the ranges
-        define.verifyRanges(rangevalues, concat_variables)
 		
-		######### HERE MUST BE ADDED THE REAL VALUES FROM THE VIDEO
+        ######### HERE MUST BE ADDED THE REAL VALUES FROM THE VIDEO
         ## probably a loadTrajectoryfromSQLITE function from traffic intelligence
+        import lib.outputs as outputs
+        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+        video_values = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap]        
         
-		
+        nbr_iterations, total_points = analysis.simplex_search_81(out, config, commands, hard_bounds, default_values, concat_variables, video_values, outputspath, parameters, InpxName, InpxPath, running, filename)
+        
+        #Adding a time marker and performance indicators
+        report = write.timeStamp(default_values, total_points, config.nbr_runs, nbr_iterations)        
+        
+        #filling the report
+        for i in range(len(report)):
+            write.writeInFile(out, report[i])  
+        out.close()
     '''
     ##default values of computed parameters - obtained from video analysis
     #default_forFMgap = np.asarray([NUMBERS])

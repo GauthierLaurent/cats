@@ -202,7 +202,7 @@ def verboseIntro(commands, config, TypeOfAnalysis):
               'Desired pourcentage error on the mean confidence interval: ' + str(config.desired_pct_error) +' %')
     print'\n'
     
-def timeStamp(variables, points, sim):
+def timeStamp(variables, points, sim, itt = None):
     text = []
     total_time = time.clock()
     avg_per_point = total_time/(len(variables) * points + 1 ) 
@@ -211,6 +211,7 @@ def timeStamp(variables, points, sim):
     #the append([]) serves to add an empty line before the time marker when using writeInFile
     text.append([])
     text.append(["Total elapsed time (sec) :",total_time])
+    if itt is not None: text.append(["Number of itaration required :", itt])
     text.append(["Average time per point (sec) :",avg_per_point])
     text.append(["Average time per simulation (sec): ",avg_per_sim])
     
