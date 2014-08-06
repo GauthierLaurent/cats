@@ -18,7 +18,7 @@ import math, sys
 def sort2lists(list1,list2):
     '''Sorts list2 according to the sorting of the content of list1
        list1 must contain values that can be sorted while
-       list2 may containany kind of data'''
+       list2 may contain any kind of data'''
        
     indexes = range(len(list1))
     indexes.sort(key=list1.__getitem__)
@@ -223,8 +223,8 @@ def buildRanges(model):
     rangeLookAheadDistMin = [0.0    ,  30.0] ; rangevalues.append(rangeLookAheadDistMin)        #min = 0, max = 999999
     rangeLookAheadDistMax = [200.0  , 300.0] ; rangevalues.append(rangeLookAheadDistMax)        #min = 0, max = 999999
     rangeObsrvdVehs =       [2.0    ,  10.0] ; rangevalues.append(rangeObsrvdVehs)              #min = 0, max = 10
-    rangeLookBackDistMin =  [0.0    ,  30.0] ; rangevalues.append(rangeLookBackDistMin)         #min = 0, max = 999999
-    rangeLookBackDistMax =  [100.0  , 200.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
+    #rangeLookBackDistMin =  [0.0    ,  30.0] ; rangevalues.append(rangeLookBackDistMin)         #min = 0, max = 999999
+    #rangeLookBackDistMax =  [100.0  , 200.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
                          
     ##Variables for lane change behavior
     rangeMaxDecelOwn =         [-10.0 , -1.00] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
@@ -242,6 +242,52 @@ def buildRanges(model):
     rangeCoopDecel =           [-10.0,   -0.9] ; rangevalues.append(rangeCoopDecel)             #min = -10, max = 0
 
     return rangevalues
+
+def hard_boundaries(model):
+    boundaries = []
+       
+    ##Variables in Wiedemann 74   [min,max]
+    if int(model) == 74:        
+        rangeW74ax     = [0.0,  None] ; boundaries.append(rangeW74ax)      #min = 0    
+        rangeW74bxAdd  = [None, None] ; boundaries.append(rangeW74bxAdd)
+        rangeW74bxMult = [None, None] ; boundaries.append(rangeW74bxMult)
+    
+    ##Variables in Wiedemann 99   [min,max]
+    elif int(model) == 99: 
+        rangeW99cc0 = [0.0  , None] ; boundaries.append(rangeW99cc0)   #min = 0
+        rangeW99cc1 = [None , None] ; boundaries.append(rangeW99cc1)
+        rangeW99cc2 = [0.0  , None] ; boundaries.append(rangeW99cc2)   #min = 0
+        rangeW99cc3 = [None , None] ; boundaries.append(rangeW99cc3)
+        rangeW99cc4 = [None , None] ; boundaries.append(rangeW99cc4)
+        rangeW99cc5 = [None , None] ; boundaries.append(rangeW99cc5)
+        rangeW99cc6 = [None , None] ; boundaries.append(rangeW99cc6)
+        rangeW99cc7 = [None , None] ; boundaries.append(rangeW99cc7)
+        rangeW99cc8 = [None , None] ; boundaries.append(rangeW99cc8)
+        rangeW99cc9 = [None , None] ; boundaries.append(rangeW99cc9)
+
+    ##Other variables for the following behavior model     
+    rangeLookAheadDistMin = [0.0 , 999999] ; boundaries.append(rangeLookAheadDistMin)        #min = 0, max = 999999
+    rangeLookAheadDistMax = [0.0 , 999999] ; boundaries.append(rangeLookAheadDistMax)        #min = 0, max = 999999
+    rangeObsrvdVehs =       [0.0 ,   10.0] ; boundaries.append(rangeObsrvdVehs)              #min = 0, max = 10
+    #rangeLookBackDistMin =  [0.0 , 999999] ; boundaries.append(rangeLookBackDistMin)         #min = 0, max = 999999
+    #rangeLookBackDistMax =  [0.0 , 999999] ; boundaries.append(rangeLookBackDistMax)         #min = 0, max = 999999            
+                         
+    ##Variables for lane change behavior
+    rangeMaxDecelOwn =         [-10.0 , -0.02] ; boundaries.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
+   #rangeDecelRedDistOwn =     [0.0   ,  None] ; boundaries.append(rangeDecelRedDistOwn)       #min = 0
+    rangeAccDecelOwn =         [-10.0 , -1.00] ; boundaries.append(rangeAccDecelOwn)           #min = -10, max = -1
+    rangeMaxDecelTrail =       [-10.0 , -0.02] ; boundaries.append(rangeMaxDecelTrail)         #min = -10, max = -0.01
+   #rangeDecelRedDistTrail =   [0.0   ,  None] ; boundaries.append(rangeDecelRedDistTrail)     #min = 0
+    rangeAccDecelTrail =       [-10.0 , -1.00] ; boundaries.append(rangeAccDecelTrail)         #min = -10, max = -1
+    rangeDiffusTm =            [None  ,  None] ; boundaries.append(rangeDiffusTm)
+    rangeMinHdwy =             [None  ,  None] ; boundaries.append(rangeMinHdwy)
+    rangeSafDistFactLnChg =    [None  ,  None] ; boundaries.append(rangeSafDistFactLnChg)
+    rangeCoopLnChg =           [None  ,  None] ; boundaries.append(rangeCoopLnChg)
+    rangeCoopLnChgSpeedDiff =  [None  ,  None] ; boundaries.append(rangeCoopLnChgSpeedDiff) 
+    rangeCoopLnChgCollTm =     [None  ,  None] ; boundaries.append(rangeCoopLnChgCollTm)
+    rangeCoopDecel =           [-10   ,   0.0] ; boundaries.append(rangeCoopDecel)             #min = -10, max = 0
+
+    return boundaries
     
 def verifyRanges(rangevalues, variables):
     
