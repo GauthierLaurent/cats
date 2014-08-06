@@ -383,6 +383,9 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
         #prequisite stuff
         ## iteration number
         itt += 1
+        
+        if commands.verbose:
+            print ' == Starting work on iteration number ' + str(itt) + ' =='
             
         ##iteration folder
         iterationpath = write.createSubFolder(os.path.join(outputspath, "iteration_"+str(itt)), "iteration_"+str(itt))    
@@ -428,11 +431,20 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
             if ye_p_values[0] < yr_p_values:    #the indice must correspond to the one used to define gap_p_values 
                 gap_p_values,points = appendAndsort2lists_withPriority(gap_p_values,points,ye_p_values[0],ye,'expansion')
                 Delta = simplicesDiameter(points)
+
+                if commands.verbose:
+                    print (' == Iteration concluded with an expansion == \n'
+                           '')
+                    
                 continue
             
             else:
                 gap_p_values,points = appendAndsort2lists_withPriority(gap_p_values,points,yr_p_values[0],yr,'reflection')
                 Delta = simplicesDiameter(points)
+                
+                if commands.verbose:
+                    print (' == Iteration concluded with a reflection == \n'
+                           '')                          
                 continue            
         
         #4.  ****   Contract  **  and 1. Sort  ************************************
@@ -455,6 +467,9 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
                 if yoc_p_values[0] < yr_p_values[0]:
                     gap_p_values,points = appendAndsort2lists_withPriority(gap_p_values,points,yoc_p_values[0],yoc,'outside contraction')
                     Delta = simplicesDiameter(points)
+                    if commands.verbose:
+                        print (' == Iteration concluded with an outside contraction == \n'
+                               '')
                     continue
                 else:
                     pass
@@ -475,6 +490,10 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
                 if yic_p_values[0] < yr_p_values[0]:         #the indice must correspond to the one used to define gap_p_values
                     gap_p_values,points = appendAndsort2lists_withPriority(gap_p_values,points,yic_p_values[0],yic,'inside contraction')
                     Delta = simplicesDiameter(points)
+                    
+                    if commands.verbose:
+                        print (' == Iteration concluded with an inside contraction == \n'
+                               '')                           
                     continue
                 else:
                     pass            
@@ -522,15 +541,29 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
                     
             gap_p_values,points = appendAndsort2lists_withPriority(gap_p_values[0],points[0],gap_shrink_p_values,shrink_points,'shrink')
             Delta = simplicesDiameter(points)
+            
+            if commands.verbose:
+                print (' == Iteration concluded with a shrink == \n'
+                       '\n')
             continue
         
         #0.  ****   Initialize next step if f0 < fr <= fn-1 **  and 1. Sort  ******
         else:
             gap_p_values,points = appendAndsort2lists_withPriority(gap_p_values,points,yr_p_values,yr,'reflection')
             Delta = simplicesDiameter(points)
+        
+            if commands.verbose:
+                print (' == Iteration concluded with a reflection == \n'
+                       '')
             continue
-
+        
     #need more code?
+    if commands.verbose:
+        if itt >= max_itt:
+            print '-> maximum number of iterations reached. Aborting calculations'
+        else:
+            print '-> Optimum found'
+        
     return itt, point_count
 
 

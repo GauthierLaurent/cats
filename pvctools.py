@@ -247,6 +247,8 @@ def main():
     if commands.calibration: 
         TypeOfAnalysis = 'Calibration'     
         
+        if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
+            
         #building the model values ranges - these serve as boundaries for the calculation universe        
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'

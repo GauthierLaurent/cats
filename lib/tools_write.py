@@ -200,7 +200,7 @@ def verboseIntro(commands, config, TypeOfAnalysis):
     if TypeOfAnalysis == 'Statistical-precision':
         print('      -- -- -- -- -- -- -- -- -- -- -- -- -- --         \n'
               'Desired pourcentage error on the mean confidence interval: ' + str(config.desired_pct_error) +' %')
-    print'\n'
+    print''
     
 def timeStamp(variables, points, sim, itt = None):
     text = []
