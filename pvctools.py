@@ -215,13 +215,14 @@ def main():
         text, firstrun_results = analysis.sensitivityAnalysis(rangevalues, inputs, default = True)
         
         ##Running the rest of the simulations
-        if commands.multi is True:            
+        if commands.multi is True:
             inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, firstrun_results]            
             unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
                     text.append(j)
+
         else:   
             inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, firstrun_results]                             
             packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           

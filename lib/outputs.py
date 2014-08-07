@@ -8,10 +8,14 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Native Libraries
 ##################
 
-import scipy, os
+import scipy, os, sys
 import numpy as np
-import storage as TraffIntStorage
 import random
+
+#disabling outputs
+import lib.nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
+import storage as TraffIntStorage
+sys.stdout = oldstdout #Re-enable output
 
 ##################
 # Output treatment tools

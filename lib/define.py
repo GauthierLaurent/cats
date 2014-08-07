@@ -51,11 +51,10 @@ def intelligentChunks(n, iterable, value_names):
     '''Cuts the variables into chunks keeping together the variables that need to relate to others'''           
     
     intelligent_chunk = []
-    
     if len(iterable) != n:
         keepAssembled_g1 = ("LookAheadDistMin","LookAheadDistMax","LookBackDistMin","LookBackDistMax")    
         keepAssembled_g2 = ("CoopLnChg","CoopLnChgSpeedDiff","CoopLnChgCollTm")    
-    
+
         keptAssembled_g1 = []
         keptAssembled_g2 = []
         other_iterables = []    

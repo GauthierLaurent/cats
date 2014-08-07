@@ -345,18 +345,27 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
     startingpath = write.createSubFolder(os.path.join(outputspath, "starting_points"), "starting_points")
          
     #Evaluation of the first points
-    significance = []
     if commands.multi is True:
-        inputs = [commands, config, startingpath, parameters, InpxName, InpxPath, "iteration_0", value_names, video_values, running]
-        results = define.createWorkers(start_values, runVissimForCalibrationAnalysis, inputs, commands.multi_test, value_names)
-        for i in results:
             
-            print 'it will fail here'            
-            ###MUST UNPACK THE RESULTS TO PUT THEM INTO START_VALUES
+        futureChunks = []        
+        for i in range(len(start_values)):
+            futureChunks.append([start_values[i],i])
+            
+        inputs = [commands, config, startingpath, parameters, InpxName, InpxPath, "iteration_0", value_names, video_values, running]
+        results = define.createWorkers(futureChunks, runVissimForCalibrationAnalysis, inputs, commands)
+            
+        #unpacking results and writing to report
+        p_values = []
+        for i in range(len(results)):
+            for j in range(len(results[i][0])):
+                write.writeInFile(out, [results[i][1][j], start_values[i], results[i][0][j]])
+                p_values.append(results[i][0][j])
             
     else:                 
         inputs = [commands, config, startingpath, parameters, InpxName, InpxPath, "iteration_0", value_names, video_values, running]
         p_values, name = runVissimForCalibrationAnalysis(start_values, inputs)        
+        
+        #writing to report        
         for i in range(len(p_values)): 
             write.writeInFile(out, [name[i], start_values[i]], p_values[i])
 
@@ -517,13 +526,28 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
             
             ##evaluating the new points
             if commands.multi is True:
-                inputs = [commands, config, shrinkpath, parameters, InpxName, InpxPath, "iteration_"+str(itt)+"_shrink", value_names, video_values, running]
-                results = define.createWorkers(shrink_points, runVissimForCalibrationAnalysis, inputs, commands.multi_test, value_names)
-                for i in results:
+        
+                #shutting down the verbose command in multiprocessing
+                if commands.verbose:
+                    commands.verbose = False
+                    restart = True
+            
+                futureChunks = []        
+                for i in range(len(shrink_points)):
+                    futureChunks.append([shrink_points[i],i])
                     
-                    print 'it will fail here'
+                inputs = [commands, config, shrinkpath, parameters, InpxName, InpxPath, "iteration_"+str(itt)+"_shrink", value_names, video_values, running]
+                results = define.createWorkers(futureChunks, runVissimForCalibrationAnalysis, inputs, commands)
+        
+                #reenabling verbose for the rest of the iteration
+                if restart is True: commands.verbose = True
                 
-                ###MUST UNPACK THE RESULTS TO PUT THEM INTO START_VALUES
+                #unpacking results and writing to report
+                shrink_p_values = []
+                for i in range(len(results)):
+                    for j in range(len(results[i][0])):
+                        write.writeInFile(out, [results[i][1][j], start_values[i], results[i][0][j]])
+                        shrink_p_values.append(results[i][0][j])
                 
             else:                              
                 inputs = [commands, config, shrinkpath, parameters, InpxName, InpxPath, "iteration_"+str(itt)+"_shrink", value_names, video_values, running]
@@ -544,7 +568,7 @@ def simplex_search_81(out, config, commands, hard_bounds, default_values, value_
             
             if commands.verbose:
                 print (' == Iteration concluded with a shrink == \n'
-                       '\n')
+                       '')
             continue
         
         #0.  ****   Initialize next step if f0 < fr <= fn-1 **  and 1. Sort  ******
@@ -681,7 +705,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             #output treatment
             if commands.multi is True:
                 inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose]
-                results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands.multi_test)            
+                results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands)            
                 #building the old_data            
                 for i in range(len(results)):
                     if i == 0:
