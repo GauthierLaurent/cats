@@ -927,6 +927,53 @@ def prepareFolderforVissimAnalysis(outputspath, folder_name, InpxName, InpxPath,
         os.rename(os.path.join(folderpath, InpxName), os.path.join(folderpath, filename))
     
     return folderpath, filename
+
+def monteCarlo(valuesVector, inputs):
+    concat_variables    = inputs [0]
+    InpxPath            = inputs [1]
+    InpxName            = inputs [2]
+    outputspath         = inputs [3]
+    config              = inputs [4]
+    commands            = inputs [5]
+    running             = inputs [6]
+    parameters          = inputs [7]
+    
+    #preparing the outputs    
+    text = []
+            
+    #analysing the values
+    for value in range(len(valuesVector)):        
+        #creating a folder containing the files for that iteration
+        folderpath, filename = prepareFolderforVissimAnalysis(outputspath, 'point_' + str(value), InpxName, InpxPath)
+    
+        #Starting a Vissim instance
+        if commands.mode:  #this serves to bypass Vissim while testing the code
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+        else:
+            if running is False:
+                Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))
+                running = True
+            else:
+                Vissim.LoadNet (os.path.join(folderpath, filename))
+                                
+            #Vissim initialisation and simulation running
+            simulated = vissim.initializeSimulation(Vissim, parameters, valuesVector[value], concat_variables, commands.save_swp)
+            
+            if simulated is not True:
+                text.append([value, valuesVector[value],''.join(str(simulated))])    #printing the exception in the csv file
+            else:                                
+                #output treatment
+                inputs = [folderpath, config.sim_steps, config.warm_up_time, commands.verbose]
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)            
+
+                #writing to file
+                text.append([value, valuesVector[value], flow, oppLCcount, manLCcount, forFMgap.cumul_all.mean, oppLCagap.cumul_all.mean, oppLCbgap.cumul_all.mean, manLCagap.cumul_all.mean, manLCbgap.cumul_all.mean])       
+
+    #closing Vissim
+    vissim.stopVissim(Vissim)
+    
+    return text
+
 	
 def sensitivityAnalysis(rangevalues, inputs, default = False):
     '''Runs the sensitivity analysis for a set of predetermined values

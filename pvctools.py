@@ -20,7 +20,7 @@ def main():
     ################################ 
     
     #Native dependencies
-    import os, sys, time, optparse
+    import os, sys, time, optparse, random
     
     #Internal
     import lib.vissim as vissim
@@ -79,8 +79,9 @@ def main():
         print '*                                                              *'
         print '*        -c to start the Calibration Analysis,                 *'
         print '*        -d to start the Statistical precision Analysis,       *'
+        print '*        -o to start the Sensitivity Monte Carlo Analysis,     *'        
         print '*   or                                                         *'
-        print '*        -s to start the Sensitivity Analysis                  *'
+        print '*        -s to start the Sensitivity Ona at a time Analysis    *'
         print '*                                                              *'
         print '*                 ==== Closing program ===                     *'
         print '****************************************************************'
@@ -163,7 +164,7 @@ def main():
      
      
     ###################################### 
-    #        Sensitivity Analysis       
+    #        One at a time Sensitivity Analysis       
     ######################################        
     if commands.sensitivity:
         TypeOfAnalysis = 'Sensitivity'
@@ -225,6 +226,93 @@ def main():
 
         else:   
             inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, firstrun_results]                             
+            packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
+            #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
+         
+            for i in packed_outputs:
+                text.append(i)
+                
+        #Adding a time marker and performance indicators
+        report = write.timeStamp(rangevalues, config.nbr_points, config.nbr_runs) 
+        for i in report: text.append(i)
+        
+        #filling the report
+        for i in range(len(text)):
+            write.writeInFile(out, text[i])        
+        out.close()
+
+    ###################################### 
+    #        Monte Carlo Sensitivity Analysis       
+    ######################################        
+    if commands.montecarlo:
+        TypeOfAnalysis = 'Monte Carlo'
+        
+        if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
+       
+        #building the model values ranges
+        if commands.verbose is True:
+            print '-> Generating the range values and default values from memory'
+            
+        rangevalues = define.buildRanges(commands.model)
+
+        #creating the default values from memory
+        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_LC_values, LCvariables = define.createLCValues()
+    
+        #creating default values   
+        default_values =  Default_FM_values  + Default_LC_values
+        concat_variables = FMvariables + LCvariables
+
+        #verifying the ranges
+        define.verifyRanges(rangevalues, concat_variables)
+
+        #opening the output file and writing the appropriate header       
+        if commands.verbose is True:
+            print '-> Generating relevant subfolders for the analysis'
+
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+
+        #creating appropriate output folder and graphic folder (if option is "on")
+        graphspath = None        
+        if commands.vis_save:
+            graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
+            write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs"), "cumul_dist_graphs")
+            write.createSubFolder(os.path.join(graphspath, "distribution_graphs"), "distribution_graphs")
+            for i in range(len(rangevalues) +1):            
+                if i == 0:
+                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
+                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
+                else:                    
+                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
+                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
+        outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
+        
+        #creating 1000 random values
+        valuesVector = []
+        for i in range(0,1000):
+            thisVector = []
+            laneChangeState = True
+            for j in range(len(rangevalues)):
+                if concat_variables[j] != 'CoopLnChg':
+                    thisVector.append(random.uniform(rangevalues[j][0],rangevalues[j][1]))
+                elif (concat_variables[j] == 'CoopLnChgSpeedDiff' or concat_variables[j] == 'CoopLnChgCollTm') and laneChangeState == False:
+                    thisVector.append(999999)
+                else:
+                    thisVector.append(random.randrange(0,2))
+            valuesVector.append(thisVector)        
+               
+        #treating the simulations
+        text = []
+        if commands.multi is True:
+            inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters]            
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, concat_variables)                  
+            #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
+            for i in unpacked_outputs:
+                for j in i:
+                    text.append(j)
+
+        else:   
+            inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters]                             
             packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          

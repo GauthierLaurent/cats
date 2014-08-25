@@ -229,11 +229,12 @@ def commands(parser):
     
     ## Analysis, on by default
     parser.add_option('-w', '--wiedemann',      action='store_true',   dest='model',          default='99',   help='[int]  Set the car following model - Default is Wiedemann 99')
-    parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration" - off by default')
-    parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test" - off by default')
+    parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration"               - off by default')
+    parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test"            - off by default')
+    parser.add_option('-o', '--monte-carlo',    action='store_true',   dest='montecarlo',     default=False,  help='[bool] Set the working analysis to "Sensitivity Monte Carlo"   - off by default')
+    parser.add_option('-s', '--sensi',          action='store_false',  dest='sensitivity',    default=True,   help='[bool] Set the working analysis to "Sensitivity One at a time" - on  by default')    
     parser.add_option('-m', '--multi',          action='store_false',  dest='multi',          default=True,   help='[bool] Disables multiprocessing while running the analysis')
     parser.add_option('-u', '--multi_testing',  action='store_true',   dest='multi_test',     default=False,  help='[bool] Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback')
-    parser.add_option('-s', '--sensi',          action='store_false',  dest='sensitivity',    default=True,   help='[bool] Set the working analysis to "Sensitivity" - on by default')    
     parser.add_option('-f', '--file',                                  dest='file',                           help='[str]  Load specific inpx file')
     parser.add_option('-a', '--save-figures',   action='store_true',   dest='vis_save',       default=False,  help='[bool] Save figures')
     parser.add_option(      '--figure-format',                         dest='fig_format',     default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')

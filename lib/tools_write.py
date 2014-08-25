@@ -122,7 +122,7 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                   "*SCI5: Confidance interval calculated for the standard deviation for the mandatory lane change gaps calculated before lane change\n")
         
     #Sensitivity header
-    if TypeOfAnalysis == 'Sensitivity':
+    if TypeOfAnalysis == 'Sensitivity' or TypeOfAnalysis == 'Monte Carlo': 
         out.write("*var_name: Name of the tested variable\n"
                   "*flow: Vehicular flow\n"
                   "*nbr_opp: Number of opportunistic lane changes\n"
@@ -136,7 +136,10 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                   "var_name;")
         for var in variables:
             out.write(str(var) + ";")
-        out.write("flow;nbr_opp;% diff;nbr_man;% diff;m_forward;% diff;m_LC_Aopp;% diff;m_LC_Bopp;% diff;m_LC_Aman;% diff;m_LC_Bman;% diff\n")        
+        if TypeOfAnalysis == 'Sensitivity': 
+            out.write("flow;nbr_opp;% diff;nbr_man;% diff;m_forward;% diff;m_LC_Aopp;% diff;m_LC_Bopp;% diff;m_LC_Aman;% diff;m_LC_Bman;% diff\n")        
+        else:
+            out.write("flow;nbr_opp;nbr_man;m_forward;m_LC_Aopp;m_LC_Bopp;m_LC_Aman;m_LC_Bman;\n")        
    
     #Calibration header
    
@@ -186,11 +189,9 @@ def verboseIntro(commands, config, TypeOfAnalysis):
             print (' |-> Graphic saving mode activated \n'
                    '        *files will be saved as ' + str(commands.fig_format))                   
             
-    print ('      -- -- -- -- -- -- -- -- -- -- -- -- -- --    \n'
-           'Inpx to process:       ' + str(config.inpx_name)         )
-           
-    if TypeOfAnalysis == 'Sensitivity':       
-        print('Number of points:      ' + str(config.nbr_points)     )
+    print ('      -- -- -- -- -- -- -- -- -- -- -- -- -- --     \n'
+           'Inpx to process:       ' + str(config.inpx_name) + '\n'   
+           'Simulation steps:      ' + str(config.sim_steps)      )
     print ('      -- -- -- -- -- -- -- -- -- -- -- -- -- --         ')
     if TypeOfAnalysis == 'Sensitivity': 
         print('Number of points:      ' + str(config.nbr_points)    + '\n'
