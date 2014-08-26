@@ -156,6 +156,7 @@ class Config():
         self.simulation_time          = self.parse('simulation_time',    '900',                   c_type='int')
         self.warm_up_time             = self.parse('warm_up_time',       '120',                   c_type='int')
         self.nbr_points               = self.parse('nbr_points',         '5'  ,                   c_type='int')
+        self.wiedemann                = self.parse('wiedemann'           '99' ,                   c_type='int')
         
         self.section = 'Statistical precision'
         self.desired_pct_error        = self.parse('desired_pct_error',  '20' ,                   c_type='float')
@@ -228,7 +229,6 @@ def commands(parser):
     parser.add_option(      '--trafint-watch',  action='store_true',   dest='trafint_watch',  default=False,  help='[bool] Watch trajectory extraction')
     
     ## Analysis, on by default
-    parser.add_option('-w', '--wiedemann',      action='store_true',   dest='model',          default='99',   help='[int]  Set the car following model - Default is Wiedemann 99')
     parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration"               - off by default')
     parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test"            - off by default')
     parser.add_option('-o', '--monte-carlo',    action='store_true',   dest='montecarlo',     default=False,  help='[bool] Set the working analysis to "Sensitivity Monte Carlo"   - off by default')

@@ -55,14 +55,14 @@ def main():
     ################################ 
     #        Car following model verification        
     ################################
-    if commands.model not in ['74','99']:
-        commands.model = '99'
+    if config.wiedemann not in ['74','99']:
+        config.wiedemann = '99'
         
         print '****************************************************************'
         print '*   The car-following model has to be one of the following:    *'
         print '*                                                              *'        
-        print '*           -> Wiedemann 99 (-w 99 or nothing)                 *'
-        print '*           -> Wiedemann 74 (-w 74)                            *'
+        print '*           -> Wiedemann 99 (99 or nothing)                    *'
+        print '*           -> Wiedemann 74 (74)                               *'
         print '*                                                              *'
         print '*           Reverting to the default value (99)                *'        
         print '****************************************************************'

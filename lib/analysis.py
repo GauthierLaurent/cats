@@ -9,10 +9,9 @@ Created on Thu Jul 10 14:43:44 2014
 #        Importing dependencies       
 ################################ 
 #Natives
-import os, shutil, sys, copy, random, math
+import os, shutil, sys, copy
 from scipy.stats import t, chi2
 from scipy.stats.mstats import kruskalwallis
-import numpy as np
 
 #Internal
 import lib.tools_write as write
@@ -136,7 +135,6 @@ def respectUniverseBoundaries(destination,hard_bounds):
                 point_in = False
             
     return point_in
-
 
 ################################ 
 #        Statistical precision analysis       
