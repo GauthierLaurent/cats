@@ -137,12 +137,12 @@ def path_slashes(string):
 ##################
 # Configuration
 ##################
-class Config():
-    config_name = 'pvc.cfg'
+class Config:
+    #config_name = 'pvc.cfg'
     
-    def __init__(self):
+    def __init__(self,config_name):
         self.config = ConfigParser.ConfigParser()        
-        self.config.read(Config.config_name)
+        self.config.read(config_name)
         
         self.section = 'Main'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
@@ -156,7 +156,7 @@ class Config():
         self.simulation_time          = self.parse('simulation_time',    '900',                   c_type='int')
         self.warm_up_time             = self.parse('warm_up_time',       '120',                   c_type='int')
         self.nbr_points               = self.parse('nbr_points',         '5'  ,                   c_type='int')
-        self.wiedemann                = self.parse('wiedemann'           '99' ,                   c_type='int')
+        self.wiedemann                = self.parse('wiedemann',          '99' ,                   c_type='int')
         
         self.section = 'Statistical precision'
         self.desired_pct_error        = self.parse('desired_pct_error',  '20' ,                   c_type='float')
@@ -179,8 +179,8 @@ class Config():
             self.write()      
 
         
-    def write(self):
-        with open(Config.config_name, 'w') as new_file:
+    def write(self,config_name):
+        with open(config_name, 'w') as new_file:
             new_file.write('[Main]\n'
                            'path_to_inpx       = '+self.path_to_inpx+'\n'
                            'inpx_name          = '+self.inpx_name+'\n'

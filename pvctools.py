@@ -43,7 +43,7 @@ def main():
     #        Load settings       
     ################################    
     commands = config.commands(optparse.OptionParser())
-    config   = config.Config()
+    config   = config.Config('pvc.cfg')
     
     #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
     if commands.file:
@@ -111,7 +111,7 @@ def main():
         
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
-    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(commands.model), Sim_lenght]
+    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(config.wiedemann), Sim_lenght]
                     
     ###################################### 
     #        Statistical precision Analysis       
@@ -122,7 +122,7 @@ def main():
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
            
         #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model) )
+        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann) )
         Default_LC_values, LCvariables = define.createLCValues()        
         
         #creating default values
@@ -175,10 +175,10 @@ def main():
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'
             
-        rangevalues = define.buildRanges(commands.model)
+        rangevalues = define.buildRanges(config.wiedemann)
 
         #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann))
         Default_LC_values, LCvariables = define.createLCValues()
     
         #creating default values
@@ -253,10 +253,10 @@ def main():
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'
             
-        rangevalues = define.buildRanges(commands.model)
+        rangevalues = define.buildRanges(config.wiedemann)
 
         #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann))
         Default_LC_values, LCvariables = define.createLCValues()
     
         #creating default values   
@@ -341,10 +341,10 @@ def main():
         #building the model values ranges - these serve as boundaries for the calculation universe        
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'
-        rangevalues = define.buildRanges(commands.model)
+        rangevalues = define.buildRanges(config.wiedemann)
     
         #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(commands.model))
+        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann))
         Default_LC_values, LCvariables = define.createLCValues()    
         
         #creating default values - Default values are the starting point of the algorythm
@@ -352,7 +352,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #creating the universe boundaries        
-        hard_bounds = define.hard_boundaries(commands.model)
+        hard_bounds = define.hard_boundaries(config.wiedemann)
         
         #verifying the ranges
         define.verifyRanges(rangevalues, concat_variables)
