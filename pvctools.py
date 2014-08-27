@@ -55,8 +55,8 @@ def main():
     ################################ 
     #        Car following model verification        
     ################################
-    if config.wiedemann not in ['74','99']:
-        config.wiedemann = '99'
+    if config.wiedemann not in [74,99]:
+        config.wiedemann = 99
         
         print '****************************************************************'
         print '*   The car-following model has to be one of the following:    *'
@@ -212,7 +212,7 @@ def main():
         
         #treating the simulations        
         ##calculating the default values
-        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters]
+        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose]
         text, firstrun_results = analysis.sensitivityAnalysis(rangevalues, inputs, default = True)
         
         ##Running the rest of the simulations

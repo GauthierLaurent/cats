@@ -39,7 +39,7 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value):
 
 
 def calculateOnePass(values, foldername, inputs):
-    '''Note: Vissim will be opened byt this function. It must be closed out of it'''
+    '''Note: Vissim will be opened by this function. It must be closed out of it'''
     
     #unpacking inputs
     commands    = inputs[0]
@@ -50,8 +50,7 @@ def calculateOnePass(values, foldername, inputs):
     InpxPath    = inputs[5]
     value_names = inputs[7]
     video_value = inputs[8]
-    running     = inputs[9]
-    Vissim      = inputs[10]
+    Vissim      = inputs[9]
 
     #creating a folder containing the files for that iteration
     folderpath, filename = prepareFolderforVissimAnalysis(outputspath, foldername, Inpxname, InpxPath)
@@ -61,11 +60,7 @@ def calculateOnePass(values, foldername, inputs):
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
         
     else:
-        if running is False:
-        #Starting a Vissim instance
-            Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))
-        else:
-            Vissim.LoadNet (os.path.join(folderpath, filename))        
+        Vissim.LoadNet (os.path.join(folderpath, filename))        
         
         #Initializing and running the simulation
         simulated = vissim.initializeSimulation(Vissim, parameters, values, value_names)
@@ -83,7 +78,7 @@ def calculateOnePass(values, foldername, inputs):
     calculated_values = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap]
     p_values = p_values + checkCorrespondanceOfOutputs(video_value, calculated_values)
 
-    return p_values, filename
+    return p_values, filename, Vissim
         
 def runVissimForCalibrationAnalysis(inputvalues, inputs):
     '''handles two type of inputs:
@@ -117,7 +112,7 @@ def runVissimForCalibrationAnalysis(inputvalues, inputs):
         p, f = calculateOnePass(values, foldername, inputs)
         p_values = p_values + p; filenames.append(f)
         
-    return p_values, filenames
+    return p_values, filenames, Vissim
 
 def respectUniverseBoundaries(destination,hard_bounds):
     '''verifies if the destination is within the boundaries. Else, returns False'''

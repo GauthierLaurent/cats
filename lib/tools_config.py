@@ -141,13 +141,13 @@ class Config:
     #config_name = 'pvc.cfg'
     
     def __init__(self,config_name):
-        self.config = ConfigParser.ConfigParser()        
+        self.config = ConfigParser.ConfigParser(allow_no_value=True)        
         self.config.read(config_name)
         
         self.section = 'Main'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
         self.inpx_name                = self.parse('inpx_name',          '',        c_type='string')
-        self.path_to_trafint          = self.parse('path_to_trafint',    '',        c_type='string')                    
+        self.path_to_trafint          = self.parse('path_to_trafint',    '',        c_type='string')                 
                                                                                                 
         self.section = 'Simulation'                                                              
         self.sim_steps                = self.parse('steps_per_sec',      '10' ,                   c_type='int')                     #10 recommended
@@ -160,6 +160,9 @@ class Config:
         
         self.section = 'Statistical precision'
         self.desired_pct_error        = self.parse('desired_pct_error',  '20' ,                   c_type='float')
+        
+        self.section = 'Calibration'
+        self.path_to_csv              = self.parse('path_to_csv',        '',                      c_type='string')
         '''                                                                                        
         self.section = 'Parameters'                                                               
         self.draw_max_traj            = self.parse('draw_max_traj',      '300')                                                     # Maximum trajectories to work with with visual tools
