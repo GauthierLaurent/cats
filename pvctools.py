@@ -273,18 +273,6 @@ def main():
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
-        graphspath = None        
-        if commands.vis_save:
-            graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
-            write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs"), "cumul_dist_graphs")
-            write.createSubFolder(os.path.join(graphspath, "distribution_graphs"), "distribution_graphs")
-            for i in range(len(rangevalues) +1):            
-                if i == 0:
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
-                else:                    
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
         
         #creating 1000 random values
@@ -302,30 +290,34 @@ def main():
             valuesVector.append(thisVector)        
                
         #treating the simulations
-        text = []
-        if commands.multi is True:
-            inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters]            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, concat_variables)                  
-            #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
-            for i in unpacked_outputs:
-                for j in i:
-                    text.append(j)
+        for i in range(10):
+            values = valuesVector[len(valuesVector)/10*i:len(valuesVector)/10*i+100]
+            lowerbound = len(valuesVector)/10*i
+            text = []
+            if commands.multi is True:
+                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound]            
+                unpacked_outputs = define.createWorkers(values, analysis.monteCarlo, inputs, commands, concat_variables)                  
+                #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
+                for i in unpacked_outputs:
+                    for j in i:
+                        text.append(j)
+    
+            else:   
+                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, values]                             
+                packed_outputs = analysis.monteCarlo(values, inputs)           
+                #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
+             
+                for i in packed_outputs:
+                    text.append(i)
+            
+            #filling the report
+            for i in range(len(text)):
+                write.writeInFile(out, text[i])     
 
-        else:   
-            inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters]                             
-            packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
-            #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
-         
-            for i in packed_outputs:
-                text.append(i)
-                
         #Adding a time marker and performance indicators
-        report = write.timeStamp(rangevalues, config.nbr_points, config.nbr_runs) 
+        report = write.timeStamp(valuesVector, config.nbr_points, config.nbr_runs) 
         for i in report: text.append(i)
-        
-        #filling the report
-        for i in range(len(text)):
-            write.writeInFile(out, text[i])        
+
         out.close()
 
     ###################################### 
