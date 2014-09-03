@@ -55,8 +55,9 @@ class stats:
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
     instants = []
+    import pdb; pdb.set_trace()
     for o in objects:
-        t = o.curvilinearPositions.getIntersections(s, str(lane))
+        t = o.curvilinearPositions.getIntersections(s, lane)
         if t != []:
             instants.append(o.getFirstInstant()+t[0])
                 
@@ -125,7 +126,7 @@ def laneChange(objects):
     oppObj = []    
     manObj = []
 
-    #Dictionanries    
+    #Dictionaries    
     oppObjDict = {}    
     manObjDict = {}
     laneDict   = {}

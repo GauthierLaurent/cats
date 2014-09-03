@@ -162,7 +162,9 @@ class Config:
         self.desired_pct_error        = self.parse('desired_pct_error',  '20' ,                   c_type='float')
         
         self.section = 'Calibration'
-        self.path_to_csv              = self.parse('path_to_csv',        '',                      c_type='string')
+        self.path_to_csv              = self.parse('path_to_csv',           '',                   c_type='string')
+        self.output_forward_gaps      = self.parse('output_forward_gaps',   'True',               c_type='bool')
+        self.output_lane_change       = self.parse('output_lane_change',    'False',              c_type='bool')
         '''                                                                                        
         self.section = 'Parameters'                                                               
         self.draw_max_traj            = self.parse('draw_max_traj',      '300')                                                     # Maximum trajectories to work with with visual tools

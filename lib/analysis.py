@@ -431,6 +431,7 @@ def monteCarlo(valuesVector, inputs):
             for i in range(len(inputs[9])):
                 if valuesVector == inputs[9][i]:
                     lowerbound += len(inputs[9][i]*i)
+                    
     
         folderpath, filename = prepareFolderforVissimAnalysis(outputspath, 'point_' + str(value+lowerbound), InpxName, InpxPath)
     
@@ -540,45 +541,44 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                     flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
                     #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                 
-                if default is True:
-                    firstrun_results = []
-                    firstrun_results.append(float(forFMgap.cumul_all.mean))
-                    firstrun_results.append(float(oppLCagap.cumul_all.mean))
-                    firstrun_results.append(float(oppLCbgap.cumul_all.mean))
-                    firstrun_results.append(float(manLCagap.cumul_all.mean))
-                    firstrun_results.append(float(manLCbgap.cumul_all.mean))
-                    firstrun_results.append(float(oppLCcount))
-                    firstrun_results.append(float(manLCcount))
-    
-                    
-                else:           
-                    delta_mean_fgap = (forFMgap.cumul_all.mean - firstrun_results[0])/firstrun_results[0]
-                    delta_mean_Aoppgap = (oppLCagap.cumul_all.mean - firstrun_results[1])/firstrun_results[1]
-                    delta_mean_Boppgap = (oppLCbgap.cumul_all.mean - firstrun_results[2])/firstrun_results[2]
-                    delta_mean_Amangap = (manLCagap.cumul_all.mean - firstrun_results[3])/firstrun_results[3]
-                    delta_mean_Bmangap = (manLCbgap.cumul_all.mean - firstrun_results[4])/firstrun_results[4]
-                    delta_oppLCcount = (oppLCcount - firstrun_results[5])/firstrun_results[5]
-                    delta_manLCcount = (manLCcount - firstrun_results[6])/firstrun_results[6]
+            if default is True:
+                firstrun_results = []
+                firstrun_results.append(float(forFMgap.cumul_all.mean))
+                firstrun_results.append(float(oppLCagap.cumul_all.mean))
+                firstrun_results.append(float(oppLCbgap.cumul_all.mean))
+                firstrun_results.append(float(manLCagap.cumul_all.mean))
+                firstrun_results.append(float(manLCbgap.cumul_all.mean))
+                firstrun_results.append(float(oppLCcount))
+                firstrun_results.append(float(manLCcount))
                 
-                #printing graphs
-                if commands.vis_save:
-                    variables = [forFMgap,oppLCagap,oppLCbgap,manLCagap,manLCbgap]
-                    variables_name =["Forward_gaps","Opportunistic_lane_change_'after'_gaps","Opportunistic_lane_change_'before'_gaps","Mandatory_lane_change_'after'_gaps","Mandatory_lane_change_'before'_gaps"]
-                    for var in range(len(variables)):
-                        if default is True:
-                            name = "Default_values"
-                            subpath = "Default_values"
-                        else:
-                            name = filename.strip('.inpx')
-                            subpath = value_name[:]
-                        
-                        write.printStatGraphs(graphspath,variables[var], name, variables_name[var], commands.fig_format, config.nbr_runs, subpath)
+            else:           
+                delta_mean_fgap = (forFMgap.cumul_all.mean - firstrun_results[0])/firstrun_results[0]
+                delta_mean_Aoppgap = (oppLCagap.cumul_all.mean - firstrun_results[1])/firstrun_results[1]
+                delta_mean_Boppgap = (oppLCbgap.cumul_all.mean - firstrun_results[2])/firstrun_results[2]
+                delta_mean_Amangap = (manLCagap.cumul_all.mean - firstrun_results[3])/firstrun_results[3]
+                delta_mean_Bmangap = (manLCbgap.cumul_all.mean - firstrun_results[4])/firstrun_results[4]
+                delta_oppLCcount = (oppLCcount - firstrun_results[5])/firstrun_results[5]
+                delta_manLCcount = (manLCcount - firstrun_results[6])/firstrun_results[6]
+            
+            #printing graphs
+            if commands.vis_save:
+                variables = [forFMgap,oppLCagap,oppLCbgap,manLCagap,manLCbgap]
+                variables_name =["Forward_gaps","Opportunistic_lane_change_'after'_gaps","Opportunistic_lane_change_'before'_gaps","Mandatory_lane_change_'after'_gaps","Mandatory_lane_change_'before'_gaps"]
+                for var in range(len(variables)):
+                    if default is True:
+                        name = "Default_values"
+                        subpath = "Default_values"
+                    else:
+                        name = filename.strip('.inpx')
+                        subpath = value_name[:]
                     
-                #writing to file
-                if default is True:
-                    text.append(["Default_values", corrected_values, flow, oppLCcount, "---", manLCcount, "---", forFMgap.cumul_all.mean, "---", oppLCagap.cumul_all.mean, "---", oppLCbgap.cumul_all.mean, "---", manLCagap.cumul_all.mean, "---", manLCbgap.cumul_all.mean,  "---"])
-                else:
-                    text.append([value_name, corrected_values, flow, oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount, forFMgap.cumul_all.mean, delta_mean_fgap, oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCbgap.cumul_all.mean, delta_mean_Boppgap, manLCagap.cumul_all.mean, delta_mean_Amangap, manLCbgap.cumul_all.mean, delta_mean_Bmangap])       
+                    write.printStatGraphs(graphspath,variables[var], name, variables_name[var], commands.fig_format, config.nbr_runs, subpath)
+                    
+            #writing to file
+            if default is True:
+                text.append(["Default_values", corrected_values, flow, oppLCcount, "---", manLCcount, "---", forFMgap.cumul_all.mean, "---", oppLCagap.cumul_all.mean, "---", oppLCbgap.cumul_all.mean, "---", manLCagap.cumul_all.mean, "---", manLCbgap.cumul_all.mean,  "---"])
+            else:
+                text.append([value_name, corrected_values, flow, oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount, forFMgap.cumul_all.mean, delta_mean_fgap, oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCbgap.cumul_all.mean, delta_mean_Boppgap, manLCagap.cumul_all.mean, delta_mean_Amangap, manLCbgap.cumul_all.mean, delta_mean_Bmangap])       
         
         #breaking the outer loop because the default only needs to be ran once
         if default is True:
