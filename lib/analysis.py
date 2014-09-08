@@ -528,9 +528,9 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                                     
                 #Vissim initialisation and simulation running
                 simulated = vissim.initializeSimulation(Vissim, parameters, corrected_values, concat_variables, commands.save_swp)
-                
                 if simulated is not True:
                     text.append([value_name, corrected_values,''.join(str(simulated))])    #printing the exception in the csv file
+                    continue
                 else:
                     #print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
                 
@@ -595,6 +595,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                 delta_thirdQuart_Boppgap  = (oppLCbgap.cumul_all.thirdQuart - firstrun_results[2])/firstrun_results[2]
                 delta_std_Boppgap         = (oppLCbgap.cumul_all.std        - firstrun_results[2])/firstrun_results[2]
                 
+                #import pdb; pdb.set_trace()
                 delta_mean_Amangap        = (manLCagap.cumul_all.mean       - firstrun_results[3])/firstrun_results[3]
                 delta_firstQuart_Amangap  = (manLCagap.cumul_all.firstQuart - firstrun_results[3])/firstrun_results[3]
                 delta_median_Amangap      = (manLCagap.cumul_all.median     - firstrun_results[3])/firstrun_results[3]
