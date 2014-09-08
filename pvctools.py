@@ -131,7 +131,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values)        
         filename = subdirname.split(os.sep)[-1]        
         
         #generating the graphic and output folder
@@ -194,7 +194,7 @@ def main():
         if commands.verbose is True:
             print '-> Generating relevant subfolders for the analysis'
 
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
         graphspath = None        
@@ -271,7 +271,7 @@ def main():
         if commands.verbose is True:
             print '-> Generating relevant subfolders for the analysis'
 
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        

@@ -90,16 +90,16 @@ def findCalibName(dirname):
     return filename
     
     
-def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
+def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, Inpxname, values = None):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
      
-    name, last_num = defineName(dirname, TypeOfAnalysis)
-    #import pdb; pdb.set_trace()    
+    name, last_num = defineName(dirname, TypeOfAnalysis)  
     subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)  
     filename = '{}/'+ name + '.csv'
     
     #header writing
     out = open(filename.format(subdirname), "w")
+    out.write("Vissim filename: " + str(Inpxname) + "\n")
     out.write("Analysis number: " + str(last_num) + "\n")
     out.write("Type of analysis: " + str(TypeOfAnalysis) + "\n")
     if TypeOfAnalysis != "Student":
@@ -141,20 +141,26 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     #Sensitivity header
     if TypeOfAnalysis == 'Sensitivity' or TypeOfAnalysis == 'Monte Carlo': 
         out.write("*var_name: Name of the tested variable\n"
+                  "Note: m = mean, fq = first quartile, md = median, tq = third quartile, std = standard deviation, %diff = relative difference with the default values results"
                   "*flow: Vehicular flow\n"
                   "*nbr_opp: Number of opportunistic lane changes\n"
                   "*nbr_man: Number of mandatory lane changes\n"
-                  "*m_forward: Mean calculated forward gaps (all lanes concatenated, calculated at the middle of each link)\n"
-                  "*m_LC_Aopp: Mean calculated opportunistic lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
-                  "*m_LC_Bopp: Mean calculated opportunistic lane change gap calculated before the lane changing vehicule began changing lane\n"
-                  "*m_LC_Aman: Mean calculated mandatory lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
-                  "*m_LC_Aman: Mean calculated mandatory lane change gap calculated before the lane changing vehicule began changing lane \n"
+                  "*forward: Forward gaps (all lanes concatenated, calculated at the middle of each link)\n"
+                  "*LC_Aopp: Opportunistic lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
+                  "*LC_Bopp: Opportunistic lane change gap calculated before the lane changing vehicule began changing lane\n"
+                  "*LC_Aman: Mandatory lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
+                  "*LC_Aman: Mandatory lane change gap calculated before the lane changing vehicule began changing lane \n"
                   "\n"
                   "var_name;")
         for var in variables:
             out.write(str(var) + ";")
         if TypeOfAnalysis == 'Sensitivity': 
-            out.write("flow;nbr_opp;% diff;nbr_man;% diff;m_forward;% diff;m_LC_Aopp;% diff;m_LC_Bopp;% diff;m_LC_Aman;% diff;m_LC_Bman;% diff\n")        
+            out.write("flow;nbr_opp;% diff;nbr_man;% diff;"
+                      "m_forward;% diff;fq_forward;% diff;md_forward;% diff;tq_forward;% diff;std_forward;% diff;"
+                      "m_LC_Aopp;% diff;fq_LC_Aopp;% diff;md_LC_Aopp;% diff;tq_LC_Aopp;% diff;std_LC_Aopp;% diff;"
+                      "m_LC_Bopp;% diff;fq_LC_Bopp;% diff;md_LC_Bopp;% diff;tq_LC_Bopp;% diff;std_LC_Bopp;% diff;"
+                      "m_LC_Aman;% diff;fq_LC_Aman;% diff;md_LC_Aman;% diff;tq_LC_Aman;% diff;std_LC_Aman;% diff;"
+                      "m_LC_Bman;% diff;fq_LC_Bman;% diff;md_LC_Bman;% diff;tq_LC_Bman;% diff;std_LC_Bman;% diff\n")        
         else:
             out.write("flow;nbr_opp;nbr_man;m_forward;m_LC_Aopp;m_LC_Bopp;m_LC_Aman;m_LC_Bman;\n")        
    
