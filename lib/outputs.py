@@ -23,7 +23,7 @@ sys.stdout = oldstdout #Re-enable output
 
 class sublvl:
     def __init__(self, raw):
-            if raw != []:
+        if raw != []:
             cumul,nlist,mean,firstQuart,median,thirdQuart,var  = dist(raw)
             self.raw        = raw        
             self.value      = nlist
@@ -119,13 +119,13 @@ def NEW_laneChange(objects, corridors):
     manObjDict = {}
     laneDict = {}
 
-    for o in range(len(objects):    
+    for o in range(len(objects)):    
         for i in set(objects[o].curvilinearPositions.lanes):
             if i not in laneDict: laneDict[i] = []
             if o not in laneDict[i]: laneDict[i].append(o)   
     
         #Vissim lane changes
-        if isinstance(objects[o].curvilinearPositions.lanes[0],string):
+        if isinstance(objects[o].curvilinearPositions.lanes[0],str):
             for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
                 #if link is not the same
                 if objects[o].curvilinearPositions.lanes[pos].strip('_')[0] != objects[o].curvilinearPositions.lanes[pos + 1].strip('_')[0]:
@@ -138,18 +138,18 @@ def NEW_laneChange(objects, corridors):
                     if start != end:    #if not --> mandatory lane change
                         if o not in manObj: manObj.append(o)
                         if o not in manObjDict:
-                            manObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                            manObjDict[o] = [[objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1]]
                         else:
-                            manObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                            manObjDict[o].append([objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1])
                 #if link is the same
                 else:
                     #if lane is not the same --> opportunistic lane change
                     if objects[o].curvilinearPositions.lanes[pos].strip('_')[1] != objects[o].curvilinearPositions.lanes[pos + 1].strip('_')[1]:
                         if o not in oppObj: oppObj.append(o)
                         if o not in oppObjDict:
-                            oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                            oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1]]
                         else:
-                            oppObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                            oppObjDict[o].append([objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1])
         
         #Traffic Intelligence lane changes
         else:
@@ -165,15 +165,15 @@ def NEW_laneChange(objects, corridors):
                     if start == end:    #If yes --> opportunistic lane change
                         if o not in oppObj: oppObj.append(o)
                         if o not in oppObjDict:
-                            oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                            oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1]]
                         else:           
-                            oppObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                            oppObjDict[o].append([objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1])
                     else:               #If not --> mandatory lane change
                         if o not in manObj: manObj.append(o)
                         if o not in manObjDict:
-                            manObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                            manObjDict[o] = [[objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1]]
                         else:
-                            manObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                            manObjDict[o].append([objects[o].curvilinearPositions.lanes[pos],objects[o].curvilinearPositions.lanes[pos + 1],pos + 1])
                             
     return oppObj, manObj, oppObjDict, manObjDict, laneDict
     
@@ -241,9 +241,9 @@ def dist(x):
     stats = [sum(x==i)/float(len(x)) for i in nlist]
     cumul = np.cumsum(stats)
     mean = np.mean(np.asarray(x))
-    firstQuart = numpy.percentile(x,25)
+    firstQuart = np.percentile(x,25)
     median = np.median(np.asarray(x))
-    thirdQuart = numpy.percentile(x,75)
+    thirdQuart = np.percentile(x,75)
     var = np.var(np.asarray(x))      
     return cumul,nlist,mean,firstQuart,median,thirdQuart,var
     
@@ -352,15 +352,15 @@ def treatVissimOutputs(files, inputs):
                 
             #mandatory lane change gaps
             agaps, bgaps = laneChangeGaps(manObj, manObjDict, laneDict, objects)
-            if agaps != []: raw_man_LC_agaps.append(agaps)
-            if bgaps != []: raw_man_LC_bgaps.append(bgaps)
+            if agaps.any(): raw_man_LC_agaps.append(agaps)
+            if bgaps.any(): raw_man_LC_bgaps.append(bgaps)
             if verbose:
                 print ' == Mandatory lane change gaps calculation done == '
-    	
+
             #opportunistic lane change gaps
             agaps, bgaps = laneChangeGaps(oppObj, oppObjDict, laneDict, objects)
-            if agaps != []: raw_opp_LC_agaps.append(agaps)
-            if bgaps != []: raw_opp_LC_bgaps.append(bgaps)
+            if agaps.any(): raw_opp_LC_agaps.append(agaps)
+            if bgaps.any(): raw_opp_LC_bgaps.append(bgaps)
             if verbose:
                 print ' == Opportunistic lane change gaps calculation done == '
                  
