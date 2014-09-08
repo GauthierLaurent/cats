@@ -90,12 +90,17 @@ def findCalibName(dirname):
     return filename
     
     
-def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, Inpxname, values = None):
+def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, Inpxname, values = None, multiProcTempFile = False):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
-     
-    name, last_num = defineName(dirname, TypeOfAnalysis)  
-    subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)  
-    filename = '{}/'+ name + '.csv'
+    
+    if multiProcTempFile is False:
+        name, last_num = defineName(dirname, TypeOfAnalysis) 
+        subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)
+        filename = '{}/'+ name + '.csv'
+    else:
+        subdirname = dirname
+        filename = '{}/' + multiProcTempFile + '.csv'
+        last_num = int(multiProcTempFile.split('_')[2])
     
     #header writing
     out = open(filename.format(subdirname), "w")

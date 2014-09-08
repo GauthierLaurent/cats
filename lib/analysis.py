@@ -486,6 +486,11 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     
     #preparing the outputs    
     text = []
+    if commands.multi is True and default is False:
+        #opening a process output file
+        WorkingPath = outputspath.strip(os.sep+'outputs')
+        multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_' + concat_variables[rangevalues[0][1]]
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, "Sensitivity", config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values, multiProcTempFile)       
     
     #creating a dictionnary
     var_dict = varDict(concat_variables, default_values)    
@@ -646,7 +651,12 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
         #breaking the outer loop because the default only needs to be ran once
         if default is True:
             break
-    
+        
+    if commands.multi is True and default is False:
+        for i in range(len(text)):
+            write.writeInFile(out, text[i])  
+        out.close()
+        
     if default is True:    
         return text, firstrun_results
     else:
