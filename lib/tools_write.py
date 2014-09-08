@@ -72,6 +72,23 @@ def defineName(dirname, TypeOfAnalysis):
     filename = TypeOfAnalysis + '_Analysis_' + str(last_num)
     
     return filename, last_num
+
+def findCalibName(dirname):
+    '''Finds the folders named after the analysis type and find the greatest increment'''
+    last_num = 0
+    
+    past_analysis  = [f for f in os.listdir(dirname) if "point" in f]
+    if past_analysis != []:
+        for f in past_analysis:
+            striped = f.strip('.csv')
+            num = int(striped.split('_')[-1])
+            if num > last_num: last_num = num
+    
+    last_num += 1  
+    filename = 'point' + str(last_num)
+    
+    return filename
+    
     
 def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
@@ -283,9 +300,9 @@ def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, 
                 dist = np.arange(min(variable.distributions[i].raw) -1,max(variable.distributions[i].raw) +1,0.1)
                 lines = plt.plot(dist, len(variable.distributions[i].raw)*kde(dist), '--')            
                 if variable_name == "Forward_gaps":
-                    besttext.append("Best fit for\nHUM... "+ str(i+1))
+                    besttext.append("Best fit for\n"+ str(i+1))
                 else:
-                    besttext.append("Best fit for\nsimulation "+ str(i+1))
+                    besttext.append("Best fit for\nsimulation"+ str(i+1))
                 bestline.append(lines[0])
         handles = simline + bestline
         labels = simtext + besttext       

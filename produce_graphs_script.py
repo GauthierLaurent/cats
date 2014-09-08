@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#%run produce_graphs_script.py Statistical-precision_Analysis_38
+#%run produce_graphs_script.py Sensitivity_Analysis_48 W99cc1_3.0
 """
 Created on Thu Jul 17 11:29:28 2014
 
@@ -33,7 +33,7 @@ def processFolder(working_dir, graphspath, working_variable, config):
         print("Traitement des fichiers zfp dans le repertoire .\outputs")
     
     #opening the files and calculating needed information
-    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(working_dir) if f.endswith("fzp")], [working_dir, config.sim_steps, config.warm_up_time, False])
+    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(working_dir) if f.endswith("fzp")], [working_dir, config.sim_steps, config.warm_up_time, True])
     
     #printing graphs
     variables = [forFMgap,oppLCagap,oppLCbgap,manLCagap,manLCbgap]

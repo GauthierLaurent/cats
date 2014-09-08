@@ -9,12 +9,21 @@ Created on Thu Jul 03 11:28:53 2014
 ##################
 #Natives
 from itertools import izip, chain, repeat
+from pylab import csv2rec
 import multiprocessing
-import math, sys
+import math, sys, os
 
 ##################
 # Define tools
 ##################
+def extractDataFromVariablesCSV(dirname):   
+    filename  = [f for f in os.listdir(dirname) if f == 'variables.csv']
+    variablesInfo = csv2rec(os.path.join(dirname,filename[0]))
+    minarray = variablesInfo('vissimmin')
+    maxarray = variablesInfo('vissimmax')
+    value_names = variablesInfo('varname')
+    return minarray, maxarray, value_names
+
 def sort2lists(list1,list2):
     '''Sorts list2 according to the sorting of the content of list1
        list1 must contain values that can be sorted while

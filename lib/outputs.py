@@ -22,17 +22,28 @@ sys.stdout = oldstdout #Re-enable output
 ##################
 
 class sublvl:
-    def __init__(self, raw = [], value = None, cumul = None, mean = None, median = None, var = None):
-        self.raw     = raw        
-        self.value   = value
-        self.cumul   = cumul
-        self.mean    = mean
-        self.median  = median
-        self.var     = var
-        if var != None:
-            self.std = var**0.5
+    def __init__(self, raw):
+            if raw != []:
+            cumul,nlist,mean,firstQuart,median,thirdQuart,var  = dist(raw)
+            self.raw        = raw        
+            self.value      = nlist
+            self.cumul      = cumul
+            self.mean       = mean
+            self.firstQuart = firstQuart
+            self.median     = median
+            self.thirdQuart = thirdQuart
+            self.var        = var
+            self.std        = var**0.5
         else:
-            self.std = None
+            self.raw        = []       
+            self.value      = None
+            self.cumul      = None
+            self.mean       = None
+            self.firstQuart = None
+            self.median     = None
+            self.thirdQuart = None
+            self.var        = None
+            self.std        = None
             
 class stats:
     def __init__(self, raw):
@@ -42,20 +53,14 @@ class stats:
             for l in raw:
                 for m in l:
                     allvalues.append(m)
-                cumul,nlist,mean,median,var  = dist(l)
-                self.distributions.append(sublvl(l, nlist,cumul,mean,median,var))
-                
-            cumul,nlist,mean,median,var  = dist(allvalues)
-            self.cumul_all = sublvl(allvalues,nlist,cumul,mean,median,var)                
-                
+                self.distributions.append(sublvl(l))
+            self.cumul_all = sublvl(allvalues)                                
         else:
             self.cumul_all = sublvl(raw)
-
 
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
     instants = []
-    import pdb; pdb.set_trace()
     for o in objects:
         t = o.curvilinearPositions.getIntersections(s, lane)
         if t != []:
@@ -102,15 +107,84 @@ def laneChangeGaps(lists, listDict, laneDict, objects):
     bgaps = np.asarray(y)
 
     return agaps, bgaps
-							
+    
+def NEW_laneChange(objects, corridors):
+
+    #Lists
+    oppObj = []    
+    manObj = []
+
+    #Dictionaries    
+    oppObjDict = {}    
+    manObjDict = {}
+    laneDict = {}
+
+    for o in range(len(objects):    
+        for i in set(objects[o].curvilinearPositions.lanes):
+            if i not in laneDict: laneDict[i] = []
+            if o not in laneDict[i]: laneDict[i].append(o)   
+    
+        #Vissim lane changes
+        if isinstance(objects[o].curvilinearPositions.lanes[0],string):
+            for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
+                #if link is not the same
+                if objects[o].curvilinearPositions.lanes[pos].strip('_')[0] != objects[o].curvilinearPositions.lanes[pos + 1].strip('_')[0]:
+                    start = None
+                    end = None
+                    #Verify if both links are in the same corridor
+                    for corridor in corridors:
+                        if objects[o].curvilinearPositions.lanes[pos] in corridor: start = corridor
+                        if objects[o].curvilinearPositions.lanes[pos +1] in corridor: end = corridor
+                    if start != end:    #if not --> mandatory lane change
+                        if o not in manObj: manObj.append(o)
+                        if o not in manObjDict:
+                            manObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                        else:
+                            manObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                #if link is the same
+                else:
+                    #if lane is not the same --> opportunistic lane change
+                    if objects[o].curvilinearPositions.lanes[pos].strip('_')[1] != objects[o].curvilinearPositions.lanes[pos + 1].strip('_')[1]:
+                        if o not in oppObj: oppObj.append(o)
+                        if o not in oppObjDict:
+                            oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                        else:
+                            oppObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+        
+        #Traffic Intelligence lane changes
+        else:
+            for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
+                #if alignment is not the same
+                if objects[o].curvilinearPositions.lanes[pos] != objects[o].curvilinearPositions.lanes[pos + 1]:
+                    start = None
+                    end = None
+                    #Verify if both links are in the same corridor
+                    for corridor in corridors:
+                        if objects[o].curvilinearPositions.lanes[pos] in corridor: start = corridor
+                        if objects[o].curvilinearPositions.lanes[pos +1] in corridor: end = corridor
+                    if start == end:    #If yes --> opportunistic lane change
+                        if o not in oppObj: oppObj.append(o)
+                        if o not in oppObjDict:
+                            oppObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                        else:           
+                            oppObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                    else:               #If not --> mandatory lane change
+                        if o not in manObj: manObj.append(o)
+                        if o not in manObjDict:
+                            manObjDict[o] = [[objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1]]
+                        else:
+                            manObjDict[o].append([objects[o].curvilinearPositions.lanes[lane],objects[o].curvilinearPositions.lanes[lane + 1],lane + 1])
+                            
+    return oppObj, manObj, oppObjDict, manObjDict, laneDict
+    
 def laneChange(objects):
-    '''Calculates whether an object makes a mandatory or an opportunistic lane change creates 3 dictionnaries and two lists
+    '''Calculates whether an object makes a mandatory or an opportunistic lane change creates 3 dictionaries and two lists
     
     The two list (oppObj and manObj) are the objects respectively doing opportunistic lane changes and mandatory lane changes      
     
                                 *************************
                                 
-    The fist two dictionnaries (oppObjDict and manObjDict) present, for each lane change:
+    The fist two dictionaries (oppObjDict and manObjDict) present, for each lane change:
                     - lane before the lane change
                     - lane after the lane change
                     - position of the last lane in the lane vector
@@ -119,7 +193,7 @@ def laneChange(objects):
                         
                                 *************************
                                 
-    The last dictionnary presents the list of objects present on a lane
+    The last dictionary presents the list of objects present on a lane
                       dict =  {lane | [ obj1, obj2, ... ] }   
     '''  
     #Lists
@@ -167,9 +241,11 @@ def dist(x):
     stats = [sum(x==i)/float(len(x)) for i in nlist]
     cumul = np.cumsum(stats)
     mean = np.mean(np.asarray(x))
+    firstQuart = numpy.percentile(x,25)
     median = np.median(np.asarray(x))
+    thirdQuart = numpy.percentile(x,75)
     var = np.var(np.asarray(x))      
-    return cumul,nlist,mean,median,var
+    return cumul,nlist,mean,firstQuart,median,thirdQuart,var
     
 def computeMeanfromOld(data,old_num):
     '''data must be provided as a list: [old_mean, a,b,c,...]'''

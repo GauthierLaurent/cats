@@ -544,20 +544,71 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
             if default is True:
                 firstrun_results = []
                 firstrun_results.append(float(forFMgap.cumul_all.mean))
+                firstrun_results.append(float(forFMgap.cumul_all.firstQuart))
+                firstrun_results.append(float(forFMgap.cumul_all.median))
+                firstrun_results.append(float(forFMgap.cumul_all.thirdQuart))
+                firstrun_results.append(float(forFMgap.cumul_all.std))
+                
                 firstrun_results.append(float(oppLCagap.cumul_all.mean))
+                firstrun_results.append(float(oppLCagap.cumul_all.firstQuart))
+                firstrun_results.append(float(oppLCagap.cumul_all.median))
+                firstrun_results.append(float(oppLCagap.cumul_all.thirdQuart))
+                firstrun_results.append(float(oppLCagap.cumul_all.std))
+                
                 firstrun_results.append(float(oppLCbgap.cumul_all.mean))
+                firstrun_results.append(float(oppLCbgap.cumul_all.firstQuart))
+                firstrun_results.append(float(oppLCbgap.cumul_all.median))
+                firstrun_results.append(float(oppLCbgap.cumul_all.thirdQuart))                
+                firstrun_results.append(float(oppLCbgap.cumul_all.std))
+                
                 firstrun_results.append(float(manLCagap.cumul_all.mean))
+                firstrun_results.append(float(manLCagap.cumul_all.firstQuart))
+                firstrun_results.append(float(manLCagap.cumul_all.median))
+                firstrun_results.append(float(manLCagap.cumul_all.thirdQuart))                
+                firstrun_results.append(float(manLCagap.cumul_all.std))
+                
                 firstrun_results.append(float(manLCbgap.cumul_all.mean))
+                firstrun_results.append(float(manLCbgap.cumul_all.firstQuart))
+                firstrun_results.append(float(manLCbgap.cumul_all.median))
+                firstrun_results.append(float(manLCbgap.cumul_all.thirdQuart))                
+                firstrun_results.append(float(manLCbgap.cumul_all.std))
+                
                 firstrun_results.append(float(oppLCcount))
                 firstrun_results.append(float(manLCcount))
                 
             else:           
-                delta_mean_fgap = (forFMgap.cumul_all.mean - firstrun_results[0])/firstrun_results[0]
-                delta_mean_Aoppgap = (oppLCagap.cumul_all.mean - firstrun_results[1])/firstrun_results[1]
-                delta_mean_Boppgap = (oppLCbgap.cumul_all.mean - firstrun_results[2])/firstrun_results[2]
-                delta_mean_Amangap = (manLCagap.cumul_all.mean - firstrun_results[3])/firstrun_results[3]
-                delta_mean_Bmangap = (manLCbgap.cumul_all.mean - firstrun_results[4])/firstrun_results[4]
+                delta_mean_fgap         = (forFMgap.cumul_all.mean       - firstrun_results[0])/firstrun_results[0]
+                delta_firstQuart_fgap   = (forFMgap.cumul_all.firstQuart - firstrun_results[0])/firstrun_results[0]
+                delta_median_fgaps      = (forFMgap.cumul_all.median     - firstrun_results[0])/firstrun_results[0]
+                delta_thirdQuart_fgaps  = (forFMgap.cumul_all.thirdQuart - firstrun_results[0])/firstrun_results[0]
+                delta_std_fgaps         = (forFMgap.cumul_all.std        - firstrun_results[0])/firstrun_results[0]
+                
+                delta_mean_Aoppgap        = (oppLCagap.cumul_all.mean       - firstrun_results[1])/firstrun_results[1]
+                delta_firstQuart_Aoppgap  = (oppLCagap.cumul_all.firstQuart - firstrun_results[1])/firstrun_results[1]
+                delta_median_Aoppgap      = (oppLCagap.cumul_all.median     - firstrun_results[1])/firstrun_results[1]
+                delta_thirdQuart_Aoppgap  = (oppLCagap.cumul_all.thirdQuart - firstrun_results[1])/firstrun_results[1]
+                delta_std_Aoppgap         = (oppLCagap.cumul_all.std        - firstrun_results[1])/firstrun_results[1]
+                
+                delta_mean_Boppgap        = (oppLCbgap.cumul_all.mean       - firstrun_results[2])/firstrun_results[2]
+                delta_firstQuart_Boppgap  = (oppLCbgap.cumul_all.firstQuart - firstrun_results[2])/firstrun_results[2]
+                delta_median_Boppgap      = (oppLCbgap.cumul_all.median     - firstrun_results[2])/firstrun_results[2]
+                delta_thirdQuart_Boppgap  = (oppLCbgap.cumul_all.thirdQuart - firstrun_results[2])/firstrun_results[2]
+                delta_std_Boppgap         = (oppLCbgap.cumul_all.std        - firstrun_results[2])/firstrun_results[2]
+                
+                delta_mean_Amangap        = (manLCagap.cumul_all.mean       - firstrun_results[3])/firstrun_results[3]
+                delta_firstQuart_Amangap  = (manLCagap.cumul_all.firstQuart - firstrun_results[3])/firstrun_results[3]
+                delta_median_Amangap      = (manLCagap.cumul_all.median     - firstrun_results[3])/firstrun_results[3]
+                delta_thirdQuart_Amangap  = (manLCagap.cumul_all.thirdQuart - firstrun_results[3])/firstrun_results[3]
+                delta_std_Amangap         = (manLCagap.cumul_all.std        - firstrun_results[3])/firstrun_results[3]
+                
+                delta_mean_Bmangap        = (manLCbgap.cumul_all.mean       - firstrun_results[4])/firstrun_results[4]
+                delta_firstQuart_Bmangap  = (manLCbgap.cumul_all.firstQuart - firstrun_results[4])/firstrun_results[4]
+                delta_median_Bmangap      = (manLCbgap.cumul_all.median     - firstrun_results[4])/firstrun_results[4]
+                delta_thirdQuart_Bmangap  = (manLCbgap.cumul_all.thirdQuart - firstrun_results[4])/firstrun_results[4]
+                delta_std_Bmangap         = (manLCbgap.cumul_all.std        - firstrun_results[4])/firstrun_results[4]
+                
                 delta_oppLCcount = (oppLCcount - firstrun_results[5])/firstrun_results[5]
+                
                 delta_manLCcount = (manLCcount - firstrun_results[6])/firstrun_results[6]
             
             #printing graphs
@@ -576,9 +627,20 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                     
             #writing to file
             if default is True:
-                text.append(["Default_values", corrected_values, flow, oppLCcount, "---", manLCcount, "---", forFMgap.cumul_all.mean, "---", oppLCagap.cumul_all.mean, "---", oppLCbgap.cumul_all.mean, "---", manLCagap.cumul_all.mean, "---", manLCbgap.cumul_all.mean,  "---"])
+                text.append(["Default_values", corrected_values, flow, oppLCcount, "---", manLCcount, "---",
+                             forFMgap.cumul_all.mean,  "---", forFMgap.cumul_all.firstQuart,  "---", forFMgap.cumul_all.median,  "---", forFMgap.cumul_all.thirdQuart,  "---", forFMgap.cumul_all.std,  "---",
+                             oppLCagap.cumul_all.mean, "---", oppLCagap.cumul_all.firstQuart, "---", oppLCagap.cumul_all.median, "---", oppLCagap.cumul_all.thirdQuart, "---", oppLCagap.cumul_all.std, "---",
+                             oppLCbgap.cumul_all.mean, "---", oppLCbgap.cumul_all.firstQuart, "---", oppLCbgap.cumul_all.median, "---", oppLCbgap.cumul_all.thirdQuart, "---", oppLCbgap.cumul_all.std, "---",
+                             manLCagap.cumul_all.mean, "---", manLCagap.cumul_all.firstQuart, "---", manLCagap.cumul_all.median, "---", manLCagap.cumul_all.thirdQuart, "---", manLCagap.cumul_all.std, "---",
+                             manLCbgap.cumul_all.mean, "---", manLCbgap.cumul_all.firstQuart, "---", manLCbgap.cumul_all.median, "---", manLCbgap.cumul_all.thirdQuart, "---", manLCbgap.cumul_all.std, "---"])       
+
             else:
-                text.append([value_name, corrected_values, flow, oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount, forFMgap.cumul_all.mean, delta_mean_fgap, oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCbgap.cumul_all.mean, delta_mean_Boppgap, manLCagap.cumul_all.mean, delta_mean_Amangap, manLCbgap.cumul_all.mean, delta_mean_Bmangap])       
+                text.append([value_name, corrected_values, flow,oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount,
+                             forFMgap.cumul_all.mean,  delta_mean_fgap,    forFMgap.cumul_all.firstQuart,  delta_firstQuart_fgap,    forFMgap.cumul_all.median,  delta_median_fgaps,   forFMgap.cumul_all.thirdQuart,  delta_thirdQuart_fgaps,   forFMgap.cumul_all.std,  delta_std_fgaps,
+                             oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCagap.cumul_all.firstQuart, delta_firstQuart_Aoppgap, oppLCagap.cumul_all.median, delta_median_Aoppgap, oppLCagap.cumul_all.thirdQuart, delta_thirdQuart_Aoppgap, oppLCagap.cumul_all.std, delta_std_Aoppgap,
+                             oppLCbgap.cumul_all.mean, delta_mean_Boppgap, oppLCbgap.cumul_all.firstQuart, delta_firstQuart_Boppgap, oppLCbgap.cumul_all.median, delta_median_Boppgap, oppLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Boppgap, oppLCbgap.cumul_all.std, delta_std_Boppgap,
+                             manLCagap.cumul_all.mean, delta_mean_Amangap, manLCagap.cumul_all.firstQuart, delta_firstQuart_Amangap, manLCagap.cumul_all.median, delta_median_Amangap, manLCagap.cumul_all.thirdQuart, delta_thirdQuart_Amangap, manLCagap.cumul_all.std, delta_std_Amangap,
+                             manLCbgap.cumul_all.mean, delta_mean_Bmangap, manLCbgap.cumul_all.firstQuart, delta_firstQuart_Bmangap, manLCbgap.cumul_all.median, delta_median_Bmangap, manLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Bmangap, manLCbgap.cumul_all.std, delta_std_Bmangap])       
         
         #breaking the outer loop because the default only needs to be ran once
         if default is True:
