@@ -3,7 +3,7 @@
 #  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
 #  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
 #  Dependencies listed in Libraries; 
-Version = 'R1.1.0.0 u. 08-09-2014'
+Version = 'R1.1.0.1 u. 09-09-2014'
 ################################################################################
 '''Dev stuff
 import pdb; pdb.set_trace()
@@ -218,8 +218,9 @@ def main():
         
         ##Running the rest of the simulations
         if commands.multi is True:
+            minChunkSize = define.countPoints(concat_variables, config.nbr_points, config.nbr_runs)
             inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, firstrun_results]            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, concat_variables)                  
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:

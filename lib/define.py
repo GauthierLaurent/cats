@@ -12,6 +12,7 @@ from itertools import izip, chain, repeat
 from pylab import csv2rec
 import multiprocessing
 import math, sys, os
+import numpy as np
 
 ##################
 # Define tools
@@ -90,7 +91,7 @@ def intelligentChunks(n, iterable, value_names):
     
     return intelligent_chunk
 
-def createWorkers(total_number_of_tasks, function, inputs, commands, variables_names = []):
+def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSize = (multiprocessing.cpu_count() - 1), variables_names = []):
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
        number of cores that can process it.
@@ -111,16 +112,16 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, variables_n
     ##number of processes
     nbr_pro = len(multiprocessing.active_children()) #redondant with num_cores, but left there to rmember the function later on
     
-    ##calculating the number of chunks needed to have one chunk per process
-    ##this number won't actually be followed as this some variables might have
-    ##to be taken out of the pool of variables to be kept together
-    len_chunks = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))
-    
+    ##calculating the number of chunks needed to have one chunk per process, but with a max number of simulations per chunk
+    one_chunk_per_process = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))    
+
+    ##blocking the number of variables to 4 per Chunks
+    len_chunks = min(one_chunk_per_process, minChunkSize)  
 
     ##breaking into chunks without 'None' values
     if not variables_names:
         processed_chunks = cleanChunks(len_chunks, total_number_of_tasks)
-            
+    ##breaking into chunks keeping linked variables together        
     else:
         processed_chunks = intelligentChunks(len_chunks, total_number_of_tasks, variables_names)
 
@@ -179,8 +180,8 @@ def createFMValues(model):
     LookAheadDistMin = 0.0    ; FMvariables.append('LookAheadDistMin')  ; FMvalues.append(LookAheadDistMin)   #min = 0, max = 999999
     LookAheadDistMax = 250.0  ; FMvariables.append('LookAheadDistMax')  ; FMvalues.append(LookAheadDistMax)   #min = 0, max = 999999
     ObsrvdVehs = 2.0          ; FMvariables.append('ObsrvdVehs')        ; FMvalues.append(ObsrvdVehs)         #min = 0, max = 10
-    #LookBackDistMin = 0.0     ; FMvariables.append('LookBackDistMin')   ; FMvalues.append(LookBackDistMin)    #min = 0, max = 999999
-    #LookBackDistMax = 150.0   ; FMvariables.append('LookBackDistMax')   ; FMvalues.append(LookBackDistMax)    #min = 0, max = 999999
+   #LookBackDistMin = 0.0     ; FMvariables.append('LookBackDistMin')   ; FMvalues.append(LookBackDistMin)    #min = 0, max = 999999
+   #LookBackDistMax = 150.0   ; FMvariables.append('LookBackDistMax')   ; FMvalues.append(LookBackDistMax)    #min = 0, max = 999999
     
     return FMvalues, FMvariables       
 
@@ -231,8 +232,8 @@ def buildRanges(model):
     rangeLookAheadDistMin = [0.0    ,  30.0] ; rangevalues.append(rangeLookAheadDistMin)        #min = 0, max = 999999
     rangeLookAheadDistMax = [200.0  , 300.0] ; rangevalues.append(rangeLookAheadDistMax)        #min = 0, max = 999999
     rangeObsrvdVehs =       [2.0    ,  10.0] ; rangevalues.append(rangeObsrvdVehs)              #min = 0, max = 10
-    #rangeLookBackDistMin =  [0.0    ,  30.0] ; rangevalues.append(rangeLookBackDistMin)         #min = 0, max = 999999
-    #rangeLookBackDistMax =  [100.0  , 200.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
+   #rangeLookBackDistMin =  [0.0    ,  30.0] ; rangevalues.append(rangeLookBackDistMin)         #min = 0, max = 999999
+   #rangeLookBackDistMax =  [100.0  , 200.0] ; rangevalues.append(rangeLookBackDistMax)         #min = 0, max = 999999            
                          
     ##Variables for lane change behavior
     rangeMaxDecelOwn =         [-10.0 , -1.00] ; rangevalues.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
@@ -277,8 +278,8 @@ def hard_boundaries(model):
     rangeLookAheadDistMin = [0.0 , 999999] ; boundaries.append(rangeLookAheadDistMin)        #min = 0, max = 999999
     rangeLookAheadDistMax = [0.0 , 999999] ; boundaries.append(rangeLookAheadDistMax)        #min = 0, max = 999999
     rangeObsrvdVehs =       [0.0 ,   10.0] ; boundaries.append(rangeObsrvdVehs)              #min = 0, max = 10
-    #rangeLookBackDistMin =  [0.0 , 999999] ; boundaries.append(rangeLookBackDistMin)         #min = 0, max = 999999
-    #rangeLookBackDistMax =  [0.0 , 999999] ; boundaries.append(rangeLookBackDistMax)         #min = 0, max = 999999            
+   #rangeLookBackDistMin =  [0.0 , 999999] ; boundaries.append(rangeLookBackDistMin)         #min = 0, max = 999999
+   #rangeLookBackDistMax =  [0.0 , 999999] ; boundaries.append(rangeLookBackDistMax)         #min = 0, max = 999999            
                          
     ##Variables for lane change behavior
     rangeMaxDecelOwn =         [-10.0 , -0.02] ; boundaries.append(rangeMaxDecelOwn)           #min = -10, max = -0.01
@@ -296,7 +297,23 @@ def hard_boundaries(model):
     rangeCoopDecel =           [-10   ,   0.0] ; boundaries.append(rangeCoopDecel)             #min = -10, max = 0
 
     return boundaries
+
+def countPoints(variable_names, points, sim):
+    '''returns the min number of variables per chunks needed to have maximum 200 simulations per chunks
+       200 simulations = 4 parameters * 5 points/para * 10 sim/points '''
     
+    total_points = 0
+    
+    for var in variable_names:
+        if var == "CoopLnChg":
+            total_points += 2
+        else:
+            total_points += points
+    
+    total_sims = np.ceil(float(total_points)*sim/200)
+    
+    return np.ceil(len(variable_names)/total_sims)
+            
 def verifyRanges(rangevalues, variables):
     
     closing = False    
