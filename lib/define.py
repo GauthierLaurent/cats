@@ -17,7 +17,23 @@ import numpy as np
 ##################
 # Define tools
 ##################
-def extractDataFromVariablesCSV(dirname):   
+def extractVissimCorridorsFromCSV(dirname, inpxname):
+    '''Reads corridor information for a csv named like the inpx
+       CSV file must be build as:    Corridor_name,vissim list,traffic intelligence list
+       both list must be separated by "-"
+    '''
+    filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+    brute = [line.strip() for line in open(os.path.join(dirname,filename[0]))]
+    vissimCorridors = []
+    trafIntCorridors = []
+    for b in brute:
+        vissimCorridors.append([int(s) for s in b.split(',')[1].split('-')])
+        trafIntCorridors.append([int(s) for s in b.split(',')[2].split('-')])
+        
+    return vissimCorridors, trafIntCorridors
+        
+def extractDataFromVariablesCSV(dirname): #MIGRATION TO FINISH
+    '''will be used to transfert every variable information to a csv file'''
     filename  = [f for f in os.listdir(dirname) if f == 'variables.csv']
     variablesInfo = csv2rec(os.path.join(dirname,filename[0]))
     minarray = variablesInfo('vissimmin')
