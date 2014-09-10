@@ -529,22 +529,36 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
             if commands.mode:  #this serves to bypass Vissim while testing the code
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
             else:
-                Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))
-                                    
-                #Vissim initialisation and simulation running
-                simulated = vissim.initializeSimulation(Vissim, parameters, corrected_values, concat_variables, commands.save_swp)
-                if simulated is not True:
-                    text.append([value_name, corrected_values,''.join(str(simulated))])    #printing the exception in the csv file
-                    continue
+                #Vissim starting and loading network block
+                Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))                
+                if Vissim == 'StartError':
+                    if default is True:
+                        print 'Could not start Vissim for default values, shutting down the analysis'
+                        sys.exit()
+                    else:
+                        text.append([value_name, corrected_values,'Could not start Vissim'])
+                        continue
+                elif Vissim == 'LoadNetError':
+                    if default is True:
+                        print 'Could not load the Network for default values, shutting down the analysis'
+                        sys.exit()
+                    else:
+                        text.append([value_name, corrected_values,'Could not load the Network'])
+                        continue
                 else:
-                    #print '*** Simulation completed *** Runtime: ' + str(time.clock())                    
-                
-                    vissim.stopVissim(Vissim) #unsure if i should stop and start vissim every iteration... to be tested.
+                    #preventing a new loading of Vissim for that iteration
+                    running = True
                     
-                    #output treatment
-                    inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose]
-                    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
-                    #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
+                    #Vissim initialisation and simulation running
+                    simulated = vissim.initializeSimulation(Vissim, parameters, corrected_values, concat_variables, commands.save_swp)
+                    if simulated is not True:
+                        text.append([value_name, corrected_values,''.join(str(simulated))])    #printing the exception in the csv file
+                        continue
+                    else:
+                        #output treatment
+                        inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose]
+                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
+                        #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                 
             if default is True:
                 firstrun_results = []
@@ -652,12 +666,14 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
         if default is True:
             break
         
+    vissim.stopVissim(Vissim)
+    
     if commands.multi is True and default is False:
         for i in range(len(text)):
             write.writeInFile(out, text[i])  
         out.close()
         
-    if default is True:    
+    if default is True:  
         return text, firstrun_results
     else:
         return text

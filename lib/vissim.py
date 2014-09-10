@@ -43,10 +43,18 @@ def startVissim(running, InpxPath):
 
     Vissim = False
     if running is False:
-        Vissim = win32com.client.Dispatch("Vissim.Vissim.600")        
-        #time.sleep(150)    
-    Vissim.LoadNet (InpxPath)   #the filename MUST have a capital first letter 
-    
+        try:
+            Vissim = win32com.client.Dispatch("Vissim.Vissim.600")        
+            #time.sleep(150)    
+        except:
+            Vissim = 'StartError'
+            
+    if Vissim is not False and Vissim is not 'StartError':
+        try:
+            Vissim.LoadNet (InpxPath)   #the filename MUST have a capital first letter 
+        except:
+           Vissim = 'LoadNetError'
+           
     return Vissim
 
 def stopVissim(Vissim):
