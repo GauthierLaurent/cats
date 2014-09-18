@@ -53,6 +53,7 @@ def calculateOnePass(values, foldername, inputs):
     video_value = inputs[8]
     Vissim      = inputs[9]
     multi       = inputs[10]
+    corridors   = inputs[11]
     
     if multi is True:
         for i,j in enumerate(inputs[11]):
@@ -81,7 +82,7 @@ def calculateOnePass(values, foldername, inputs):
             
         else:
             #treating the outputs
-            inputs = [outputspath, config.sim_steps, config.warm_up_time]
+            inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
             
     #checking the correspondance to the real data values
@@ -139,7 +140,7 @@ def respectUniverseBoundaries(destination,hard_bounds):
 #        Statistical precision analysis       
 ################################
 
-def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters):
+def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, corridors):
     '''Finds the number of iterations needed to achieve a good confidence interval
     
     Base on the ODOT specifications:
@@ -185,7 +186,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         else:
             #output treatment
             if commands.multi is True:
-                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose]
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
                 results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands)            
                 #building the old_data            
                 for i in range(len(results)):
@@ -217,11 +218,11 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
                        
                 old_num    = iterrations_ran
                 old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]
-                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, old_data]
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
                                     
             else:
-                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose]
+                inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
        
     #Student t-test to find the min number of runs
@@ -286,7 +287,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             file_to_run = ["Statistical_test_" + str(iterrations_ran).zfill(3) + ".fzp"]            
 
             #output treatment
-            inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, old_data]
+            inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(file_to_run, inputs)
         
         #generating the needed means and std
@@ -419,6 +420,7 @@ def monteCarlo(valuesVector, inputs):
     running             = inputs [6]
     parameters          = inputs [7]
     lowerbound          = inputs [8]
+    corridors           = inputs [9]
     
     #preparing the outputs    
     text = []
@@ -452,7 +454,7 @@ def monteCarlo(valuesVector, inputs):
                 text.append([value, valuesVector[value],''.join(str(simulated))])    #printing the exception in the csv file
             else:                                
                 #output treatment
-                inputs = [folderpath, config.sim_steps, config.warm_up_time, commands.verbose]
+                inputs = [folderpath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)            
 
                 #writing to file
@@ -481,8 +483,9 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     running             = inputs [8]
     parameters          = inputs [9]
     verbose             = inputs [10]
+    corridors           = inputs [11]
     if default is False:
-        firstrun_results = inputs[11]      
+        firstrun_results = inputs[12]      
     
     #preparing the outputs    
     text = []
@@ -556,7 +559,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                         continue
                     else:
                         #output treatment
-                        inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose]
+                        inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose, corridors]
                         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
                         #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                 

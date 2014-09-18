@@ -23,12 +23,12 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
        both list must be separated by "-"
     '''
     filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
-    brute = [line.strip() for line in open(os.path.join(dirname,filename[0]))]
+    brute = [line.strip() for line in open(os.path.join(dirname,filename[0]))]    
     vissimCorridors = []
-    trafIntCorridors = []
+    trafIntCorridors = []    
     for b in brute:
-        vissimCorridors.append([int(s) for s in b.split(',')[1].split('-')])
-        trafIntCorridors.append([int(s) for s in b.split(',')[2].split('-')])
+        vissimCorridors.append([b.split(',')[1]] + [int(s) for s in b.split(',')[2].split('-')])
+        trafIntCorridors.append([b.split(',')[1]] + [int(s) for s in b.split(',')[3].split('-')])
         
     return vissimCorridors, trafIntCorridors
         
