@@ -68,7 +68,7 @@ def calculateOnePass(values, foldername, inputs):
     
     p_values = []
     if commands.mode:  #this serves to bypass Vissim while testing the code
-        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
         
     else:
         Vissim.LoadNet (os.path.join(folderpath, filename))        
@@ -83,7 +83,7 @@ def calculateOnePass(values, foldername, inputs):
         else:
             #treating the outputs
             inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
             
     #checking the correspondance to the real data values
     if config.output_forward_gaps:
@@ -172,7 +172,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         print 'Starting the first 10 runs'
     
     if commands.mode:  #this serves to bypass Vissim while testing the code
-        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
     else:
         Vissim = vissim.startVissim(running, os.path.join(outputspath,  "Statistical_test.inpx"))
                             
@@ -219,11 +219,11 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
                 old_num    = iterrations_ran
                 old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]
                 inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(None, inputs)
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs(None, inputs)
                                     
             else:
                 inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
        
     #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
@@ -272,7 +272,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         
         #calling vissim
         if commands.mode:  #this serves to bypass Vissim while testing the code
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
         else:
             
             #Initialize the new Vissim simulation
@@ -288,7 +288,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
 
             #output treatment
             inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs(file_to_run, inputs)
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs(file_to_run, inputs)
         
         #generating the needed means and std
         t_student = t.ppf(0.975, iterrations_ran -1)
@@ -439,7 +439,7 @@ def monteCarlo(valuesVector, inputs):
     
         #Starting a Vissim instance
         if commands.mode:  #this serves to bypass Vissim while testing the code
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
         else:
             if running is False:
                 Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))
@@ -455,7 +455,7 @@ def monteCarlo(valuesVector, inputs):
             else:                                
                 #output treatment
                 inputs = [folderpath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)            
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)            
 
                 #writing to file
                 text.append([value, valuesVector[value], flow, oppLCcount, manLCcount, forFMgap.cumul_all.mean, oppLCagap.cumul_all.mean, oppLCbgap.cumul_all.mean, manLCagap.cumul_all.mean, manLCbgap.cumul_all.mean])       
@@ -530,7 +530,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     
             #Starting a Vissim instance
             if commands.mode:  #this serves to bypass Vissim while testing the code
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.generateRandomOutputs(parameters)
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
             else:
                 #Vissim starting and loading network block
                 Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))                
@@ -560,7 +560,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                     else:
                         #output treatment
                         inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose, corridors]
-                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
+                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
                         #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                 
             if default is True:
@@ -598,6 +598,12 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                 firstrun_results.append(float(oppLCcount))
                 firstrun_results.append(float(manLCcount))
                 
+                firstrun_results.append(float(forward_speeds.cumul_all.mean))
+                firstrun_results.append(float(forward_speeds.cumul_all.firstQuart))
+                firstrun_results.append(float(forward_speeds.cumul_all.median))
+                firstrun_results.append(float(forward_speeds.cumul_all.thirdQuart))
+                firstrun_results.append(float(forward_speeds.cumul_all.std))
+                
             else:           
                 delta_mean_fgap         = (forFMgap.cumul_all.mean       - firstrun_results[0])/firstrun_results[0]
                 delta_firstQuart_fgap   = (forFMgap.cumul_all.firstQuart - firstrun_results[0])/firstrun_results[0]
@@ -633,6 +639,13 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                 delta_oppLCcount = (oppLCcount - firstrun_results[5])/firstrun_results[5]
                 
                 delta_manLCcount = (manLCcount - firstrun_results[6])/firstrun_results[6]
+                
+                delta_mean_Speeds         = (forward_speeds.cumul_all.mean       - firstrun_results[7])/firstrun_results[7]
+                delta_firstQuart_Speeds   = (forward_speeds.cumul_all.firstQuart - firstrun_results[7])/firstrun_results[7]
+                delta_median_Speeds       = (forward_speeds.cumul_all.median     - firstrun_results[7])/firstrun_results[7]
+                delta_thirdQuart_Speeds   = (forward_speeds.cumul_all.thirdQuart - firstrun_results[7])/firstrun_results[7]
+                delta_std_Speeds          = (forward_speeds.cumul_all.std        - firstrun_results[7])/firstrun_results[7]
+                
             
             #printing graphs
             if commands.vis_save:
@@ -655,7 +668,8 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                              oppLCagap.cumul_all.mean, "---", oppLCagap.cumul_all.firstQuart, "---", oppLCagap.cumul_all.median, "---", oppLCagap.cumul_all.thirdQuart, "---", oppLCagap.cumul_all.std, "---",
                              oppLCbgap.cumul_all.mean, "---", oppLCbgap.cumul_all.firstQuart, "---", oppLCbgap.cumul_all.median, "---", oppLCbgap.cumul_all.thirdQuart, "---", oppLCbgap.cumul_all.std, "---",
                              manLCagap.cumul_all.mean, "---", manLCagap.cumul_all.firstQuart, "---", manLCagap.cumul_all.median, "---", manLCagap.cumul_all.thirdQuart, "---", manLCagap.cumul_all.std, "---",
-                             manLCbgap.cumul_all.mean, "---", manLCbgap.cumul_all.firstQuart, "---", manLCbgap.cumul_all.median, "---", manLCbgap.cumul_all.thirdQuart, "---", manLCbgap.cumul_all.std, "---"])       
+                             manLCbgap.cumul_all.mean, "---", manLCbgap.cumul_all.firstQuart, "---", manLCbgap.cumul_all.median, "---", manLCbgap.cumul_all.thirdQuart, "---", manLCbgap.cumul_all.std, "---",
+                             forward_speeds.cumul_all.mean, "---", forward_speeds.cumul_all.firstQuart, "---", forward_speeds.cumul_all.median, "---", forward_speeds.cumul_all.thirdQuart, "---", forward_speeds.cumul_all.std, "---"])       
 
             else:
                 text.append([value_name, corrected_values, flow,oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount,
@@ -663,8 +677,9 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
                              oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCagap.cumul_all.firstQuart, delta_firstQuart_Aoppgap, oppLCagap.cumul_all.median, delta_median_Aoppgap, oppLCagap.cumul_all.thirdQuart, delta_thirdQuart_Aoppgap, oppLCagap.cumul_all.std, delta_std_Aoppgap,
                              oppLCbgap.cumul_all.mean, delta_mean_Boppgap, oppLCbgap.cumul_all.firstQuart, delta_firstQuart_Boppgap, oppLCbgap.cumul_all.median, delta_median_Boppgap, oppLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Boppgap, oppLCbgap.cumul_all.std, delta_std_Boppgap,
                              manLCagap.cumul_all.mean, delta_mean_Amangap, manLCagap.cumul_all.firstQuart, delta_firstQuart_Amangap, manLCagap.cumul_all.median, delta_median_Amangap, manLCagap.cumul_all.thirdQuart, delta_thirdQuart_Amangap, manLCagap.cumul_all.std, delta_std_Amangap,
-                             manLCbgap.cumul_all.mean, delta_mean_Bmangap, manLCbgap.cumul_all.firstQuart, delta_firstQuart_Bmangap, manLCbgap.cumul_all.median, delta_median_Bmangap, manLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Bmangap, manLCbgap.cumul_all.std, delta_std_Bmangap])       
-        
+                             manLCbgap.cumul_all.mean, delta_mean_Bmangap, manLCbgap.cumul_all.firstQuart, delta_firstQuart_Bmangap, manLCbgap.cumul_all.median, delta_median_Bmangap, manLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Bmangap, manLCbgap.cumul_all.std, delta_std_Bmangap,       
+                             forward_speeds.cumul_all.mean, delta_mean_Speeds, forward_speeds.cumul_all.firstQuart, delta_firstQuart_Speeds, forward_speeds.cumul_all.median, delta_median_Speeds, forward_speeds.cumul_all.thirdQuart, delta_thirdQuart_Speeds, forward_speeds.cumul_all.std, delta_std_Speeds]) 
+                             
         #breaking the outer loop because the default only needs to be ran once
         if default is True:
             break

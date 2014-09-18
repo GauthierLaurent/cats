@@ -61,16 +61,19 @@ class stats:
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
     instants = []
+    speeds = []
     for o in objects:
         t = o.curvilinearPositions.getIntersections(s, lane)
         if t != []:
             instants.append(o.getFirstInstant()+t[0])
-                
+            speeds.append(o.curvilinearVelocities.getXCoordinates()[int(np.floor(t[0]))])
+               
     instants.sort()
     x = np.asarray(instants)
+    
     gaps = x[1:]-x[:-1]
     
-    return gaps	
+    return gaps, speeds
 
 def laneChangeGaps(listDict, laneDict, objects):
     '''Determines the width of lane change gaps for a list of objects who make lane changes
@@ -101,6 +104,7 @@ def laneChangeGaps(listDict, laneDict, objects):
                     if instants[i] > 0:
                         x.append(instants[i])
                         y.append(instants[i] - instants[i -1])
+                        
                         break
 
     agaps = np.asarray(x)
@@ -283,6 +287,7 @@ def treatVissimOutputs(files, inputs):
         raw_opp_LC_bgaps    = []
         raw_man_LC_agaps    = []
         raw_man_LC_bgaps    = []
+        raw_forward_speeds  = []
     else:
         raw_opportunisticLC = old_data[0]
         raw_mandatoryLC     = old_data[1] 
@@ -293,7 +298,7 @@ def treatVissimOutputs(files, inputs):
         raw_man_LC_agaps    = old_data[6]
         raw_man_LC_bgaps    = old_data[7]
         old_num             = old_data[8]   #Number of previous data. Is used to calculate the new means (old_mean*N+new_stuff)/(N+nbr_new_stuff)
-	
+        raw_forward_speeds  = old_data[9]
 
     if files is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
         for filename in files:
@@ -330,14 +335,17 @@ def treatVissimOutputs(files, inputs):
             
             #forward gap analysis
             temp_raw_forward_gaps = []
+            temp_raw_speeds = []
             for index,lane in enumerate(lanes):  
                 s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
-                raw_gaps = forwardGaps(objects, s, lane)
+                raw_gaps, raw_speeds = forwardGaps(objects, s, lane)
                 if raw_gaps != []: temp_raw_forward_gaps += list(raw_gaps)
+                if raw_speeds != []: temp_raw_speeds += list(raw_speeds)    
                 if verbose:
                     print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock())
             if temp_raw_forward_gaps != []:
                 raw_forward_gaps.append(temp_raw_forward_gaps)
+                raw_forward_speeds.append(temp_raw_speeds)
                 
             #mandatory lane change gaps
             agaps, bgaps = laneChangeGaps(manObjDict, laneDict, objects)
@@ -396,5 +404,57 @@ def treatVissimOutputs(files, inputs):
     opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
     mandatory_LCagap = stats(raw_man_LC_agaps)
     mandatory_LCbgap = stats(raw_man_LC_bgaps)
+    forward_speeds = stats(raw_forward_speeds)
     
-    return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap
+    return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap, forward_speeds
+
+def randomGaussRange(low, high, n):
+    out = []    
+    mu = random.uniform(low, high)
+    sigma = random.uniform(0, (mu - low) )
+    while len(out) < n:
+        num = (random.normalvariate(mu, sigma))
+        if num < high and num > low:
+            out.append(num)
+        
+    return out
+
+def generateRandomOutputs(parameters):
+    '''This fonction serves to bypass everything produced by Vissim to gain speed while testing the code'''
+    RandSeed = parameters[1]
+    NumRuns = parameters[2]   
+    
+    raw_opportunisticLC = []
+    raw_mandatoryLC = [] 
+    raw_flow = []
+    raw_forward_gaps = []
+    raw_opp_LC_agaps = []
+    raw_opp_LC_bgaps = []
+    raw_man_LC_agaps = []
+    raw_man_LC_bgaps = []
+    raw_foward_speed = []
+        
+    for i in range(NumRuns):
+        random.seed(RandSeed + i)
+        raw_opportunisticLC.append(random.uniform(2,30))
+        raw_mandatoryLC.append(random.uniform(2,30)) 
+        raw_flow.append(random.uniform(1200,2000))
+        raw_forward_gaps.append(randomGaussRange(1,20,100))
+        raw_opp_LC_agaps.append(randomGaussRange(1,20,100))
+        raw_opp_LC_bgaps.append(randomGaussRange(1,20,100))
+        raw_man_LC_agaps.append(randomGaussRange(5,10,100))
+        raw_man_LC_bgaps.append(randomGaussRange(7,10,100))
+        raw_foward_speed.append(randomGaussRange(7,10,100))
+    
+    mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
+    mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)  
+    mean_flow =  scipy.mean(raw_flow)
+    
+    forward_followgap = stats(raw_forward_gaps)
+    opportunistic_LCagap = stats(raw_opp_LC_agaps)
+    opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
+    mandatory_LCagap = stats(raw_man_LC_agaps)
+    mandatory_LCbgap = stats(raw_man_LC_bgaps)
+    forward_speeds = stats(raw_foward_speed)
+    
+    return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap, forward_speeds
