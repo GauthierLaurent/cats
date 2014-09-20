@@ -17,20 +17,28 @@ import numpy as np
 ##################
 # Define tools
 ##################
+         
+class Corridor:
+    def __init__(self,data):
+        self.name      = data[0]
+        self.direction = data[1]
+        self.link_list = data[2]
+        self.to_eval   = data[3]
+
 def extractVissimCorridorsFromCSV(dirname, inpxname):
     '''Reads corridor information for a csv named like the inpx
        CSV file must be build as:    Corridor_name,vissim list,traffic intelligence list
        both list must be separated by "-"
     '''
-    filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
-    brute = [line.strip() for line in open(os.path.join(dirname,filename[0]))]    
-    vissimCorridors = []
-    trafIntCorridors = []    
-    for b in brute:
-        vissimCorridors.append([b.split(',')[1]] + [int(s) for s in b.split(',')[2].split('-')])
-        trafIntCorridors.append([b.split(',')[1]] + [int(s) for s in b.split(',')[3].split('-')])
-        
-    return vissimCorridors, trafIntCorridors
+    filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]    
+    brute = [line.strip() for line in open(os.path.join(dirname,filename[0])) if line.startswith('#') is False]    
+    vissimCorridors = {}
+    trafIntCorridors = {}    
+    for b in xrange(len(brute)):        
+        vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
+        trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
+   
+    return vissimCorridors.values(), trafIntCorridors.values()
         
 def extractDataFromVariablesCSV(dirname): #MIGRATION TO FINISH
     '''will be used to transfert every variable information to a csv file'''
