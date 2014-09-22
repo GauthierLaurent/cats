@@ -3,7 +3,7 @@
 #  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
 #  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
 #  Dependencies listed in Libraries; 
-Version = 'R1.0.1.2 u. 22-07-2014'
+Version = 'R1.1.0.1 u. 09-09-2014'
 ################################################################################
 '''Dev stuff
 import pdb; pdb.set_trace()
@@ -113,7 +113,8 @@ def main():
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
     parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(config.wiedemann), Sim_lenght]
-                    
+    VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(InpxPath, InpxName)
+                
     ###################################### 
     #        Statistical precision Analysis       
     ###################################### 
@@ -131,7 +132,7 @@ def main():
         concat_variables = FMvariables + LCvariables
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, default_values)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values)        
         filename = subdirname.split(os.sep)[-1]        
         
         #generating the graphic and output folder
@@ -151,7 +152,7 @@ def main():
         '''
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
                 
-        text = analysis.statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters)        
+        text = analysis.statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, VissimCorridors)        
 
         #Adding a time marker and performance indicators
         report = write.timeStamp([1], 1, text[-1][0]) 
@@ -194,7 +195,7 @@ def main():
         if commands.verbose is True:
             print '-> Generating relevant subfolders for the analysis'
 
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
         graphspath = None        
@@ -218,15 +219,16 @@ def main():
         
         ##Running the rest of the simulations
         if commands.multi is True:
-            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, firstrun_results]            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, concat_variables)                  
+            minChunkSize = define.countPoints(concat_variables, config.nbr_points, config.nbr_runs)
+            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
+            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
                     text.append(j)
 
         else:   
-            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, firstrun_results]                             
+            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
             packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          
@@ -271,7 +273,7 @@ def main():
         if commands.verbose is True:
             print '-> Generating relevant subfolders for the analysis'
 
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time)        
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
@@ -296,7 +298,7 @@ def main():
             lowerbound = len(valuesVector)/10*i
             text = []
             if commands.multi is True:
-                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound]            
+                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, VissimCorridors]            
                 unpacked_outputs = define.createWorkers(values, analysis.monteCarlo, inputs, commands, concat_variables)                  
                 #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
                 for i in unpacked_outputs:
@@ -304,7 +306,7 @@ def main():
                         text.append(j)
     
             else:   
-                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, values]                             
+                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, VissimCorridors]                             
                 packed_outputs = analysis.monteCarlo(values, inputs)           
                 #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
              

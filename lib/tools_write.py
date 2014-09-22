@@ -56,6 +56,12 @@ def createSubFolder(folderpath, filename, Archives = True):
         
     return newfolderpath
 
+def writeListToCSV(lists, name):    
+    out = open(name, 'w')
+    for sublist in lists:
+        writeInFile(out,sublist)
+    out.close()
+    
 def defineName(dirname, TypeOfAnalysis):
     '''Finds the folders named after the analysis type and find the greatest increment'''
     last_num = 0
@@ -72,17 +78,39 @@ def defineName(dirname, TypeOfAnalysis):
     filename = TypeOfAnalysis + '_Analysis_' + str(last_num)
     
     return filename, last_num
+
+def findCalibName(dirname):
+    '''Finds the folders named after the analysis type and find the greatest increment'''
+    last_num = 0
     
-def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, values = None):
+    past_analysis  = [f for f in os.listdir(dirname) if "point" in f]
+    if past_analysis != []:
+        for f in past_analysis:
+            striped = f.strip('.csv')
+            num = int(striped.split('_')[-1])
+            if num > last_num: last_num = num
+    
+    last_num += 1  
+    filename = 'point' + str(last_num)
+    
+    return filename
+    
+    
+def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, Inpxname, values = None, multiProcTempFile = False):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
-     
-    name, last_num = defineName(dirname, TypeOfAnalysis)
-    #import pdb; pdb.set_trace()    
-    subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)  
-    filename = '{}/'+ name + '.csv'
+    
+    if multiProcTempFile is False:
+        name, last_num = defineName(dirname, TypeOfAnalysis) 
+        subdirname = createSubFolder(os.path.join(dirname,name), name, Archives = False)
+        filename = '{}/'+ name + '.csv'
+    else:
+        subdirname = dirname
+        filename = '{}/' + multiProcTempFile + '.csv'
+        last_num = int(multiProcTempFile.split('_')[2])
     
     #header writing
     out = open(filename.format(subdirname), "w")
+    out.write("Vissim filename: " + str(Inpxname) + "\n")
     out.write("Analysis number: " + str(last_num) + "\n")
     out.write("Type of analysis: " + str(TypeOfAnalysis) + "\n")
     if TypeOfAnalysis != "Student":
@@ -124,20 +152,26 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     #Sensitivity header
     if TypeOfAnalysis == 'Sensitivity' or TypeOfAnalysis == 'Monte Carlo': 
         out.write("*var_name: Name of the tested variable\n"
+                  "Note: m = mean, fq = first quartile, md = median, tq = third quartile, std = standard deviation, %diff = relative difference with the default values results"
                   "*flow: Vehicular flow\n"
                   "*nbr_opp: Number of opportunistic lane changes\n"
                   "*nbr_man: Number of mandatory lane changes\n"
-                  "*m_forward: Mean calculated forward gaps (all lanes concatenated, calculated at the middle of each link)\n"
-                  "*m_LC_Aopp: Mean calculated opportunistic lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
-                  "*m_LC_Bopp: Mean calculated opportunistic lane change gap calculated before the lane changing vehicule began changing lane\n"
-                  "*m_LC_Aman: Mean calculated mandatory lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
-                  "*m_LC_Aman: Mean calculated mandatory lane change gap calculated before the lane changing vehicule began changing lane \n"
+                  "*forward: Forward gaps (all lanes concatenated, calculated at the middle of each link)\n"
+                  "*LC_Aopp: Opportunistic lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
+                  "*LC_Bopp: Opportunistic lane change gap calculated before the lane changing vehicule began changing lane\n"
+                  "*LC_Aman: Mandatory lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
+                  "*LC_Aman: Mandatory lane change gap calculated before the lane changing vehicule began changing lane \n"
                   "\n"
                   "var_name;")
         for var in variables:
             out.write(str(var) + ";")
         if TypeOfAnalysis == 'Sensitivity': 
-            out.write("flow;nbr_opp;% diff;nbr_man;% diff;m_forward;% diff;m_LC_Aopp;% diff;m_LC_Bopp;% diff;m_LC_Aman;% diff;m_LC_Bman;% diff\n")        
+            out.write("flow;nbr_opp;% diff;nbr_man;% diff;"
+                      "m_forward;% diff;fq_forward;% diff;md_forward;% diff;tq_forward;% diff;std_forward;% diff;"
+                      "m_LC_Aopp;% diff;fq_LC_Aopp;% diff;md_LC_Aopp;% diff;tq_LC_Aopp;% diff;std_LC_Aopp;% diff;"
+                      "m_LC_Bopp;% diff;fq_LC_Bopp;% diff;md_LC_Bopp;% diff;tq_LC_Bopp;% diff;std_LC_Bopp;% diff;"
+                      "m_LC_Aman;% diff;fq_LC_Aman;% diff;md_LC_Aman;% diff;tq_LC_Aman;% diff;std_LC_Aman;% diff;"
+                      "m_LC_Bman;% diff;fq_LC_Bman;% diff;md_LC_Bman;% diff;tq_LC_Bman;% diff;std_LC_Bman;% diff\n")        
         else:
             out.write("flow;nbr_opp;nbr_man;m_forward;m_LC_Aopp;m_LC_Bopp;m_LC_Aman;m_LC_Bman;\n")        
    
@@ -283,9 +317,9 @@ def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, 
                 dist = np.arange(min(variable.distributions[i].raw) -1,max(variable.distributions[i].raw) +1,0.1)
                 lines = plt.plot(dist, len(variable.distributions[i].raw)*kde(dist), '--')            
                 if variable_name == "Forward_gaps":
-                    besttext.append("Best fit for\nHUM... "+ str(i+1))
+                    besttext.append("Best fit for\n"+ str(i+1))
                 else:
-                    besttext.append("Best fit for\nsimulation "+ str(i+1))
+                    besttext.append("Best fit for\nsimulation"+ str(i+1))
                 bestline.append(lines[0])
         handles = simline + bestline
         labels = simtext + besttext       
