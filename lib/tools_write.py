@@ -56,6 +56,12 @@ def createSubFolder(folderpath, filename, Archives = True):
         
     return newfolderpath
 
+def writeListToCSV(lists, name):    
+    out = open(name, 'w')
+    for sublist in lists:
+        writeInFile(out,sublist)
+    out.close()
+    
 def defineName(dirname, TypeOfAnalysis):
     '''Finds the folders named after the analysis type and find the greatest increment'''
     last_num = 0
