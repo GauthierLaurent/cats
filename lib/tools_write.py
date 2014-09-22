@@ -156,11 +156,12 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                   "*flow: Vehicular flow\n"
                   "*nbr_opp: Number of opportunistic lane changes\n"
                   "*nbr_man: Number of mandatory lane changes\n"
-                  "*forward: Forward gaps (all lanes concatenated, calculated at the middle of each link)\n"
+                  "*forward: Forward gaps (all specified lanes concatenated, calculated at the middle of each link)\n"
                   "*LC_Aopp: Opportunistic lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
                   "*LC_Bopp: Opportunistic lane change gap calculated before the lane changing vehicule began changing lane\n"
                   "*LC_Aman: Mandatory lane change gap calculated after the lane changing vehicule inserted into the new lane \n"
                   "*LC_Aman: Mandatory lane change gap calculated before the lane changing vehicule began changing lane \n"
+                  "*f_speed: Speed distribution (all specified lanes concatenated, calculated at the same point as forward gaps)\n"
                   "\n"
                   "var_name;")
         for var in variables:
@@ -171,7 +172,9 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                       "m_LC_Aopp;% diff;fq_LC_Aopp;% diff;md_LC_Aopp;% diff;tq_LC_Aopp;% diff;std_LC_Aopp;% diff;"
                       "m_LC_Bopp;% diff;fq_LC_Bopp;% diff;md_LC_Bopp;% diff;tq_LC_Bopp;% diff;std_LC_Bopp;% diff;"
                       "m_LC_Aman;% diff;fq_LC_Aman;% diff;md_LC_Aman;% diff;tq_LC_Aman;% diff;std_LC_Aman;% diff;"
-                      "m_LC_Bman;% diff;fq_LC_Bman;% diff;md_LC_Bman;% diff;tq_LC_Bman;% diff;std_LC_Bman;% diff\n")        
+                      "m_LC_Bman;% diff;fq_LC_Bman;% diff;md_LC_Bman;% diff;tq_LC_Bman;% diff;std_LC_Bman;% diff;"
+                      "m_f_speed;% diff;fq_f_speed;% diff;md_f_speed;% diff;tq_f_speed;% diff;std_f_speed;% diff\n"
+                      )        
         else:
             out.write("flow;nbr_opp;nbr_man;m_forward;m_LC_Aopp;m_LC_Bopp;m_LC_Aman;m_LC_Bman;\n")        
    
