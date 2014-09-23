@@ -15,6 +15,14 @@ import math, sys, os
 import numpy as np
 
 ##################
+# Import Traffic Intelligence
+##################
+#disabling outputs
+import lib.nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
+import moving
+sys.stdout = oldstdout #Re-enable output
+
+##################
 # Define tools
 ##################
          
@@ -30,15 +38,92 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
        CSV file must be build as:    Corridor_name,vissim list,traffic intelligence list
        both list must be separated by "-"
     '''
-    filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]    
-    brute = [line.strip() for line in open(os.path.join(dirname,filename[0])) if line.startswith('#') is False]    
-    vissimCorridors = {}
-    trafIntCorridors = {}    
-    for b in xrange(len(brute)):        
-        vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
-        trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
-   
-    return vissimCorridors.values(), trafIntCorridors.values()
+
+    if os.path.exists(os.path.join(dirname, inpxname)):
+
+        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+        f = open(os.path.join(dirname,filename[0]))
+        for line in f:
+            if '$Corridors' in line.strip(): break
+            
+        brute = []
+        for line in f:
+            if '$' in line.strip(): break
+            if line.startswith('#') is False and line.strip() != '': brute.append(line.strip())
+             
+        vissimCorridors = {}
+        trafIntCorridors = {}    
+        for b in xrange(len(brute)):        
+            vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
+            trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
+       
+        return vissimCorridors.values(), trafIntCorridors.values()
+    else:
+        print 'No vissim file named ' + str(inpxname) + ', closing program '
+        sys.exit()
+
+class Videos:
+    def __init__(self,data):
+        self.video_name = data[0]
+        self.alignments = []
+        for i in data[1]:
+            self.alignments.append(Alignments(i))
+        
+class Alignments:
+    def __init__(self,data):
+        self.name       = data[0]
+        self.point_list = data[1]
+        
+def extractAlignmentsfromCSV(dirname, inpxname):
+    '''Reads corridor information for a csv named like the inpx
+       CSV file must be build as:
+       Video_name
+       Alignment_name;point_list with point_list as: (x1,y1),(x2,y2),etc
+       both list must be separated by "-"
+    '''
+
+    if os.path.exists(os.path.join(dirname, inpxname)):
+
+        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+        f = open(os.path.join(dirname,filename[0]))
+        for line in f:
+            if '$Video_alignments' in line.strip(): break
+        
+        video_names = []
+        sublvl = []
+        brute = []
+        for line in f:
+            if line.strip() == '':
+                if sublvl != []: brute.append(sublvl)
+                sublvl = [] 
+            if '$' in line.strip():
+                break
+            if line.strip().endswith('.sqlite'):
+                video_names.append(line.strip())
+                if sublvl != []: brute.append(sublvl)
+                sublvl = []
+            if line.strip().endswith('.sqlite') is False and line.strip() != '':
+                sublvl.append(line.strip())
+        if sublvl != []: brute.append(sublvl)
+        
+        videos = {}
+        for vid in xrange(len(brute)):
+            vid_name = video_names[vid]
+            align_list = {}
+            for b in xrange(len(brute[vid])):
+                name = brute[vid][b].split(';')[0]
+                inter = brute[vid][b].split(';')[1].replace('),(',');(').split(';')
+                point = []
+                for i in xrange(len(inter)):
+                    point.append(moving.Point(float(inter[i].strip('(').strip(')').split(',')[0]),float(inter[i].strip('(').strip(')').split(',')[1])))
+           
+                align_list[b] = [name, point]
+            videos[vid] = Videos([vid_name, align_list.values()])
+                
+        return videos.values()
+    else:
+        print 'No vissim file named ' + str(inpxname) + ', closing program '
+        sys.exit()
         
 def extractDataFromVariablesCSV(dirname): #MIGRATION TO FINISH
     '''will be used to transfert every variable information to a csv file'''

@@ -148,7 +148,10 @@ class Config:
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
         self.inpx_name                = self.parse('inpx_name',          '',        c_type='string')
         self.path_to_trafint          = self.parse('path_to_trafint',    '',        c_type='string')                 
-                                                                                                
+        
+        self.section = 'Video'
+        self.path_to_sqlite           = self.parse('path_to_sqlite',     '',        c_type='string')
+                                                                                        
         self.section = 'Simulation'                                                              
         self.sim_steps                = self.parse('steps_per_sec',      '10' ,                   c_type='int')                     #10 recommended
         self.first_seed               = self.parse('first_seed',         '42' ,                   c_type='int')  
@@ -190,6 +193,9 @@ class Config:
                            'path_to_inpx       = '+self.path_to_inpx+'\n'
                            'inpx_name          = '+self.inpx_name+'\n'
                            'path_to_trafint    = '+self.path_to_trafint+'\n'
+                           '\n'
+                           '[Video]\n'
+                           'path_to_sqlite     = '+self.path_to_sqlite+'\n'
                            '\n'
                            '[Simulation]\n'
                            'sim_steps          = '+str(self.sim_steps)+'\n'

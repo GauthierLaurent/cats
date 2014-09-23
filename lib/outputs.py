@@ -12,6 +12,9 @@ import scipy, os, sys
 import numpy as np
 import random, time
 
+##################
+# Import Traffic Intelligence
+##################
 #disabling outputs
 import lib.nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
 import storage as TraffIntStorage
