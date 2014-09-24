@@ -39,6 +39,7 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
        both list must be separated by "-"
     '''
 
+    if inpxname in dirname: dirname = dirname.strip(inpxname)
     if os.path.exists(os.path.join(dirname, inpxname)):
 
         filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
@@ -81,7 +82,7 @@ def extractAlignmentsfromCSV(dirname, inpxname):
        Alignment_name;point_list with point_list as: (x1,y1),(x2,y2),etc
        both list must be separated by "-"
     '''
-
+    if inpxname in dirname: dirname = dirname.strip(inpxname)
     if os.path.exists(os.path.join(dirname, inpxname)):
 
         filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
@@ -224,7 +225,7 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
     ##calculating the number of chunks needed to have one chunk per process, but with a max number of simulations per chunk
     one_chunk_per_process = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))    
 
-    ##blocking the number of variables to 4 per Chunks
+    ##blocking the number of variables to 4 per Chunks   
     len_chunks = min(one_chunk_per_process, minChunkSize)  
 
     ##breaking into chunks without 'None' values
@@ -421,7 +422,7 @@ def countPoints(variable_names, points, sim):
     
     total_sims = np.ceil(float(total_points)*sim/200)
     
-    return np.ceil(len(variable_names)/total_sims)
+    return int(np.ceil(len(variable_names)/total_sims))
             
 def verifyRanges(rangevalues, variables):
     

@@ -214,7 +214,7 @@ def main():
         
         #treating the simulations        
         ##calculating the default values
-        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose]
+        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
         text, firstrun_results = analysis.sensitivityAnalysis(rangevalues, inputs, default = True)
         
         ##Running the rest of the simulations
