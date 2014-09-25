@@ -5,6 +5,16 @@ Created on Thu Jul 03 11:28:53 2014
 @author: Laurent
 """
 ##################
+# Version
+##################
+#this will be used to verify if the serialised data is still matching the data processsed by pcvtools
+def version():
+    '''if a change modifies the data to be serialized, increment the number directly after R
+       otherwise, play with .X.Y
+    '''
+    Version = 'R1.1.0 u. 09-09-2014'
+    
+##################
 # Import Libraries
 ##################
 #Natives

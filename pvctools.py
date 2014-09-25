@@ -3,7 +3,6 @@
 #  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
 #  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
 #  Dependencies listed in Libraries; 
-Version = 'R1.1.0.1 u. 09-09-2014'
 ################################################################################
 '''Dev stuff
 import pdb; pdb.set_trace()
