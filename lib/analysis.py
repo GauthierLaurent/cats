@@ -683,8 +683,9 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
         #breaking the outer loop because the default only needs to be ran once
         if default is True:
             break
-        
-    vissim.stopVissim(Vissim)
+
+    if not commands.mode:
+        vissim.stopVissim(Vissim)
     
     if commands.multi is True and default is False:
         for i in range(len(text)):
