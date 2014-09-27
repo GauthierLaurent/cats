@@ -73,15 +73,14 @@ def main():
     '''as -s is on by default, this is presently useless. It will become usefull
        in the futur when -s is turned off by default '''
        
-    if not (commands.sensitivity or commands.student or commands.calibration):
+    if not (commands.sensitivity or commands.student or commands.calibration or commands.montecarlo):
         print '****************************************************************'     
         print '*   No module was chosen, please use:                          *'
         print '*                                                              *'
-        print '*        -c to start the Calibration Analysis,                 *'
         print '*        -d to start the Statistical precision Analysis,       *'
         print '*        -o to start the Sensitivity Monte Carlo Analysis,     *'        
         print '*   or                                                         *'
-        print '*        -s to start the Sensitivity Ona at a time Analysis    *'
+        print '*        -s to start the Sensitivity One-at-a-time Analysis    *'
         print '*                                                              *'
         print '*                 ==== Closing program ===                     *'
         print '****************************************************************'
@@ -297,11 +296,12 @@ def main():
             lowerbound = len(valuesVector)/10*i
             text = []
             if commands.multi is True:
-                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, VissimCorridors]            
-                unpacked_outputs = define.createWorkers(values, analysis.monteCarlo, inputs, commands, concat_variables)                  
+                minChunkSize = define.monteCarloCountPoints(len(values), config.nbr_runs)
+                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, VissimCorridors, valuesVector]            
+                unpacked_outputs = define.createWorkers(values, analysis.monteCarlo, inputs, commands, minChunkSize)                  
                 #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
-                for i in unpacked_outputs:
-                    for j in i:
+                for k in unpacked_outputs:
+                    for j in k:
                         text.append(j)
     
             else:   
@@ -309,8 +309,8 @@ def main():
                 packed_outputs = analysis.monteCarlo(values, inputs)           
                 #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
              
-                for i in packed_outputs:
-                    text.append(i)
+                for k in packed_outputs:
+                    text.append(k)
             
             #filling the report
             for i in range(len(text)):

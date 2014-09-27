@@ -212,6 +212,7 @@ def intelligentChunks(n, iterable, value_names):
     return intelligent_chunk
 
 def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSize = (multiprocessing.cpu_count() - 1), variables_names = []):
+  
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
        number of cores that can process it.
@@ -433,6 +434,15 @@ def countPoints(variable_names, points, sim):
     total_sims = np.ceil(float(total_points)*sim/200)
     
     return int(np.ceil(len(variable_names)/total_sims))
+
+def monteCarloCountPoints(points, sim):
+    '''returns the min number of variables per chunks needed to have maximum 200 simulations per chunks
+       200 simulations = 4 parameters * 5 points/para * 10 sim/points '''
+    
+    total_points = points*sim
+    total_sims = np.ceil(float(total_points)*sim/200)
+    
+    return int(np.ceil(total_points/total_sims))
             
 def verifyRanges(rangevalues, variables):
     

@@ -12,6 +12,7 @@ Created on Thu Jul 10 14:43:44 2014
 import os, shutil, sys, copy
 from scipy.stats import t, chi2
 from scipy.stats.mstats import kruskalwallis
+import cPickle as pickle
 
 #Internal
 import lib.tools_write as write
@@ -422,19 +423,26 @@ def monteCarlo(valuesVector, inputs):
     lowerbound          = inputs [8]
     corridors           = inputs [9]
     
+    if commands.multi:
+        all_values          = inputs [10]
+        #find the index of the first vector included in the chunk, and compares its position with lowerbound
+        lowerbound += (all_values.index(valuesVector[0]) - lowerbound)
+    
     #preparing the outputs    
     text = []
-            
+
+    if commands.multi is True:
+        #opening a process output file
+        if not os.path.isdir(os.path.join(outputspath.strip(os.sep+'outputs'),'tempfiles')):
+            os.makedirs(os.path.join(outputspath.strip(os.sep+'outputs'),'tempfiles'))
+        WorkingPath = os.path.join(outputspath.strip(os.sep+'outputs'),'tempfiles')
+        multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_points_' + str(lowerbound) + '_to_' + str(len(valuesVector)+lowerbound)
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, "Monte Carlo", config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, None, multiProcTempFile)       
+          
     #analysing the values
     for value in range(len(valuesVector)):        
         #creating a folder containing the files for that iteration
-    
-        if commands.multi:
-            for i in range(len(inputs[9])):
-                if valuesVector == inputs[9][i]:
-                    lowerbound += len(inputs[9][i]*i)
                     
-    
         folderpath, filename = prepareFolderforVissimAnalysis(outputspath, 'point_' + str(value+lowerbound), InpxName, InpxPath)
     
         #Starting a Vissim instance
@@ -457,13 +465,42 @@ def monteCarlo(valuesVector, inputs):
                 inputs = [folderpath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)            
 
-                #writing to file
-                text.append([value, valuesVector[value], flow, oppLCcount, manLCcount, forFMgap.cumul_all.mean, oppLCagap.cumul_all.mean, oppLCbgap.cumul_all.mean, manLCagap.cumul_all.mean, manLCbgap.cumul_all.mean])       
+        #writing to file
+        text.append([value+lowerbound, valuesVector[value], flow, oppLCcount, manLCcount, forFMgap.cumul_all.mean, oppLCagap.cumul_all.mean, oppLCbgap.cumul_all.mean, manLCagap.cumul_all.mean, manLCbgap.cumul_all.mean])       
 
     #closing Vissim
-    vissim.stopVissim(Vissim)
+    if not commands.mode:
+        vissim.stopVissim(Vissim)
+    
+    #security writing of chunk results while in multiprocessing
+    if commands.multi is True:
+        for i in range(len(text)):
+            write.writeInFile(out, text[i])  
+        out.close()
+        
+    #dumping data into a traj file for futur retrival
+    ##creating folder
+    if not os.path.isdir(os.path.join(outputspath.strip(os.sep+'outputs'),'traj_files')):
+        os.makedirs(os.path.join(outputspath.strip(os.sep+'outputs'),'traj_files'))
+    
+    ## naming file
+    trajfilename = outputspath.strip(os.sep+'outputs').split(os.sep)[-1] + '_points_' + str(lowerbound) + '_to_' + str(len(valuesVector)+lowerbound)
+    
+    ##dumping serialised data
+    with open(os.path.join(outputspath.strip(os.sep+'outputs'),'traj_files', trajfilename), 'wb') as output:
+        pickle.dump(define.version, output, protocol=2)
+        pickle.dump(oppLCcount, output, protocol=2)
+        pickle.dump(manLCcount, output, protocol=2)
+        pickle.dump(flow, output, protocol=2)
+        pickle.dump(forFMgap, output, protocol=2)
+        pickle.dump(oppLCagap, output, protocol=2)
+        pickle.dump(oppLCbgap, output, protocol=2)
+        pickle.dump(manLCagap, output, protocol=2)
+        pickle.dump(manLCbgap, output, protocol=2)
+        pickle.dump(forward_speeds, output, protocol=2)
     
     return text
+    
 	
 def sensitivityAnalysis(rangevalues, inputs, default = False):
     '''Runs the sensitivity analysis for a set of predetermined values
@@ -489,6 +526,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     
     #preparing the outputs    
     text = []
+    
     if commands.multi is True and default is False:
         #opening a process output file
         WorkingPath = outputspath.strip(os.sep+'outputs')
@@ -531,6 +569,7 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
             #Starting a Vissim instance
             if commands.mode:  #this serves to bypass Vissim while testing the code
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
+            
             else:
                 #Vissim starting and loading network block
                 Vissim = vissim.startVissim(running, os.path.join(folderpath, filename))                
@@ -687,10 +726,12 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
     if not commands.mode:
         vissim.stopVissim(Vissim)
     
+    #security writing of chunk results while in multiprocessing
     if commands.multi is True and default is False:
         for i in range(len(text)):
             write.writeInFile(out, text[i])  
         out.close()
+        
         
     if default is True:  
         return text, firstrun_results
