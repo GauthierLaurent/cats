@@ -15,7 +15,7 @@ import win32com.client
 # Vissim management tools
 ##################
 
-def isVissimRunning(firstTime):
+def isVissimRunning(kill):
     '''This function is used to verify if the Vissim program is running
        The first time it is called in the program, firstTime should be called as True:
        This is to make sure Vissim was not left open in non COM mode before starting the python program
@@ -28,7 +28,7 @@ def isVissimRunning(firstTime):
         try:
             p = psutil.Process(list[i])
             if p.cmdline[0].find("Vissim.exe") != -1:
-                if firstTime is True:                
+                if kill is True:                
                     # killing Vissim so it can be restarted with the COM module enabled
                     p.kill()
                 else:
@@ -59,8 +59,11 @@ def startVissim(running, InpxPath):
 
 def stopVissim(Vissim):
     '''Closes the current instance of Vissim. Return True if successfull, False otherwise'''
-    Vissim.Exit()    
-    if isVissimRunning(False):
+    try:
+        Vissim.Exit()
+    except:
+        sys.exc_info()
+    if isVissimRunning(True):
         return False
     else:
         return True

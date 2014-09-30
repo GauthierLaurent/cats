@@ -316,7 +316,10 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         print "Statistical precision achieved - generating report"     
                 
     #closing vissim
-    vissim.stopVissim(Vissim)
+    if not commands.mode: 
+        closed = vissim.stopVissim(Vissim)
+        if not closed:
+            print 'Warning, vissim instance could not be closed, potential hold of a required vissim instance'
 
     '''
     MUST ADD GRAPH OPTION
@@ -470,7 +473,9 @@ def monteCarlo(valuesVector, inputs):
 
     #closing Vissim
     if not commands.mode:
-        vissim.stopVissim(Vissim)
+        closed = vissim.stopVissim(Vissim)
+        if not closed:
+            print 'Warning, vissim instance could not be closed, potential hold of a required vissim instance'
     
     #security writing of chunk results while in multiprocessing
     if commands.multi is True:
@@ -724,7 +729,9 @@ def sensitivityAnalysis(rangevalues, inputs, default = False):
             break
 
     if not commands.mode:
-        vissim.stopVissim(Vissim)
+        closed = vissim.stopVissim(Vissim)
+        if not closed:
+            print 'Warning, vissim instance could not be closed, potential hold of a required vissim instance'
     
     #security writing of chunk results while in multiprocessing
     if commands.multi is True and default is False:

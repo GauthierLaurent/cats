@@ -104,7 +104,7 @@ def main():
     WorkingPath = os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))
     
     #Checking if Vissim is already running and closing it to avoid problems latter on
-    running = vissim.isVissimRunning(firstTime = True)    
+    running = vissim.isVissimRunning(True)    
     if running is not False:
         print 'Could not close Vissim, the program may potentially have problems with the COM interface'
         
