@@ -23,6 +23,8 @@ from pylab import csv2rec
 import multiprocessing
 import math, sys, os
 import numpy as np
+import cPickle as pickle
+import StringIO
 
 ##################
 # Import Traffic Intelligence
@@ -33,9 +35,28 @@ import moving
 sys.stdout = oldstdout #Re-enable output
 
 ##################
-# Define tools
+# Read file data tools
 ##################
-         
+def loadDataFromTraj(path, filename):
+    with open(os.path.join(path, filename), 'rb') as input_data:
+        trajversion = pickle.dump(input_data)
+        if trajversion == version(): 
+            oppLCcount  = pickle.load(input_data)
+            manLCcount  = pickle.load(input_data)
+            flow        = pickle.load(input_data)
+            forFMgap    = pickle.load(input_data)
+            oppLCagap   = pickle.load(input_data)
+            oppLCbgap   = pickle.load(input_data)
+            manLCagap   = pickle.load(input_data)
+            manLCbgap   = pickle.load(input_data)
+            Speeds      = pickle.load(input_data)
+            return [oppLCcount, manLCcount, flow, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, Speeds]
+        
+        else:
+             print 'Data version outdated, aborting calculations. Please recalculate video data'
+             sys.exit()
+
+#corridor information             
 class Corridor:
     def __init__(self,data):
         self.name      = data[0]
@@ -73,6 +94,7 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
         print 'No vissim file named ' + str(inpxname) + ', closing program '
         sys.exit()
 
+#alignement information
 class Videos:
     def __init__(self,data):
         self.video_name = data[0]
@@ -135,15 +157,101 @@ def extractAlignmentsfromCSV(dirname, inpxname):
     else:
         print 'No vissim file named ' + str(inpxname) + ', closing program '
         sys.exit()
+
+#parameter information        
+def floatOrNone(stringvalue):
+    try:
+        return float(stringvalue)
+    except:
+        return None
         
-def extractDataFromVariablesCSV(dirname): #MIGRATION TO FINISH
+def floatOrBool(stringvalue): 
+    try:
+        return float(stringvalue)
+    except: 
+        if stringvalue.lower() == 'false':
+            return False
+        elif stringvalue.lower() == 'true':
+            return True
+
+class Variable:
+    def __init__(self, name, vissim_name, vissim_min, vissim_max, vissim_default, desired_min, desired_max):
+        self.name           = name
+        self.vissim_name    = vissim_name
+        self.vissim_default = floatOrBool(vissim_default)
+        self.desired_min    = floatOrBool(desired_min)
+        self.desired_max    = floatOrBool(desired_max)
+        self.vissim_min     = floatOrNone(vissim_min)
+        self.vissim_max     = floatOrNone(vissim_max)
+
+def convertParameterstoString(dirname, inpxname): #MIGRATION TO FINISH
+    '''Reads variable information for a csv named like the inpx
+       CSV file must be build as:
+             1rst line:      VarName,VissimMin,VissimMax,DesiredMin,DesiredMax,VissimName,
+             other lines:    stringfloat,float,float,float,string,
+             
+             where:
+                     VarName is a name given by the user and will be used to write pcvtools reports
+                     VissimName is the name of the variable found in the Vissim COM manual
+                     VissimMin and VissimMax are the min and max values found in the Vissim COM manual
+                     DesiredMin and DesiredMax are the range to be used for the evaluation                           
+    '''
+
+    if inpxname in dirname: dirname = dirname.strip(inpxname)
+    if os.path.exists(os.path.join(dirname, inpxname)):
+
+        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+        f = open(os.path.join(dirname,filename[0]))
+        for line in f:
+            if '$Variables' in line.strip(): break
+            
+        brutestring = ''
+        for line in f:
+            if '$' in line: break
+            if line.startswith('#') is False and line.strip() != '': brutestring += line.replace("\t", "")
+            
+        vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
+        
+        parameters = {}        
+        for i in xrange(len(vissimNames)):
+            parameters[i] = Variable(value_names[i], vissimNames[i], vissimMinVa[i], vissimMaxVa[i], vissimDefau[i], desiredMinV[i], desiredMaxV[i])
+        
+        parameters = verifyDesiredRanges(parameters.values())       
+        
+        return parameters
+    else:
+        print 'No vissim file named ' + str(inpxname) + ', closing program '
+        sys.exit()
+        
+def extractDataFromVariablesCSV(filename): 
     '''will be used to transfert every variable information to a csv file'''
-    filename  = [f for f in os.listdir(dirname) if f == 'variables.csv']
-    variablesInfo = csv2rec(os.path.join(dirname,filename[0]))
-    minarray = variablesInfo('vissimmin')
-    maxarray = variablesInfo('vissimmax')
-    value_names = variablesInfo('varname')
-    return minarray, maxarray, value_names
+    variablesInfo = csv2rec(filename)
+    vissimNames = variablesInfo['vissimname']
+    vissimMinVa = variablesInfo['vissimmin']
+    vissimMaxVa = variablesInfo['vissimmax']
+    vissimDefau = variablesInfo['vissimdefault']
+    value_names = variablesInfo['varname']
+    desiredMinV = variablesInfo['desiredmin']
+    desiredMaxV = variablesInfo['desiredmax']
+       
+    return vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV
+
+def verifyDesiredRanges(variables):
+    for i in xrange(len(variables)):
+        if variables[i].vissim_min is not None:
+            if variables[i].desired_min < variables[i].vissim_min:
+                print str(variables[i].name) + ' was set to have a lower bound of ' + str(variables[i].vissim_min) + ' which is lower than the vissim minimum bound. Setting the lower bound to the vissim bound' 
+                variables[i].desired_min = variables[i].vissim_min
+        
+        if variables[i].vissim_max is not None:    
+            if variables[i].desired_max > variables[i].vissim_max:
+                print str(variables[i].name) + ' was set to have a upper bound of ' + str(variables[i].vissim_max) + ' which is higher than the vissim maximum bound. Setting the upper bound to the vissim bound'             
+                variables[i].desired_max = variables[i].vissim_max            
+    return variables
+
+##################
+# Define tools
+##################
 
 def sort2lists(list1,list2):
     '''Sorts list2 according to the sorting of the content of list1
@@ -156,6 +264,10 @@ def sort2lists(list1,list2):
     sorted_list2 = map(list2.__getitem__, indexes)
     
     return sorted_list1, sorted_list2
+
+##################
+# Multiprocessing tools
+##################
     
 def toChunks(n, iterable, padvalue=None, asList=True):
     ''' Split an iterable into chunks of n size
@@ -270,6 +382,10 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
         for i in range(len(processed_chunks)):
             print function(processed_chunks[i], inputs)
             import pdb;pdb.set_trace()   
+
+##################
+# Vissim variables tools
+##################
     
 def createFMValues(model):
     ''' CarFollowModType must be Wiedemann74 OR Wiedemann99 
