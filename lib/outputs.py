@@ -395,7 +395,7 @@ def treatVissimOutputs(files, inputs):
         else:
             mean_opportunisticLC = computeMeanfromOld(raw_opportunisticLC,old_num)
     else:
-        mean_opportunisticLC = None
+        mean_opportunisticLC = 0
     
     if raw_mandatoryLC != []:
         if old_data == []:
@@ -405,7 +405,7 @@ def treatVissimOutputs(files, inputs):
             mean_mandatoryLC = computeMeanfromOld(raw_mandatoryLC,old_num)
             
     else:
-        mean_mandatoryLC = None
+        mean_mandatoryLC = 0
     
     if raw_flow != []:
         if old_data == []:
@@ -413,7 +413,7 @@ def treatVissimOutputs(files, inputs):
         else:
             mean_flow = computeMeanfromOld(raw_flow,old_num)
     else:
-        mean_flow = None
+        mean_flow = 0
     
 
     forward_followgap = stats(raw_forward_gaps)
