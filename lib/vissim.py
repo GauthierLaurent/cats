@@ -38,24 +38,21 @@ def isVissimRunning(kill):
             pass       
     return running
 
-def startVissim(running, InpxPath):
+def startVissim():
     '''start an instance of Vissim. Return the object Vissim if successfull, False otherwise'''
 
-    Vissim = False
-    if running is False:
-        try:
-            Vissim = win32com.client.Dispatch("Vissim.Vissim.600")        
-            #time.sleep(150)    
-        except:
-            Vissim = 'StartError'
-            
+    try:
+        return win32com.client.Dispatch("Vissim.Vissim.600")
+    except:
+        return 'StartError'
+   
+def loadNetwork(Vissim, InpxPath):
     if Vissim is not False and Vissim is not 'StartError':
         try:
-            Vissim.LoadNet (InpxPath)   #the filename MUST have a capital first letter 
+            Vissim.LoadNet (InpxPath)   #the filename MUST have a capital first letter
+            return True
         except:
-           Vissim = 'LoadNetError'
-           
-    return Vissim
+           return 'LoadNetError'
 
 def stopVissim(Vissim):
     '''Closes the current instance of Vissim. Return True if successfull, False otherwise'''
@@ -68,10 +65,10 @@ def stopVissim(Vissim):
     else:
         return True
 
-def initializeSimulation(Vissim, parameters, values = [], variables = [], swp = False):          #Change Lane parameters need to be added
+def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
         the parameter variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
-    
+
     try:
         Simulation = Vissim.Simulation
         Evaluation = Vissim.Evaluation
@@ -80,12 +77,15 @@ def initializeSimulation(Vissim, parameters, values = [], variables = [], swp = 
             Simulation.Stop()
         
         #Setting Simulation attributes        
-        Simulation.SetAttValue("SimRes", parameters[0])         #ODOT p.45 (56 in the pdf)
+        Simulation.SetAttValue("SimRes", sim_parameters[0])         #ODOT p.45 (56 in the pdf)
         Simulation.SetAttValue("useMaxSimSpeed", True)
-        Simulation.SetAttValue("RandSeed", parameters[1])       #Hitchhiker's Guide to the Galaxy!
+        Simulation.SetAttValue("RandSeed", sim_parameters[1])       #Hitchhiker's Guide to the Galaxy!
         Simulation.SetAttValue("RandSeedIncr", 1)
-        Simulation.SetAttValue("NumRuns", parameters[2])        #To be verified
-        Simulation.SetAttValue("SimPeriod",parameters[4])
+        Simulation.SetAttValue("NumRuns", sim_parameters[2])        #To be verified
+        Simulation.SetAttValue("SimPeriod",sim_parameters[4])
+        
+        #Setting the number of cores to use     --- the exact number could be passed through sim_parameters
+        #Simulation.SetAttValue("NumCores",VALUE)       
         
         #Enabling the Quick Mode
         Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
@@ -95,18 +95,61 @@ def initializeSimulation(Vissim, parameters, values = [], variables = [], swp = 
         if swp: Evaluation.SetAttValue("LaneChangesWriteFile",True)  #Enable .swp outputs
         
         #Setting driving behavior attributes
-        if variables != []:   
-            for i in range(len(Vissim.Net.DrivingBehaviors)):                       
-                Type = "WIEDEMANN"+str(parameters[3])
+        if sim_parameters[3] is not None:
+            for i in xrange(len(Vissim.Net.DrivingBehaviors)):                       
+                Type = "WIEDEMANN"+str(sim_parameters[3])
                 Vissim.Net.DrivingBehaviors[i].SetAttValue("CarFollowModType",Type)
-                for variable in range(len(variables)):
-                    Vissim.Net.DrivingBehaviors[i].SetAttValue(variables[variable],values[variable])
-                    
+                for variable in xrange(len(parameters)):
+                    if caracterizedParameter('DrivingBehaviors', parameters[variable]):
+                        Vissim.Net.DrivingBehaviors[i].SetAttValue(parameters[variable].vissim_name,values[variable])
+                 
         #Starting the simulation            
         Simulation.RunContinuous()
-
+        
         simulated = True        
     except:
         simulated = sys.exc_info()
         
     return simulated
+    
+def caracterizedParameter(param_type, parameter):
+    '''function used to assign parameters to the correct Vissim COM method
+        -> this will be usefull to expand pvctools to other type of study than
+           DrivingBehaviors related studies
+           
+           checks if the parameter is in the type of variables, returns True or False
+    '''
+    drivingBehaviors_list = ['W74ax','W74bxAdd', 'W74bxMult',
+                             'W99cc0','W99cc1','W99cc2','W99cc3','W99cc4','W99cc5','W99cc6','W99cc7','W99cc8','W99cc9',
+                             'LookAheadDistMin','LookAheadDistMax','ObsrvdVehs','LookBackDistMin','LookBackDistMax',
+                             'MaxDecelOwn','DecelRedDistOwn','AccDecelOwn','MaxDecelTrail','DecelRedDistTrail','AccDecelTrail','DiffusTm','MinHdwy','SafDistFactLnChg','CoopLnChg','CoopLnChgSpeedDiff','CoopLnChgCollTm','CoopDecel'
+                             ]
+                             
+    if param_type == 'DrivingBehaviors':
+        if parameter.vissim_name in drivingBehaviors_list:
+            return True
+        else:
+            return False
+
+def weidemannCheck(model, parameters):
+    '''returns the parameters that are not part of the other wiedemann model than
+       the one specified. If None is passed for the model type, every parameters
+       will be returned'''
+       
+    weidemann74 = ['W74ax','W74bxAdd', 'W74bxMult']
+    weidemann99 = ['W99cc0','W99cc1','W99cc2','W99cc3','W99cc4','W99cc5','W99cc6','W99cc7','W99cc8','W99cc9']    
+
+    output = []    
+    for i in xrange(len(parameters)):
+        if model == 74:
+            if parameters[i].vissim_name in weidemann99:
+                pass
+            else:
+                output.append(parameters[i])
+
+        elif model == 99:
+            if parameters[i].vissim_name in weidemann74:
+                pass
+            else:
+                output.append(parameters[i])
+    return output    

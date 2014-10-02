@@ -121,13 +121,15 @@ def main():
         
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
            
-        #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann) )
-        Default_LC_values, LCvariables = define.createLCValues()        
+        #generating the raw variables contained in the csv
+        variables = define.extractParamFromCSV(InpxPath,InpxName)
         
-        #creating default values
-        default_values =  Default_FM_values  + Default_LC_values
-        concat_variables = FMvariables + LCvariables
+        #removing unwanted variables for this weidemann model
+        variables = vissim.weidemannCheck(config.wiedemann, variables)
+    
+        #creating default values    
+        default_values =  [variables[i].vissim_default for i in xrange(len(variables))]
+        concat_variables = [variables[i].vissim_name for i in xrange(len(variables))]
 
         #opening the output file and writing the appropriate header       
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values)        
@@ -174,20 +176,16 @@ def main():
         #building the model values ranges
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'
-            
-        rangevalues = define.buildRanges(config.wiedemann)
-
-        #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann))
-        Default_LC_values, LCvariables = define.createLCValues()
+        
+        #generating the raw variables contained in the csv
+        variables = define.extractParamFromCSV(InpxPath,InpxName)
+        
+        #removing unwanted variables for this weidemann model
+        variables = vissim.weidemannCheck(config.wiedemann, variables)
     
-        #creating default values
-    
-        default_values =  Default_FM_values  + Default_LC_values
-        concat_variables = FMvariables + LCvariables
-
-        #verifying the ranges
-        define.verifyRanges(rangevalues, concat_variables)
+        #creating default values    
+        default_values =  [variables[i].vissim_default for i in xrange(len(variables))]
+        concat_variables = [variables[i].vissim_name for i in xrange(len(variables))]
 
         #opening the output file and writing the appropriate header       
         if commands.verbose is True:
@@ -201,40 +199,45 @@ def main():
             graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
             write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs"), "cumul_dist_graphs")
             write.createSubFolder(os.path.join(graphspath, "distribution_graphs"), "distribution_graphs")
-            for i in range(len(rangevalues) +1):            
+            for i in range(len(variables) +1):            
                 if i == 0:
                     write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
                     write.createSubFolder(os.path.join(graphspath, "distribution_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
                 else:                    
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
+                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", variables[i-1].name), "cumul_dist_graphs" + os.sep + variables[i-1].name)
+                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", variables[i-1].name), "cumul_dist_graphs" + os.sep + variables[i-1].name)
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
         
         #treating the simulations        
         ##calculating the default values
-        inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
-        text, firstrun_results = analysis.sensitivityAnalysis(rangevalues, inputs, default = True)
+        inputs = [InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
+        text, firstrun_results = analysis.sensitivityAnalysis(define.intelligentChunks(len(variables), variables, concat_variables), inputs, default = True)
         
         ##Running the rest of the simulations
         if commands.multi is True:
-            minChunkSize = define.countPoints(concat_variables, config.nbr_points, config.nbr_runs)
-            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
-            unpacked_outputs = define.createWorkers(rangevalues, analysis.sensitivityAnalysis, inputs, commands, minChunkSize, concat_variables)                  
+            #TODO: transform analysis.sensitivityAnalysis to accomodate for more than 4 process
+            '''for minChunkSize: there is a max number of 4 vissim instances that can be ran at the same time...
+               the min 4 is to make sure not more than 4 instances are processed at the same time.
+               A way to deal with this would be to generate the simulations, than have a crawler reach through the
+               folders to deal with the outputs - possibly while the next simulations are being processed'''
+            minChunkSize = min(4,define.countPoints(concat_variables, config.nbr_points, config.nbr_runs))
+            inputs = [InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
+            unpacked_outputs = define.createWorkers(variables, analysis.sensitivityAnalysis, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
                     text.append(j)
 
         else:   
-            inputs = [concat_variables, default_values, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
-            packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(rangevalues), rangevalues, concat_variables), inputs)           
+            inputs = [InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
+            packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(variables), variables, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          
             for i in packed_outputs:
                 text.append(i)
                 
         #Adding a time marker and performance indicators
-        report = write.timeStamp(rangevalues, config.nbr_points, config.nbr_runs) 
+        report = write.timeStamp(variables, config.nbr_points, config.nbr_runs) 
         for i in report: text.append(i)
         
         #filling the report
@@ -254,18 +257,15 @@ def main():
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'
             
-        rangevalues = define.buildRanges(config.wiedemann)
-
-        #creating the default values from memory
-        Default_FM_values, FMvariables = define.createFMValues(int(config.wiedemann))
-        Default_LC_values, LCvariables = define.createLCValues()
+        #generating the raw variables contained in the csv
+        variables = define.extractParamFromCSV(InpxPath,InpxName)
+        
+        #removing unwanted variables for this weidemann model
+        variables = vissim.weidemannCheck(config.wiedemann, variables)
     
-        #creating default values   
-        default_values =  Default_FM_values  + Default_LC_values
-        concat_variables = FMvariables + LCvariables
-
-        #verifying the ranges
-        define.verifyRanges(rangevalues, concat_variables)
+        #creating default values    
+        default_values =  [variables[i].vissim_default for i in xrange(len(variables))]
+        concat_variables = [variables[i].vissim_name for i in xrange(len(variables))]
 
         #opening the output file and writing the appropriate header       
         if commands.verbose is True:
@@ -275,20 +275,27 @@ def main():
 
         #creating appropriate output folder and graphic folder (if option is "on")
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
-        
+        import pdb; pdb.set_trace()
         #creating 1000 random values
         valuesVector = []
-        for i in range(0,1000):
+        for i in xrange(0,1000):
             thisVector = []
-            laneChangeState = True
-            for j in range(len(rangevalues)):
-                if concat_variables[j] != 'CoopLnChg':
-                    thisVector.append(random.uniform(rangevalues[j][0],rangevalues[j][1]))
-                elif (concat_variables[j] == 'CoopLnChgSpeedDiff' or concat_variables[j] == 'CoopLnChgCollTm') and laneChangeState == False:
-                    thisVector.append(999999)
+            laneChangeState = random.randrange(0,2)
+            for j in xrange(len(variables)):
+                if variables[j].vissim_name not in ['CoopLnChg','CoopLnChgSpeedDiff','CoopLnChgCollTm']:
+                    thisVector.append(random.uniform(variables[j].desired_min,variables[j].desired_max))
                 else:
-                    thisVector.append(random.randrange(0,2))
-            valuesVector.append(thisVector)        
+                    if variables[j].vissim_name == 'CoopLnChg':
+                        if laneChangeState == 1:
+                            thisVector.append(True)
+                        else:
+                            thisVector.append(False)
+                    else:
+                        if laneChangeState == 1:
+                            thisVector.append(random.uniform(variables[j].desired_min,variables[j].desired_max))
+                        else:
+                            thisVector.append(999999)
+            valuesVector.append(thisVector)
                
         #treating the simulations
         for i in range(10):
