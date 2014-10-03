@@ -110,7 +110,8 @@ def main():
         
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
-    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(config.wiedemann), Sim_lenght]
+    sim_cores = 1
+    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(config.wiedemann), Sim_lenght, sim_cores]
     VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(InpxPath, InpxName)
                 
     ###################################### 
@@ -189,7 +190,7 @@ def main():
 
         #opening the output file and writing the appropriate header       
         if commands.verbose is True:
-            print '-> Generating relevant subfolders for the analysis'
+            print '-> Generating relevant subfolders for the analysis\n'
 
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
@@ -210,7 +211,7 @@ def main():
         
         #treating the simulations        
         ##calculating the default values
-        inputs = [InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
+        inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
         text, firstrun_results = analysis.sensitivityAnalysis(define.intelligentChunks(len(variables), variables, concat_variables), inputs, default = True)
         
         ##Running the rest of the simulations
@@ -221,7 +222,7 @@ def main():
                A way to deal with this would be to generate the simulations, than have a crawler reach through the
                folders to deal with the outputs - possibly while the next simulations are being processed'''
             minChunkSize = min(4,define.countPoints(concat_variables, config.nbr_points, config.nbr_runs))
-            inputs = [InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
+            inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
             unpacked_outputs = define.createWorkers(variables, analysis.sensitivityAnalysis, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
@@ -229,7 +230,7 @@ def main():
                     text.append(j)
 
         else:   
-            inputs = [InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
+            inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
             packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(variables), variables, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          
@@ -252,7 +253,8 @@ def main():
         TypeOfAnalysis = 'Monte Carlo'
         
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
-       
+        
+        
         #building the model values ranges
         if commands.verbose is True:
             print '-> Generating the range values and default values from memory'
@@ -269,16 +271,16 @@ def main():
 
         #opening the output file and writing the appropriate header       
         if commands.verbose is True:
-            print '-> Generating relevant subfolders for the analysis'
+            print '-> Generating relevant subfolders for the analysis\n'
 
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
-        import pdb; pdb.set_trace()
+
         #creating 1000 random values
         valuesVector = []
-        for i in xrange(0,1000):
+        for i in xrange(0,10):
             thisVector = []
             laneChangeState = random.randrange(0,2)
             for j in xrange(len(variables)):
@@ -296,36 +298,61 @@ def main():
                         else:
                             thisVector.append(999999)
             valuesVector.append(thisVector)
-               
+            
         #treating the simulations
-        for i in range(10):
-            values = valuesVector[len(valuesVector)/10*i:len(valuesVector)/10*i+100]
-            lowerbound = len(valuesVector)/10*i
-            text = []
+        if commands.verbose:
+            print '/n=== Starting the modelisations of the ' + str(len(valuesVector)) + ' points ==='
+            
+        for i in range(1):
+            values = valuesVector[len(valuesVector)/1*i:len(valuesVector)/1*i+10]
+            lowerbound = len(valuesVector)/1*i
+            
+            if commands.multi is True:
+                cores_per_process, number_of_process, unused_cores = define.cpuPerVissimInstance()
+                minChunkSize = number_of_process
+                parameters[5] = cores_per_process
+                out_valuesVector = []
+                inputs = [variables, InpxPath, InpxName, outputspath, commands, running, parameters, lowerbound, valuesVector]            
+                unpacked_outputs = define.createWorkers(values, analysis.monteCarlo_vissim, inputs, commands, minChunkSize)                  
+                #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
+                for k in unpacked_outputs:
+                    out_valuesVector += k
+                        
+            else:   
+                inputs = [variables, InpxPath, InpxName, outputspath, commands, running, parameters, lowerbound]                             
+                out_valuesVector = analysis.monteCarlo_vissim(values, inputs)           
+        #import pdb;pdb.set_trace()        
+        #treating the outputs
+        if commands.verbose:
+            print '=== Starting the treatments of the ' + str(len(valuesVector)) + ' points simulated ==='
+            
+        text = []
+        ##note: data is now passed as [[list of values], path_to_folder]
+        for i in range(1):
+            values = out_valuesVector[len(out_valuesVector)/1*i:len(out_valuesVector)/1*i+10]
             if commands.multi is True:
                 minChunkSize = define.monteCarloCountPoints(len(values), config.nbr_runs)
-                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, VissimCorridors, valuesVector]            
-                unpacked_outputs = define.createWorkers(values, analysis.monteCarlo, inputs, commands, minChunkSize)                  
-                #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
+                inputs = [variables, parameters, outputspath, config, commands, VissimCorridors, InpxName]            
+                unpacked_outputs = define.createWorkers(values, analysis.monteCarlo_outputs, inputs, commands, minChunkSize)
+                
                 for k in unpacked_outputs:
                     for j in k:
                         text.append(j)
-    
-            else:   
-                inputs = [concat_variables, InpxPath, InpxName, outputspath, config, commands, running, parameters, lowerbound, VissimCorridors]                             
-                packed_outputs = analysis.monteCarlo(values, inputs)           
-                #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
-             
+
+            else:
+                inputs = [variables, parameters, outputspath, config, commands, VissimCorridors, InpxName]                             
+                packed_outputs = analysis.monteCarlo_outputs(values, inputs)
+                
                 for k in packed_outputs:
-                    text.append(k)
-            
-            #filling the report
-            for i in range(len(text)):
-                write.writeInFile(out, text[i])     
+                    text.append(k)    
 
         #Adding a time marker and performance indicators
         report = write.timeStamp(valuesVector, config.nbr_points, config.nbr_runs) 
         for i in report: text.append(i)
+
+        #filling the report
+        for i in range(len(text)):
+            write.writeInFile(out, text[i]) 
 
         out.close()
 

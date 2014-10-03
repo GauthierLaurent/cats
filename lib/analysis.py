@@ -422,25 +422,63 @@ def prepareFolderforVissimAnalysis(outputspath, folder_name, InpxName, InpxPath,
     
     return folderpath, filename
 
-def monteCarlo(valuesVector, inputs):
-    concat_variables    = inputs [0]
-    InpxPath            = inputs [1]
-    InpxName            = inputs [2]
-    outputspath         = inputs [3]
-    config              = inputs [4]
-    commands            = inputs [5]
-    running             = inputs [6]
-    parameters          = inputs [7]
-    lowerbound          = inputs [8]
-    corridors           = inputs [9]
+def monteCarlo_vissim(valuesVector, inputs):
+    parameters     = inputs [0]
+    InpxPath       = inputs [1]
+    InpxName       = inputs [2]
+    outputspath    = inputs [3]
+    commands       = inputs [4]
+    running        = inputs [5]
+    sim_parameters = inputs [6]
+    lowerbound     = inputs [7]    
     
     if commands.multi:
-        all_values          = inputs [10]
+        all_values = inputs [8]
         #find the index of the first vector included in the chunk, and compares its position with lowerbound
         lowerbound += (all_values.index(valuesVector[0]) - lowerbound)
     
-    #preparing the outputs    
-    text = []
+    #preparing the output
+    out_valuesVector = []
+     
+    #analysing the values
+    for value in range(len(valuesVector)):        
+        #creating a folder containing the files for that iteration
+                    
+        folderpath, filename = prepareFolderforVissimAnalysis(outputspath, 'Point_' + str(value+lowerbound), InpxName, InpxPath)
+
+        #Starting a Vissim instance
+        if not commands.mode:  #this serves to bypass Vissim while testing the code
+            
+            if running is False:
+                Vissim = vissim.startVissim()
+                running = True
+            else:
+                loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
+                                
+            #Vissim initialisation and simulation running
+            simulated = vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp)
+            
+        out_valuesVector.append([valuesVector[value], folderpath, lowerbound])
+            
+    #closing Vissim
+    if not commands.mode:
+        closed = vissim.stopVissim(Vissim)
+        if not closed:
+            print 'Warning, vissim instance could not be closed, potential hold of a required vissim instance'            
+    
+    return out_valuesVector
+            
+def monteCarlo_outputs(valuesVector, inputs):
+    parameters     = inputs [0]
+    sim_parameters = inputs [1]
+    outputspath    = inputs [2]
+    config         = inputs [3]
+    commands       = inputs [4]
+    corridors      = inputs [5]
+    InpxName       = inputs [6]
+
+    concat_variables = [parameters[i].vissim_name for i in xrange(len(parameters))]
+    lowerbound = valuesVector[0][2]
 
     if commands.multi is True:
         #opening a process output file
@@ -449,42 +487,36 @@ def monteCarlo(valuesVector, inputs):
         WorkingPath = os.path.join(outputspath.strip(os.sep+'outputs'),'tempfiles')
         multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_points_' + str(lowerbound) + '_to_' + str(len(valuesVector)+lowerbound)
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, "Monte Carlo", config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, None, multiProcTempFile)       
-          
-    #analysing the values
-    for value in range(len(valuesVector)):        
-        #creating a folder containing the files for that iteration
-                    
-        folderpath, filename = prepareFolderforVissimAnalysis(outputspath, 'point_' + str(value+lowerbound), InpxName, InpxPath)
-    
-        #Starting a Vissim instance
-        if commands.mode:  #this serves to bypass Vissim while testing the code
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
-        else:
-            if running is False:
-                Vissim = vissim.startVissim()
-                running = True
-            else:
-                Vissim.LoadNet (os.path.join(folderpath, filename))
-                                
-            #Vissim initialisation and simulation running
-            simulated = vissim.initializeSimulation(Vissim, parameters, valuesVector[value], concat_variables, commands.save_swp)
             
-            if simulated is not True:
-                text.append([value, valuesVector[value],''.join(str(simulated))])    #printing the exception in the csv file
-            else:                                
-                #output treatment
-                inputs = [folderpath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)            
-
-        #writing to file
-        text.append([value+lowerbound, valuesVector[value], flow, oppLCcount, manLCcount, forFMgap.cumul_all.mean, oppLCagap.cumul_all.mean, oppLCbgap.cumul_all.mean, manLCagap.cumul_all.mean, manLCbgap.cumul_all.mean])       
-
-    #closing Vissim
-    if not commands.mode:
-        closed = vissim.stopVissim(Vissim)
-        if not closed:
-            print 'Warning, vissim instance could not be closed, potential hold of a required vissim instance'
+    #preparing the outputs    
+    text = []
     
+    for value in xrange(len(valuesVector)):
+        if commands.mode:
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters)
+            success = True
+        else:
+            if os.path.isdir(valuesVector[value][1]):                
+                #output treatment
+                inputs = [valuesVector[value][1], config.sim_steps, config.warm_up_time, commands.verbose, corridors]
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith("fzp")], inputs)
+                success = True
+            else:
+                success = False
+        #writing to file
+        if success == True:
+            text.append([value+lowerbound, valuesVector[value][0],flow,oppLCcount,manLCcount,
+                         forFMgap.cumul_all.mean,  forFMgap.cumul_all.firstQuart,  forFMgap.cumul_all.median,  forFMgap.cumul_all.thirdQuart,  forFMgap.cumul_all.std,  
+                         oppLCagap.cumul_all.mean, oppLCagap.cumul_all.firstQuart, oppLCagap.cumul_all.median, oppLCagap.cumul_all.thirdQuart, oppLCagap.cumul_all.std,
+                         oppLCbgap.cumul_all.mean, oppLCbgap.cumul_all.firstQuart, oppLCbgap.cumul_all.median, oppLCbgap.cumul_all.thirdQuart, oppLCbgap.cumul_all.std,
+                         manLCagap.cumul_all.mean, manLCagap.cumul_all.firstQuart, manLCagap.cumul_all.median, manLCagap.cumul_all.thirdQuart, manLCagap.cumul_all.std,
+                         manLCbgap.cumul_all.mean, manLCbgap.cumul_all.firstQuart, manLCbgap.cumul_all.median, manLCbgap.cumul_all.thirdQuart, manLCbgap.cumul_all.std,       
+                         forward_speeds.cumul_all.mean, forward_speeds.cumul_all.firstQuart, forward_speeds.cumul_all.median, forward_speeds.cumul_all.thirdQuart, forward_speeds.cumul_all.std]) 
+        
+        else:
+            #printing the exception in the csv file
+            text.append([value+lowerbound, valuesVector[value][0],'No files found for this point. This error may be the result of an error while launching Vissim, while loading the Network or while running the simulation'])
+
     #security writing of chunk results while in multiprocessing
     if commands.multi is True:
         for i in range(len(text)):
@@ -541,23 +573,24 @@ def sensitivityAnalysis(values, inputs, default = False):
        note: rangevalues = [range, position in the complete list]
     '''    
 
-    default_values =  [values[i][0].vissim_default for i in xrange(len(values))]
-    concat_variables = [values[i][0].vissim_name for i in xrange(len(values))]
-    parameters = [values[i][0] for i in xrange(len(values))]
-
     #unpacking inputs - should eventually be changed directly in the code
-    InpxPath            = inputs [0]
-    InpxName            = inputs [1]
-    outputspath         = inputs [2]
-    graphspath          = inputs [3]
-    config              = inputs [4]
-    commands            = inputs [5]
-    running             = inputs [6]
-    sim_parameters      = inputs [7]
-    verbose             = inputs [8]
-    corridors           = inputs [9]
+    all_values          = inputs [0]
+    InpxPath            = inputs [1]
+    InpxName            = inputs [2]
+    outputspath         = inputs [3]
+    graphspath          = inputs [4]
+    config              = inputs [5]
+    commands            = inputs [6]
+    running             = inputs [7]
+    sim_parameters      = inputs [8]
+    verbose             = inputs [9]
+    corridors           = inputs [10]
     if default is False:
-        firstrun_results = inputs[10]      
+        firstrun_results = inputs[11]
+
+    default_values =  [all_values[i].vissim_default for i in xrange(len(all_values))]
+    concat_variables = [all_values[i].vissim_name for i in xrange(len(all_values))]
+    parameters = [all_values[i] for i in xrange(len(all_values))]
     
     #preparing the outputs    
     text = []
@@ -582,10 +615,11 @@ def sensitivityAnalysis(values, inputs, default = False):
         else:
             current_range = [parameters[value].desired_min,parameters[value].desired_max]   
             value_name = parameters[value].name
+
             position = values[value][1]
         
         #defining the values needed for the current cycle
-        working_values, points_array, = setCalculatingValues(default_values, value_name, config.nbr_points, current_range, default)
+        working_values, points_array = setCalculatingValues(default_values, value_name, config.nbr_points, current_range, default)
 
         #iterating on the number points
         for point in points_array:
