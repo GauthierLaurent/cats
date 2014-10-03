@@ -385,6 +385,28 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
             print function(processed_chunks[i], inputs)
             import pdb;pdb.set_trace()   
 
+def cpuPerVissimInstance():
+    '''calculates the number of vissim process to spawn depending on the amount of
+       cpus present in the computer.
+       
+       The value of cores_per_process returned is the flat value to alocate the same
+       amount of cpus to each vissim process. The unused_cores calculated could be
+       redistributed to some of the processes and the number of simulations increased
+       accordingly on those processes.
+    '''
+    num_cores = multiprocessing.cpu_count()
+    if num_cores > 5:
+        cores_per_process = (num_cores - 1) // 4
+        number_of_process = 4
+        unused_cores      = (num_cores - 1) % 4
+    
+    else:
+        cores_per_process = 1
+        number_of_process = num_cores - 1
+        unused_cores      = 0
+        
+    return cores_per_process, number_of_process, unused_cores
+        
 #calculations of number of chunks to build
 def countPoints(variable_names, points, sim):
     '''returns the min number of variables per chunks needed to have maximum 200 simulations per chunks
