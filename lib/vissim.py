@@ -39,17 +39,18 @@ def isVissimRunning(kill):
     return running
 
 def startVissim():
-    '''start an instance of Vissim. Return the object Vissim if successfull, False otherwise'''
-
+    '''start an instance of Vissim. Returns the object Vissim if successfull, StartError otherwise'''
     try:
         return win32com.client.Dispatch("Vissim.Vissim.600")
     except:
         return 'StartError'
    
 def loadNetwork(Vissim, InpxPath):
+    '''start a Vissim network. Returns True if successfull, LoadNetError otherwise
+       The filename MUST have a capital first letter'''
     if Vissim is not False and Vissim is not 'StartError':
         try:
-            Vissim.LoadNet (InpxPath)   #the filename MUST have a capital first letter
+            Vissim.LoadNet (InpxPath)
             return True
         except:
            return 'LoadNetError'
@@ -84,8 +85,8 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
         Simulation.SetAttValue("NumRuns", sim_parameters[2])        #To be verified
         Simulation.SetAttValue("SimPeriod",sim_parameters[4])
         
-        #Setting the number of cores to use     --- the exact number could be passed through sim_parameters
-        #Simulation.SetAttValue("NumCores",VALUE)       
+        #Setting the number of cores to use
+        Simulation.SetAttValue("NumCores",sim_parameters[5])       
         
         #Enabling the Quick Mode
         Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
