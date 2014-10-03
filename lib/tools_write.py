@@ -176,7 +176,14 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                       "m_f_speed;% diff;fq_f_speed;% diff;md_f_speed;% diff;tq_f_speed;% diff;std_f_speed;% diff\n"
                       )        
         else:
-            out.write("flow;nbr_opp;nbr_man;m_forward;m_LC_Aopp;m_LC_Bopp;m_LC_Aman;m_LC_Bman;\n")        
+            out.write("flow;nbr_opp;nbr_man;"
+                      "m_forward;fq_forward;md_forward;tq_forward;std_forward;"
+                      "m_LC_Aopp;fq_LC_Aopp;md_LC_Aopp;tq_LC_Aopp;std_LC_Aopp;"
+                      "m_LC_Bopp;fq_LC_Bopp;md_LC_Bopp;tq_LC_Bopp;std_LC_Bopp;"
+                      "m_LC_Aman;fq_LC_Aman;md_LC_Aman;tq_LC_Aman;std_LC_Aman;"
+                      "m_LC_Bman;fq_LC_Bman;md_LC_Bman;tq_LC_Bman;std_LC_Bman;"
+                      "m_f_speed;fq_f_speed;md_f_speed;tq_f_speed;std_f_speed;\n"
+                      )
    
     #Calibration header
    
