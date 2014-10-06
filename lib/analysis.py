@@ -445,18 +445,20 @@ def monteCarlo_vissim(valuesVector, inputs):
         #creating a folder containing the files for that iteration
                     
         folderpath, filename = prepareFolderforVissimAnalysis(outputspath, 'Point_' + str(value+lowerbound), InpxName, InpxPath)
-
-        #Starting a Vissim instance
+      
         if not commands.mode:  #this serves to bypass Vissim while testing the code
             
+            #Starting a Vissim instance
             if running is False:
                 Vissim = vissim.startVissim()
                 running = True
-            else:
-                loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
-                                
-            #Vissim initialisation and simulation running
-            simulated = vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp)
+            
+            #loading the network
+            loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
+            
+            if loaded != 'LoadNetError':  
+                #Vissim initialisation and simulation running
+                vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp)
             
         out_valuesVector.append([valuesVector[value], folderpath, lowerbound])
             
@@ -496,13 +498,17 @@ def monteCarlo_outputs(valuesVector, inputs):
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters)
             success = True
         else:
-            if os.path.isdir(valuesVector[value][1]):                
-                #output treatment
-                inputs = [valuesVector[value][1], config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith("fzp")], inputs)
-                success = True
+            if os.path.isdir(valuesVector[value][1]):
+                if [f for f in os.listdir(valuesVector[value][1]) if f.endswith("fzp")] != []:                
+                    #output treatment
+                    inputs = [valuesVector[value][1], config.sim_steps, config.warm_up_time, commands.verbose, corridors]
+                    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith("fzp")], inputs)
+                    success = True
+                else:
+                    success = False
             else:
                 success = False
+                
         #writing to file
         if success == True:
             text.append([value+lowerbound, valuesVector[value][0],flow,oppLCcount,manLCcount,

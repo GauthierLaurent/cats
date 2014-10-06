@@ -301,7 +301,7 @@ def main():
             
         #treating the simulations
         if commands.verbose:
-            print '/n=== Starting the modelisations of the ' + str(len(valuesVector)) + ' points ==='
+            print '\n=== Starting the modelisations of the ' + str(len(valuesVector)) + ' points ==='
             
         for i in range(1):
             values = valuesVector[len(valuesVector)/1*i:len(valuesVector)/1*i+10]
@@ -324,7 +324,7 @@ def main():
         #import pdb;pdb.set_trace()        
         #treating the outputs
         if commands.verbose:
-            print '=== Starting the treatments of the ' + str(len(valuesVector)) + ' points simulated ==='
+            print '\n=== Starting the treatments of the ' + str(len(valuesVector)) + ' points simulated ==='
             
         text = []
         ##note: data is now passed as [[list of values], path_to_folder]
