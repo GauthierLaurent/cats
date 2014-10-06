@@ -429,13 +429,14 @@ def monteCarlo_vissim(valuesVector, inputs):
     outputspath    = inputs [3]
     commands       = inputs [4]
     running        = inputs [5]
-    sim_parameters = inputs [6]
-    lowerbound     = inputs [7]    
+    sim_parameters = inputs [6]    
     
     if commands.multi:
-        all_values = inputs [8]
+        all_values = inputs [7]
         #find the index of the first vector included in the chunk, and compares its position with lowerbound
-        lowerbound += (all_values.index(valuesVector[0]) - lowerbound)
+        lowerbound = all_values.index(valuesVector[0])
+    else:
+        lowerbound = 0
     
     #preparing the output
     out_valuesVector = []
@@ -461,7 +462,7 @@ def monteCarlo_vissim(valuesVector, inputs):
                 vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp)
             
         out_valuesVector.append([valuesVector[value], folderpath, lowerbound])
-            
+
     #closing Vissim
     if not commands.mode:
         closed = vissim.stopVissim(Vissim)
@@ -492,7 +493,7 @@ def monteCarlo_outputs(valuesVector, inputs):
             
     #preparing the outputs    
     text = []
-    
+
     for value in xrange(len(valuesVector)):
         if commands.mode:
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters)
