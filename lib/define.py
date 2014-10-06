@@ -12,7 +12,7 @@ def version():
     '''if a change modifies the data to be serialized, increment the number directly after R
        otherwise, play with .X.Y
     '''
-    Version = 'R1.2.1 u. 06-10-2014'
+    Version = 'R1.2.2 u. 06-10-2014'
     
 ##################
 # Import Libraries
