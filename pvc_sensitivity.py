@@ -212,7 +212,7 @@ def main():
         #treating the simulations        
         ##calculating the default values
         inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
-        text, firstrun_results = analysis.sensitivityAnalysis(define.intelligentChunks(len(variables), variables, concat_variables), inputs, default = True)
+        text, firstrun_results = analysis.OAT_sensitivity(define.intelligentChunks(len(variables), variables, concat_variables), inputs, default = True)
         
         ##Running the rest of the simulations
         if commands.multi is True:
@@ -221,9 +221,10 @@ def main():
                the min 4 is to make sure not more than 4 instances are processed at the same time.
                A way to deal with this would be to generate the simulations, than have a crawler reach through the
                folders to deal with the outputs - possibly while the next simulations are being processed'''
+
             minChunkSize = min(4,define.countPoints(concat_variables, config.nbr_points, config.nbr_runs))
             inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
-            unpacked_outputs = define.createWorkers(variables, analysis.sensitivityAnalysis, inputs, commands, minChunkSize, concat_variables)                  
+            unpacked_outputs = define.createWorkers(variables, analysis.OAT_sensitivity, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
@@ -231,7 +232,7 @@ def main():
 
         else:   
             inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
-            packed_outputs = analysis.sensitivityAnalysis(define.intelligentChunks(len(variables), variables, concat_variables), inputs)           
+            packed_outputs = analysis.OAT_sensitivity(define.intelligentChunks(len(variables), variables, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          
             for i in packed_outputs:

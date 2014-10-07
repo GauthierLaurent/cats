@@ -574,7 +574,7 @@ def createDelta(firstrun_results, variable):
     else:
         return '---'
         
-def sensitivityAnalysis(values, inputs, default = False):
+def OAT_sensitivity(values, inputs, default = False):
     '''Runs the sensitivity analysis for a set of predetermined values
     
        note: rangevalues = [range, position in the complete list]
