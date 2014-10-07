@@ -620,8 +620,8 @@ def sensitivityAnalysis(values, inputs, default = False):
             value_name = "Default"
             position = 0
         else:
-            current_range = [parameters[value].desired_min,parameters[value].desired_max]   
-            value_name = parameters[value].name
+            current_range = [values[value][0].desired_min,values[value][0].desired_max]   
+            value_name = values[value][0].name
 
             position = values[value][1]
         
@@ -644,7 +644,7 @@ def sensitivityAnalysis(values, inputs, default = False):
             
             #creating a folder containing the files for that iteration
             folderpath, filename = prepareFolderforVissimAnalysis(outputspath, value_name + '_' + str(round(point,3)), InpxName, InpxPath, default)
-    
+
             #Starting a Vissim instance
             if commands.mode:  #this serves to bypass Vissim while testing the code
                 flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters)
@@ -794,7 +794,6 @@ def sensitivityAnalysis(values, inputs, default = False):
         for i in range(len(text)):
             write.writeInFile(out, text[i])  
         out.close()
-        
         
     if default is True:  
         return text, firstrun_results
