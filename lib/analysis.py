@@ -605,7 +605,7 @@ def OAT_sensitivity(values, inputs, default = False):
     if commands.multi is True and default is False:
         #opening a process output file
         WorkingPath = outputspath.strip(os.sep+'outputs')
-        multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_' + parameters[1].name
+        multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_' + values[0][0].name
         out, subdirname = write.writeHeader(WorkingPath, concat_variables, "Sensitivity", config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values, multiProcTempFile)       
     
     #creating a dictionnary
