@@ -18,9 +18,9 @@ def version():
 # Import Libraries
 ##################
 #Natives
-from itertools import izip, chain, repeat
+from itertools import izip, chain, repeat, product
 from pylab import csv2rec
-import multiprocessing
+import multiprocessing, random
 import math, sys, os
 import numpy as np
 import cPickle as pickle
@@ -145,11 +145,14 @@ def extractAlignmentsfromCSV(dirname, inpxname):
             align_list = {}
             for b in xrange(len(brute[vid])):
                 name = brute[vid][b].split(';')[0]
-                inter = brute[vid][b].split(';')[1].replace('),(',');(').split(';')
+                inter = brute[vid][b].split(';')[1].replace(' ','')
+                inter = [inter.replace(')','').replace('(','')]
+
                 point = []
-                for i in xrange(len(inter)):
-                    point.append(moving.Point(float(inter[i].strip('(').strip(')').split(',')[0]),float(inter[i].strip('(').strip(')').split(',')[1])))
-           
+                while len(inter) > 0:
+                    inter = inter[0].split(',',2)
+                    point.append(moving.Point(float(inter[0]),float(inter[1])))
+                    inter = inter[2:]           
                 align_list[b] = [name, point]
             videos[vid] = Videos([vid_name, align_list.values()])
                 
@@ -432,3 +435,118 @@ def monteCarloCountPoints(points, sim):
     total_sims = np.ceil(float(total_points)*sim/200)
     
     return int(np.ceil(total_points/total_sims))
+
+##################
+# Sampling tools
+##################
+
+def genMCsample(variables, n):
+    '''generates a Monte Carlo sample of n points'''
+    valuesVector = []
+    for i in xrange(n):
+        thisVector = []
+        laneChangeState = random.randrange(0,2)
+        for j in xrange(len(variables)):
+            if variables[j].vissim_name not in ['CoopLnChg','CoopLnChgSpeedDiff','CoopLnChgCollTm']:
+                thisVector.append(random.uniform(variables[j].desired_min,variables[j].desired_max))
+            else:
+                if variables[j].vissim_name == 'CoopLnChg':
+                    if laneChangeState == 1:
+                        thisVector.append(True)
+                    else:
+                        thisVector.append(False)
+                else:
+                    if laneChangeState == 1:
+                        thisVector.append(random.uniform(variables[j].desired_min,variables[j].desired_max))
+                    else:
+                        thisVector.append(999999)
+        valuesVector.append(thisVector)
+    return valuesVector
+
+def choose(n):
+    '''returns a list of n intergers randomly order from the range 0 to n-1'''
+    final = []
+    for i in xrange(n):
+        chosen = False        
+        while chosen is False:
+            test = random.randint(0,n-1)
+            if test not in final:
+                chosen = True
+                final.append(test)       
+    return final
+    
+def choose_xn(n,m):
+    '''chooses n points m times'''
+    mat = []    
+    for i in xrange(m):
+        mat.append(choose(n))
+    
+    return mat
+    
+def boolTable(n):
+    out = []
+    for args in product(*repeat((True, False),n)):
+        out.append(list(args))
+    return out
+    
+def genLHCsample(variables,n):
+    '''generates a Latin Hypercube sample of n points per non boolean dimension
+       variables can be either boolean or real number values
+       
+       returns all combinations of real values (nxn matrix) for the True and False
+       possibility of each boolean variable
+        
+       total number of points returned = ( len(real variables) )*(  2 ** len(bool variables) )
+    '''        
+    real_dim = []
+    disc_dim = []
+    
+    #classification of boolean and nonboolean variables
+    ranges = []
+    for var in xrange(len(variables)):
+        ranges.append([variables[var].desired_min, variables[var].desired_max])
+        if isinstance(variables[var].desired_max, bool):
+            disc_dim.append(var)
+        else:
+            real_dim.append(var)
+    
+    #subdivision of the ranges of each nonboolean variable
+    cut_ranges =  []
+    for i in real_dim:
+        this_one_range = []   
+        for j in xrange(n):
+            this_one_range.append([ranges[i][0] + j * (ranges[i][1]-ranges[i][0])/float(n), ranges[i][0] + (j+1) * (ranges[i][1]-ranges[i][0])/float(n)])
+        cut_ranges.append(this_one_range)
+
+    #column,row selection
+    mat = choose_xn(n,len(real_dim))
+
+    #real values variable point selection
+    real_mat = []
+    for m in xrange(n):
+        point = []
+        for k in xrange(len(real_dim)):
+            point.append(random.uniform(cut_ranges[k][mat[k][m]][0],cut_ranges[k][mat[k][m]][1]))
+        real_mat.append(point)   
+
+    #bool values combinations enumeration
+    bool_mat = boolTable(len(disc_dim))
+
+    #assembly line
+    #TODO: apply corrections to variables affected by True/False value of the bool variable
+    final_mat = []
+    for i in xrange(len(bool_mat)):
+        semi_mat = []
+        for k in xrange(len(real_mat)):
+            point = []                
+            for m in xrange(len(variables)):
+                if m in disc_dim:
+                    point.append(bool_mat[i][disc_dim.index(m)])
+                else:
+                    point.append(real_mat[k][real_dim.index(m)])
+            semi_mat.append(point)
+        final_mat += semi_mat
+
+    return final_mat
+            
+    

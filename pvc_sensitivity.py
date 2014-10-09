@@ -280,27 +280,9 @@ def main():
         outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
         if commands.verbose is True:
             print '-> Name of the report file: ' + subdirname.split(os.sep)[-1] + '.csv\n'
-
+        
         #creating 1000 random values
-        valuesVector = []
-        for i in xrange(0,1000):
-            thisVector = []
-            laneChangeState = random.randrange(0,2)
-            for j in xrange(len(variables)):
-                if variables[j].vissim_name not in ['CoopLnChg','CoopLnChgSpeedDiff','CoopLnChgCollTm']:
-                    thisVector.append(random.uniform(variables[j].desired_min,variables[j].desired_max))
-                else:
-                    if variables[j].vissim_name == 'CoopLnChg':
-                        if laneChangeState == 1:
-                            thisVector.append(True)
-                        else:
-                            thisVector.append(False)
-                    else:
-                        if laneChangeState == 1:
-                            thisVector.append(random.uniform(variables[j].desired_min,variables[j].desired_max))
-                        else:
-                            thisVector.append(999999)
-            valuesVector.append(thisVector)
+        valuesVector = define.genMCsample(variables, 1000)
             
         #treating the simulations
         if commands.verbose:
