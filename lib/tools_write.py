@@ -18,9 +18,8 @@ from scipy import stats
 import lib.define as define
 
 ##################
-# Writing tools
+# Folder tools
 ##################
-
 def createSubFolder(folderpath, filename, Archives = True):
     '''Creates a folder named "filename"
     
@@ -55,12 +54,6 @@ def createSubFolder(folderpath, filename, Archives = True):
         newfolderpath = False
         
     return newfolderpath
-
-def writeListToCSV(lists, name):    
-    out = open(name, 'w')
-    for sublist in lists:
-        writeInFile(out,sublist)
-    out.close()
     
 def defineName(dirname, TypeOfAnalysis):
     '''Finds the folders named after the analysis type and find the greatest increment'''
@@ -95,7 +88,9 @@ def findCalibName(dirname):
     
     return filename
     
-    
+##################
+# Report tools
+##################    
 def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUpTime, desiredSimulatedTime, Inpxname, values = None, multiProcTempFile = False):
     '''writes the header. For sensitivity analysis, the header has 19 lines'''
     
@@ -188,6 +183,12 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     #Calibration header
    
     return out, subdirname
+
+def writeListToCSV(lists, name):    
+    out = open(name, 'w')
+    for sublist in lists:
+        writeInFile(out,sublist)
+    out.close()
     
 def intoList(out, mylist):
     '''iterates over mylist to write it's content into the list given in out'''
@@ -218,7 +219,25 @@ def writeInFile(out, *args):
         else:
             out.write(str(var) +";")
     out.write("\n")
-
+   
+def timeStamp(variables, points, sim, itt = None):
+    text = []
+    total_time = time.clock()
+    avg_per_point = total_time/(len(variables) * points + 1 ) 
+    avg_per_sim   = total_time/((len(variables) * points + 1 )*sim)
+    
+    #the append([]) serves to add an empty line before the time marker when using writeInFile
+    text.append([])
+    text.append(["Total elapsed time (sec) :",total_time])
+    if itt is not None: text.append(["Number of itaration required :", itt])
+    text.append(["Average time per point (sec) :",avg_per_point])
+    text.append(["Average time per simulation (sec): ",avg_per_sim])
+    
+    return text
+    
+##################
+# In-console print tools
+##################
 def verboseIntro(commands, config, TypeOfAnalysis):
     print ('--> Starting a ' + TypeOfAnalysis + ' Analysis with the following options: ')
     if commands.multi or commands.multi_test or commands.mode or commands.vis_save:
@@ -246,22 +265,10 @@ def verboseIntro(commands, config, TypeOfAnalysis):
         print('      -- -- -- -- -- -- -- -- -- -- -- -- -- --         \n'
               'Desired pourcentage error on the mean confidence interval: ' + str(config.desired_pct_error) +' %')
     print''
-    
-def timeStamp(variables, points, sim, itt = None):
-    text = []
-    total_time = time.clock()
-    avg_per_point = total_time/(len(variables) * points + 1 ) 
-    avg_per_sim   = total_time/((len(variables) * points + 1 )*sim)
-    
-    #the append([]) serves to add an empty line before the time marker when using writeInFile
-    text.append([])
-    text.append(["Total elapsed time (sec) :",total_time])
-    if itt is not None: text.append(["Number of itaration required :", itt])
-    text.append(["Average time per point (sec) :",avg_per_point])
-    text.append(["Average time per simulation (sec): ",avg_per_sim])
-    
-    return text
-        
+
+##################
+# Graphic tools
+##################        
 def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, nsim, subpath = ""):
     '''create graphs for a type 'Stats' variable'''
 
@@ -345,6 +352,30 @@ def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, 
         plt.clf()
         plt.close(fig)                  
     return True
+
+def plot_st(objects, alignments, fps, dirname):
+    '''generates a time-space diagram for each alignment'''
+    for a in xrange(len(alignments)):
+        fig = plt.figure()
+        for o in objects:
+            t = []
+            s = []
+            for pos in xrange(len(o.getCurvilinearPositions().getSCoordinates())):
+                if o.getCurvilinearPositions().getLanes()[pos] == a:
+                    t.append((o.getFirstInstant()+pos)/float(fps))
+                    s.append(o.getCurvilinearPositions().getSCoordinates()[pos])
+            plt.plot(t,s,'b')
+        
+        plt.xlabel('time (sec)' )
+        plt.ylabel('distance (m)')
+        plt.title('Time-space diagram for alignment ' + alignments[a])
+        plt.savefig(os.path.join(dirname, 'Time-space diagram for alignment ' + alignments[a]))
+        plt.clf()
+        plt.close(fig)    
+    return
+
+
+
     
 #######   Legacy  ############
 '''    
