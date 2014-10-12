@@ -254,6 +254,100 @@ def verifyDesiredRanges(variables):
                 variables[i].desired_max = variables[i].vissim_max            
     return variables
 
+def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
+
+    def add_end(list_to_append, video_name, text_to_add):
+        for i in xrange(len(text_to_add)):
+            list_to_append += [str(i)+';']
+            for j in xrange(len(text_to_add[i])):
+                if j == len(text_to_add[i])-1:
+                    list_to_append += [str(text_to_add[i][j])+'\n']
+                else:
+                    list_to_append += [str(text_to_add[i][j])]
+        list_to_append += ['\n']
+        return list_to_append
+    
+    if inpxname in dirname: dirname = dirname.strip(inpxname)
+    if os.path.exists(os.path.join(dirname, inpxname.strip('.inpx') + '.csv')):
+           
+        with open(os.path.join(dirname, inpxname.strip('.inpx') + '.csv'), 'r+') as f:
+            
+            text_list = []
+            
+            for l in f:
+                text_list.append(l)
+
+            to_write_list = []
+            
+            for line in xrange(len(text_list)):
+                if 'Video_alignments' in text_list[line]:                  
+                    #$Video_alignments does exist, we must modify this section
+                    section_list = []
+                    for lines in xrange(line+1,len(text_list)):
+                        if '$' in text_list[lines]:
+                            last_line = lines
+                            break
+                        section_list.append(text_list[lines])                    
+                    
+                    modified_section_list = []
+                    index_list = []
+                    found = False
+                    for sec in xrange(len(section_list)):
+                        if '.sqlite' in section_list[sec]:
+                            index_list.append(sec)
+                        if video_name in section_list[sec]:
+                            found = sec
+                            
+                    #no video of that name found
+                    if found is False:
+                        modified_section_list.append('$Video_alignments\n')
+                        modified_section_list += section_list[0:found]
+                        modified_section_list.append(str(video_name)+'\n')
+                        modified_section_list = add_end(modified_section_list, video_name, text_to_add)
+                                       
+                    #name found, overwritting this section
+                    else:
+                        #adding the first part
+                        modified_section_list.append('$Video_alignments\n')
+                        modified_section_list += section_list[0:found]
+
+                        #adding the values we are interested in                                                
+                        modified_section_list.append(str(video_name)+'\n')
+                        modified_section_list = add_end(modified_section_list, video_name, text_to_add)
+
+                        #adding the last part if it exists
+                        if found < index_list[-1]:
+                            modified_section_list += section_list[index_list[index_list.index(found)+1]:]
+
+                    #adding modified section and rest of the file
+                    to_write_list += modified_section_list
+                    to_write_list += text_list[last_line:]
+                    break
+                
+                elif line == len(text_list) -1:
+                    #No section $Video_alignments found, we must create it
+                    to_write_list.append(text_list[line])
+                    if text_list[line] != '\n':
+                        if '\n' in text_list[line]:
+                            to_write_list.append('\n')
+                        else:
+                            to_write_list.append('\n\n')
+                    to_write_list.append('$Video_alignments\n')
+                    to_write_list.append(str(video_name)+'\n')
+                    to_write_list = add_end(to_write_list, video_name, text_to_add)
+
+                else:
+                    to_write_list.append(text_list[line])
+
+        f.close()
+        
+        with open(os.path.join(dirname, inpxname.strip('.inpx') + '.csv'), 'w') as f:
+              for i in to_write_list:
+                  f.write(i)
+        f.close()
+        
+        import pdb;pdb.set_trace()
+        
 ##################
 # Define tools
 ##################
