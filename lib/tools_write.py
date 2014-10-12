@@ -373,7 +373,57 @@ def plot_st(objects, alignments, fps, dirname):
         plt.clf()
         plt.close(fig)    
     return
+    
+##################
+# Drawing tools
+##################
+def tellMe(s, target=False):
+    if(not target):
+        target = plt
+    
+    print('Drawing console: '+s)
+    plt.title(s,fontsize=14)
+    plt.draw()
 
+def drawAlign(target=False):
+    ''' This module will enable user to draw alignments ontop of trajectories
+        
+    Note: Expects trajectory plot to be pre-drawn
+    Thanks to Paul St-Aubin PvaTools
+    '''
+    if(not target):
+        target = plt
+        
+    plt.setp(target.gca(), autoscale_on=False)
+    
+    exit_cond = False
+    alignments = []
+    pj = []
+    j = 0
+    ## Segments
+    while not exit_cond:
+        pts = []
+        while len(pts) < 2:
+            tellMe('Draw alignments. Left click: select points, right click: undo, middle click: exit.', target=target)
+            pts = [list(x) for x in plb.ginput(0,timeout=-1)]
+            if(len(pts) < 2):
+                tellMe('Too few points, starting over.', target=target)
+                time.sleep(1) # Wait a second
+    
+        ph = plb.plot([x[0] for x in pts], [x[1] for x in pts], 'm', lw=2 )
+    
+        tellMe('Save alignments? Mouse click for yes, key click for no.', target=target)
+        save_cond = plb.waitforbuttonpress()
+        for p in ph: p.remove()
+        if(not save_cond):
+            alignments.append(pts)
+            pj.append(plb.plot([x[0] for x in pts], [x[1] for x in pts], 'k', lw=2))
+            j += 1
+        
+        tellMe('Add alignments? Mouse for yes, key for no.', target=target)
+        exit_cond = plb.waitforbuttonpress()
+    
+    return alignments
 
 
     
