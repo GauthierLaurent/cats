@@ -255,7 +255,9 @@ def verifyDesiredRanges(variables):
     return variables
 
 def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
-
+    '''inserts the info for the video in the CSV file respecting, if applicable, the
+       location of the $Video_alignments section and keeping, if applicable, other
+       videos' informations'''
     def add_end(list_to_append, video_name, text_to_add):
         for i in xrange(len(text_to_add)):
             list_to_append += [str(i)+';']
@@ -263,7 +265,7 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                 if j == len(text_to_add[i])-1:
                     list_to_append += [str(text_to_add[i][j])+'\n']
                 else:
-                    list_to_append += [str(text_to_add[i][j])]
+                    list_to_append += [str(text_to_add[i][j])+',']
         list_to_append += ['\n']
         return list_to_append
     
