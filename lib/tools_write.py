@@ -11,6 +11,7 @@ Created on Thu Jul 03 11:32:08 2014
 #Native
 import os, time, shutil
 import matplotlib.pyplot as plt
+import matplotlib.pylab as plb
 import numpy as np
 from scipy import stats
 
@@ -116,7 +117,7 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     out.write("Date: " + str(time.localtime().tm_year) + '/' + str(time.localtime().tm_mon).zfill(2) + '/'  + str(time.localtime().tm_mday).zfill(2) + "\n")
     out.write("\n")
     
-    #Statistical-precision header
+    #Statistical-precision subheader
     if TypeOfAnalysis == "Statistical-precision":  
         out.write("Test based on a desired confidance interval of +/- S\n"
                   "       **  N = [t(1-alpha/2;N-1)*S]^2  **\n"
@@ -144,7 +145,7 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
                   "*SCI4: Confidance interval calculated for the standard deviation for the mandatory lane change gaps calculated after lane change\n"
                   "*SCI5: Confidance interval calculated for the standard deviation for the mandatory lane change gaps calculated before lane change\n")
         
-    #Sensitivity header
+    #Sensitivity subheader
     if TypeOfAnalysis == 'Sensitivity' or TypeOfAnalysis == 'Monte Carlo': 
         out.write("*var_name: Name of the tested variable\n"
                   "Note: m = mean, fq = first quartile, md = median, tq = third quartile, std = standard deviation, %diff = relative difference with the default values results"
@@ -183,7 +184,44 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
     #Calibration header
    
     return out, subdirname
+    
+def writeRealDataReport(dirname, video_name, inpxname, min_time, max_time, speed_centiles, other_info):
+    '''writes the report file.
+       Speed_centiles MUST be of the form [list_of_name,list_of_values]
+       other_info Must include directly the format to output'''
+    
+    name = 'Video_analysis_of_'+str(video_name).strip('.sqlite')
+    filename = '{}/'+ name + '.csv'
+    
+    #header writing
+    out = open(filename.format(dirname), 'w')
+    out.write('Video analysed: ' + str(video_name) + '\n')
+    out.write('Associated Vissim file: ' + str(inpxname) + '\n')
+    if min_time or max_time is not None:
+        if min_time is None:
+            out.write('Video analysed from time 0 to '+str(max_time)+' (frames)\n')
+        elif max_time is None:
+            out.write('Video analysed from time '+str(min_time)+' (frames) till end\n')
+        else:
+            out.write('Video analysed from time '+str(min_time)+' to '+str(max_time)+' (frames)\n') 
+    out.write('Date: ' + str(time.localtime().tm_year) + '/' + str(time.localtime().tm_mon).zfill(2) + '/'  + str(time.localtime().tm_mday).zfill(2) + '\n')
+    out.write('\n')
 
+    #speed centile description
+    out.write('Usefull speed centiles for vissim calibration:\n')
+    writeInFile(out, ['centile (%)'] + speed_centiles[0])
+    writeInFile(out, ['speed (m/frame)*'] + speed_centiles[1])
+    out.write('*m/s = (m/frame)*fps  and km/h = (m/frame)*fps*3.6\m')
+    out.write('\n')
+    
+    #subheader
+    for i in other_info:       
+        writeInFile(out, i)  
+      
+    out.close()
+   
+    return
+    
 def writeListToCSV(lists, name):    
     out = open(name, 'w')
     for sublist in lists:
@@ -210,8 +248,7 @@ def writeToOneList(*args):
     return out
     
 def writeInFile(out, *args):
-    '''Writes any number of arguments into the file given in out'''
-    
+    '''Writes any number of arguments into the file given in out'''    
     variables = writeToOneList(list(args))
     for var in variables:
         if isinstance(var,float) is True:
