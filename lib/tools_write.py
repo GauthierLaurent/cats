@@ -74,7 +74,7 @@ def defineName(dirname, TypeOfAnalysis):
     return filename, last_num
 
 def findCalibName(dirname):
-    '''Finds the folders named after the analysis type and find the greatest increment'''
+    '''Finds the folders named point_x and find the greatest increment x'''
     last_num = 0
     
     past_analysis  = [f for f in os.listdir(dirname) if "point" in f]

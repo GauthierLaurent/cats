@@ -178,7 +178,7 @@ def floatOrBool(stringvalue):
             return True
 
 class Variable:
-    def __init__(self, name, vissim_name, vissim_min, vissim_max, vissim_default, desired_min, desired_max):
+    def __init__(self, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, point = None):
         self.name           = name
         self.vissim_name    = vissim_name
         self.vissim_default = floatOrBool(vissim_default)
@@ -186,6 +186,7 @@ class Variable:
         self.desired_max    = floatOrBool(desired_max)
         self.vissim_min     = floatOrNone(vissim_min)
         self.vissim_max     = floatOrNone(vissim_max)
+        self.point          = floatOrNone(point)
 
 def extractParamFromCSV(dirname, inpxname): #MIGRATION TO FINISH
     '''Reads variable information for a csv named like the inpx
@@ -253,6 +254,19 @@ def verifyDesiredRanges(variables):
                 print str(variables[i].name) + ' was set to have a upper bound of ' + str(variables[i].vissim_max) + ' which is higher than the vissim maximum bound. Setting the upper bound to the vissim bound'             
                 variables[i].desired_max = variables[i].vissim_max            
     return variables
+    
+def verifyDesiredPoints(variables):
+    chk = True
+    for i in xrange(len(variables)):
+        if variables[i].vissim_min is not None:
+            if variables[i].point < variables[i].vissim_min:
+                chk = False
+        
+        if variables[i].vissim_max is not None:    
+            if variables[i].point > variables[i].vissim_max:
+                chk = False
+                
+    return chk
 
 def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
     '''inserts the info for the video in the CSV file respecting, if applicable, the
