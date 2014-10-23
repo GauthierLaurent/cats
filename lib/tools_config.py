@@ -144,46 +144,53 @@ class Config:
         self.config = ConfigParser.ConfigParser(allow_no_value=True)        
         self.config.read(config_name)
         
-        self.section = 'Main'
+        self.section = 'Sensitivity'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
-        self.inpx_name                = self.parse('inpx_name',          '',        c_type='string')
-        self.path_to_trafint          = self.parse('path_to_trafint',    '',        c_type='string')                 
+        self.inpx_name                = self.parse('inpx_name',            '',        c_type='string')
+        self.path_to_trafint          = self.parse('path_to_trafint',      '',        c_type='string')                 
+        self.path_to_csv              = self.parse('path_to_csv',          '',        c_type='string')
         
         self.section = 'Video'
-        self.path_to_sqlite           = self.parse('path_to_sqlite',     '',        c_type='string')
+        self.path_to_sqlite           = self.parse('path_to_sqlite',       '',        c_type='string')
                                                                                         
         self.section = 'Simulation'                                                              
-        self.sim_steps                = self.parse('steps_per_sec',      '10' ,                   c_type='int')                     #10 recommended
-        self.first_seed               = self.parse('first_seed',         '42' ,                   c_type='int')  
-        self.nbr_runs                 = self.parse('nbr_runs',           '10' ,                   c_type='int')                     #May eventually build up something to test this
-        self.simulation_time          = self.parse('simulation_time',    '900',                   c_type='int')
-        self.warm_up_time             = self.parse('warm_up_time',       '120',                   c_type='int')
-        self.nbr_points               = self.parse('nbr_points',         '5'  ,                   c_type='int')
-        self.wiedemann                = self.parse('wiedemann',          '99' ,                   c_type='int')
+        self.sim_steps                = self.parse('steps_per_sec',        '10',      c_type='int')      #10 recommended
+        self.first_seed               = self.parse('first_seed',           '42',      c_type='int')  
+        self.nbr_runs                 = self.parse('nbr_runs',             '10',      c_type='int')      #May eventually build up something to test this
+        self.simulation_time          = self.parse('simulation_time',      '900',     c_type='int')
+        self.warm_up_time             = self.parse('warm_up_time',         '120',     c_type='int')
+        self.nbr_points               = self.parse('nbr_points',           '5',       c_type='int')
+        self.wiedemann                = self.parse('wiedemann',            '99',      c_type='int')
         
         self.section = 'Statistical precision'
-        self.desired_pct_error        = self.parse('desired_pct_error',  '20' ,                   c_type='float')
+        self.desired_pct_error        = self.parse('desired_pct_error',    '20' ,     c_type='float')
         
         self.section = 'Calibration'
-        self.path_to_csv              = self.parse('path_to_csv',           '',                   c_type='string')
-        self.output_forward_gaps      = self.parse('output_forward_gaps',   'True',               c_type='bool')
-        self.output_lane_change       = self.parse('output_lane_change',    'False',              c_type='bool')
-        '''                                                                                        
-        self.section = 'Parameters'                                                               
-        self.draw_max_traj            = self.parse('draw_max_traj',      '300')                                                     # Maximum trajectories to work with with visual tools
-        self.plot_dropped_traj        = self.parse('plot_dropped_traj',  'True',                c_type='bool')                      # Plot trajectories that were dropped in a seperate folder
-        self.plot_text_size           = self.parse('plot_text_size',     '16',                  c_type='int')                       # Size of text
-        self.cm_colour                = self.parse('cm_colour',          'hot',                 c_type='string')                    # http://www.scipy.org/Cookbook/Matplotlib/Show_colormaps\n
-        self.speed_map_u_scale        = self.parse('speed_map_u_scale',  '50')                                                      # Upper speed limit to plot histograms to
-        self.hex_grid                 = self.parse('speed_map_hex_grid', '[60,60]',             c_type='int',    c_struct='list1D') # Size of bin grid for hexbin plots 
-        self.figsize                  = self.parse('figsize',            '[15,12]',             c_type='float',  c_struct='list1D') # Default figure size
-        self.minVFcount               = self.parse('minVFcount',         '10',                  c_type='int')                       # Minimum vectors to draw vector field
-        self.TTCthreshSeconds         = self.parse('TTCthreshSeconds',   '1.5',                 c_type='float')                     # Maximum value of TTC for threshold TTC plotting, in seconds
-        self.font_family              = self.parse('font_family',        'Arial',               c_type='string')                    # Plotting font
-        '''
+        self.output_forward_gaps      = self.parse('output_forward_gaps',  'True',   c_type='bool')
+        self.output_lane_change       = self.parse('output_lane_change',   'False',  c_type='bool')
+
+        self.section = 'Networks'
+        self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       
+        self.active_network_2         = self.parse('active_network_2',     'False',  c_type='bool')  
+        self.active_network_3         = self.parse('active_network_3',     'False',  c_type='bool')  
+
+        self.section = 'Paths'
+        self.path_to_calib_csv		  = self.parse('path_to_calib_csv',     '',       c_type='string')
+        self.path_to_NOMAD			  = self.parse('path_to_NOMAD',         '',       c_type='string')
+        self.path_to_NOMAD_param      = self.parse('path_to_NOMAD_param',   '',       c_type='string')
+        self.path_to_output_folder    = self.parse('path_to_output_folder', '',       c_type='string')
+        self.path_to_inpx_file_1      = self.parse('path_to_inpx_file_1',   '',       c_type='string')
+        self.path_to_inpx_file_2      = self.parse('path_to_inpx_file_2',   '',       c_type='string')
+        self.path_to_inpx_file_3      = self.parse('path_to_inpx_file_3',   '',       c_type='string')
+        self.path_to_video_data_1     = self.parse('path_to_video_data_1',  '',       c_type='string')
+        self.path_to_video_data_2     = self.parse('path_to_video_data_2',  '',       c_type='string')
+        self.path_to_video_data_3     = self.parse('path_to_video_data_3',  '',       c_type='string')
+        self.path_to_csv_net1         = self.parse('path_to_csv_network_1', '',       c_type='string')
+        self.path_to_csv_net2         = self.parse('path_to_csv_network_2', '',       c_type='string')
+        self.path_to_csv_net3         = self.parse('path_to_csv_network_3', '',       c_type='string')
         
-        if(not os.path.isfile('pvc.cfg')):
-            print('Notice: No default configuration found. Creating new pva.cfg')
+        if(not os.path.isfile(config_name)):
+            print('Notice: No default configuration found. Creating new ' + str(config_name))
             self.write()      
 
         
