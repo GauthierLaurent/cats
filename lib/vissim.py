@@ -28,12 +28,11 @@ def isVissimRunning(kill):
         try:
             p = psutil.Process(list[i])
             if p.cmdline[0].find("Vissim.exe") != -1:
-                if kill is True:                
+                if kill is True:
                     # killing Vissim so it can be restarted with the COM module enabled
                     p.kill()
                 else:
-                    running = p
-                break;
+                    running = True
         except:
             pass       
     return running
@@ -65,7 +64,7 @@ def stopVissim(Vissim):
         return False
     else:
         return True
-
+        
 def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
         the sim_parameters variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
