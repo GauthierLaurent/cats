@@ -395,9 +395,9 @@ def load_traj(fullpath):
         forwar_speed = pickle.load(input_file)
         
     if version == version():
-        return version, opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed
+        return [opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed]
     else:
-        return 'TrajVersionError'
+        return ['TrajVersionError']
         
 ################################ 
 #        Network Calibration class       
