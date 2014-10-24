@@ -361,6 +361,43 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
               for i in to_write_list:
                   f.write(i)
         f.close()
+
+################################ 
+#        Serialized data files     
+################################
+def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_LC_agaps,opp_LC_bgaps,man_LC_agaps,man_LC_bgaps,forwar_speed):
+    '''dumps data into a file named name.traj in the folder provided in depositpath'''    
+    with open(os.path.join(depositpath, name + '.traj'), 'wb') as output:       
+        pickle.dump(version(),    output, protocol=2)
+        pickle.dump(opp_LC_count, output, protocol=2)
+        pickle.dump(man_LC_count, output, protocol=2)
+        pickle.dump(flow,         output, protocol=2)
+        pickle.dump(forward_gaps, output, protocol=2)
+        pickle.dump(opp_LC_agaps, output, protocol=2)
+        pickle.dump(opp_LC_bgaps, output, protocol=2)
+        pickle.dump(man_LC_agaps, output, protocol=2)
+        pickle.dump(man_LC_bgaps, output, protocol=2)
+        pickle.dump(forwar_speed, output, protocol=2)
+
+def load_traj(fullpath):
+    '''loads data from the traj file provided in full path
+    full path must end with \name.traj'''
+    with open(fullpath, 'r') as input_file:     
+        version      = pickle.load(input_file)
+        opp_LC_count = pickle.load(input_file)
+        man_LC_count = pickle.load(input_file)
+        flow         = pickle.dump(input_file)
+        forward_gaps = pickle.load(input_file)
+        opp_LC_agaps = pickle.load(input_file)
+        opp_LC_bgaps = pickle.load(input_file)
+        man_LC_agaps = pickle.load(input_file)
+        man_LC_bgaps = pickle.load(input_file)
+        forwar_speed = pickle.load(input_file)
+        
+    if version == version():
+        return version, opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed
+    else:
+        return 'TrajVersionError'
         
 ################################ 
 #        Network Calibration class       
