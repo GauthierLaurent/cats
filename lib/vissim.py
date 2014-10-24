@@ -68,7 +68,7 @@ def stopVissim(Vissim):
 
 def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
-        the parameter variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
+        the sim_parameters variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
 
     try:
         Simulation = Vissim.Simulation
