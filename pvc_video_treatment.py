@@ -261,19 +261,9 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     write.writeRealDataReport(config.path_to_inpx, video_names, config.inpx_name, min_time, max_time, [percentages,values_at_p], other_info)
     
     #dumping serialised data
-    with open(os.path.join(config.path_to_inpx, config.inpx_name.strip('.inpx') + '.traj'), 'wb') as output:
-        print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())        
-        pickle.dump(define.version, output, protocol=2)
-        pickle.dump(opportunisticLC, output, protocol=2)
-        pickle.dump(mandatoryLC, output, protocol=2)
-        pickle.dump(flow, output, protocol=2)
-        pickle.dump(forward_followgap, output, protocol=2)
-        pickle.dump(opportunistic_LCagap, output, protocol=2)
-        pickle.dump(opportunistic_LCbgap, output, protocol=2)
-        pickle.dump(mandatory_LCagap, output, protocol=2)
-        pickle.dump(mandatory_LCbgap, output, protocol=2)
-        pickle.dump(forward_speeds, output, protocol=2)
-        
+    print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())
+    define.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)        
+    
     return
 
 ################################ 
