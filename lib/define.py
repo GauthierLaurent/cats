@@ -12,7 +12,7 @@ def version():
     '''if a change modifies the data to be serialized, increment the number directly after R
        otherwise, play with .X.Y
     '''
-    Version = 'R1.2.2 u. 06-10-2014'
+    return 'R1.2.2 u. 06-10-2014'
     
 ##################
 # Import Libraries
@@ -362,7 +362,61 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                   f.write(i)
         f.close()
         
-        import pdb;pdb.set_trace()
+################################ 
+#        Network Calibration class       
+################################
+class Network:
+    def __init__(self,inpx_path,traj_path_list):
+        self.inpx_path = inpx_path
+        if isinstance(traj_path_list, list):
+            self.traj_paths = traj_path_list
+        else:
+            self.traj_paths = [traj_path_list] 
+        
+    def addtraj(self,traj):
+        self.traj_paths = self.traj_paths + [traj]
+                       
+    def addCorridor(self, corridor):
+        self.corridors = corridor
+        
+    def addVissim(self, vissim):
+        self.vissim = vissim
+        
+def buildNetworkObjects(config):
+    '''takes all info from calib.cfg and build a network object out of it. This fonction will not duplicate a
+    network that has been entered multiple times to be processed on two different videos files'''
+    
+    inpx_list = {}
+    if config.active_network_1:
+        inpx_list[config.path_to_inpx_1.split(os.sep)[-1]] = Network(config.path_to_inpx_1,config.path_to_video_data_1)
+        VissimCorridors1, trafIntCorridors1 = extractVissimCorridorsFromCSV(config.path_to_csv_net1, config.path_to_csv_net1.split(os.sep)[-1])
+        inpx_list[config.path_to_inpx_2.split(os.sep)[-1]].addCorridor(VissimCorridors1)
+        
+    if config.active_network_2:
+        if config.path_to_inpx_2.split(os.sep)[-1] not in inpx_list:
+            inpx_list[config.path_to_inpx_2.split(os.sep)[-1]] = Network(config.path_to_inpx_2,config.path_to_video_data_2)
+            VissimCorridors2, trafIntCorridors2 = extractVissimCorridorsFromCSV(config.path_to_csv_net2, config.path_to_csv_net2.split(os.sep)[-1])
+            inpx_list[config.path_to_inpx_2.split(os.sep)[-1]].addCorridor(VissimCorridors2)
+        else:
+            inpx_list[config.path_to_inpx_2.split(os.sep)[-1]].addtraj(config.path_to_video_data_2)
+            
+    if config.active_network_3:
+        if config.path_to_inpx_3.split(os.sep)[-1] not in inpx_list:
+            inpx_list[config.path_to_inpx_3.split(os.sep)[-1]] = Network(config.path_to_inpx_3,config.path_to_video_data_3)
+            VissimCorridors3, trafIntCorridors3 = extractVissimCorridorsFromCSV(config.path_to_csv_net3, config.path_to_csv_net3.split(os.sep)[-1])
+            inpx_list[config.path_to_inpx_3.split(os.sep)[-1]].addCorridor(VissimCorridors3)
+        else:
+            inpx_list[config.path_to_inpx_3.split(os.sep)[-1]].addtraj(config.path_to_video_data_3)    
+
+    if config.active_network_4:
+        if config.path_to_inpx_4.split(os.sep)[-1] not in inpx_list:
+            inpx_list[config.path_to_inpx_4.split(os.sep)[-1]] = Network(config.path_to_inpx_4,config.path_to_video_data_4)
+            VissimCorridors4, trafIntCorridors4 = extractVissimCorridorsFromCSV(config.path_to_csv_net4, config.path_to_csv_net4.split(os.sep)[-1])
+            inpx_list[config.path_to_inpx_4.split(os.sep)[-1]].addCorridor(VissimCorridors4)
+        else:
+            inpx_list[config.path_to_inpx_4.split(os.sep)[-1]].addtraj(config.path_to_video_data_4)    
+        
+    return inpx_list.values()  
         
 ##################
 # Define tools

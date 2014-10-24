@@ -173,6 +173,7 @@ class Config:
         self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       
         self.active_network_2         = self.parse('active_network_2',     'False',  c_type='bool')  
         self.active_network_3         = self.parse('active_network_3',     'False',  c_type='bool')  
+        self.active_network_4         = self.parse('active_network_4',     'False',  c_type='bool')  
 
         self.section = 'Paths'
         self.path_to_calib_csv		  = self.parse('path_to_calib_csv',     '',       c_type='string')
@@ -182,12 +183,15 @@ class Config:
         self.path_to_inpx_file_1      = self.parse('path_to_inpx_file_1',   '',       c_type='string')
         self.path_to_inpx_file_2      = self.parse('path_to_inpx_file_2',   '',       c_type='string')
         self.path_to_inpx_file_3      = self.parse('path_to_inpx_file_3',   '',       c_type='string')
+        self.path_to_inpx_file_4      = self.parse('path_to_inpx_file_4',   '',       c_type='string')
         self.path_to_video_data_1     = self.parse('path_to_video_data_1',  '',       c_type='string')
         self.path_to_video_data_2     = self.parse('path_to_video_data_2',  '',       c_type='string')
         self.path_to_video_data_3     = self.parse('path_to_video_data_3',  '',       c_type='string')
+        self.path_to_video_data_4     = self.parse('path_to_video_data_4',  '',       c_type='string')
         self.path_to_csv_net1         = self.parse('path_to_csv_network_1', '',       c_type='string')
         self.path_to_csv_net2         = self.parse('path_to_csv_network_2', '',       c_type='string')
         self.path_to_csv_net3         = self.parse('path_to_csv_network_3', '',       c_type='string')
+        self.path_to_csv_net4         = self.parse('path_to_csv_network_4', '',       c_type='string')
         
         if(not os.path.isfile(config_name)):
             print('Notice: No default configuration found. Creating new ' + str(config_name))
