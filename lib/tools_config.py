@@ -166,9 +166,10 @@ class Config:
         self.desired_pct_error        = self.parse('desired_pct_error',    '20' ,     c_type='float')
         
         self.section = 'Calibration'
-        self.output_forward_gaps      = self.parse('output_forward_gaps',  'True',   c_type='bool')
-        self.output_lane_change       = self.parse('output_lane_change',   'False',  c_type='bool')
-
+        self.output_forward_gaps      = self.parse('output_forward_gaps',      'True',   c_type='bool')
+        self.output_lane_change       = self.parse('output_lane_change',       'False',  c_type='bool')
+        self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',  '',       c_type='string')
+        
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       
         self.active_network_2         = self.parse('active_network_2',     'False',  c_type='bool')  
@@ -176,8 +177,8 @@ class Config:
         self.active_network_4         = self.parse('active_network_4',     'False',  c_type='bool')  
 
         self.section = 'Paths'
-        self.path_to_calib_csv		  = self.parse('path_to_calib_csv',     '',       c_type='string')
-        self.path_to_NOMAD			  = self.parse('path_to_NOMAD',         '',       c_type='string')
+        self.path_to_calib_csv        = self.parse('path_to_calib_csv',     '',       c_type='string')
+        self.path_to_NOMAD	         = self.parse('path_to_NOMAD',         '',       c_type='string')
         self.path_to_NOMAD_param      = self.parse('path_to_NOMAD_param',   '',       c_type='string')
         self.path_to_output_folder    = self.parse('path_to_output_folder', '',       c_type='string')
         self.path_to_inpx_file_1      = self.parse('path_to_inpx_file_1',   '',       c_type='string')
