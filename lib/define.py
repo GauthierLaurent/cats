@@ -9,11 +9,29 @@ Created on Thu Jul 03 11:28:53 2014
 ##################
 #this will be used to verify if the serialised data is still matching the data processsed by pcvtools
 def version():
-    '''if a change modifies the data to be serialized, increment the number directly after R
-       otherwise, play with .X.Y
     '''
-    return 'R1.2.2 u. 06-10-2014'
+    version is RX.Y.Z u. DD-MM-AAAA
+    where:
+            X is the release version
+            Y is the serialized data version
+            Z is the subrelease update version
+    '''
+    return 'R1.3.0 u. 29-10-2014'
     
+def verify_release_version(in_version):
+    '''looks for the X part of the version number'''
+    if in_version.split('.')[0] == version().split('.')[0]:
+        return True
+    else:
+        return False 
+
+def verify_data_version(in_version):
+    '''looks for the Y part of the version number'''
+    if in_version.split('.')[1] == version().split('.')[1]:
+        return True
+    else:
+        return False 
+        
 ##################
 # Import Libraries
 ##################
@@ -40,7 +58,7 @@ sys.stdout = oldstdout #Re-enable output
 def loadDataFromTraj(path, filename):
     with open(os.path.join(path, filename), 'rb') as input_data:
         trajversion = pickle.dump(input_data)
-        if trajversion == version(): 
+        if verify_data_version(trajversion): 
             oppLCcount  = pickle.load(input_data)
             manLCcount  = pickle.load(input_data)
             flow        = pickle.load(input_data)
@@ -382,7 +400,7 @@ def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_
 def load_traj(fullpath):
     '''loads data from the traj file provided in full path
     full path must end with \name.traj'''
-    with open(fullpath, 'r') as input_file:     
+    with open(fullpath, 'r') as input_file:
         version      = pickle.load(input_file)
         opp_LC_count = pickle.load(input_file)
         man_LC_count = pickle.load(input_file)
@@ -405,10 +423,12 @@ def load_traj(fullpath):
 class Network:
     def __init__(self,inpx_path,traj_path_list):
         self.inpx_path = inpx_path
+
         if isinstance(traj_path_list, list):
             self.traj_paths = traj_path_list
         else:
             self.traj_paths = [traj_path_list] 
+
         
     def addtraj(self,traj):
         self.traj_paths = self.traj_paths + [traj]
@@ -417,7 +437,7 @@ class Network:
         self.corridors = corridor
         
     def addVissim(self, vissim):
-        self.vissim = vissim
+        self.vissim = vissim    
         
 def buildNetworkObjects(config):
     '''takes all info from calib.cfg and build a network object out of it. This fonction will not duplicate a
