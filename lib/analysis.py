@@ -108,24 +108,6 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     p_values.append(secondary_values[5])
     
         return p_values
-        
-#TODO: move next function to legacy calibration
-def respectUniverseBoundaries(destination,hard_bounds):
-    '''verifies if the destination is within the boundaries. Else, returns False'''
-    
-    point_in = True
-    for i in range(len(destination)):
-        #gathering informations on symetric equations: (x-x0)/a = (y-y0)/b = ... = (n-n0)/m
-
-        if hard_bounds[i][0] is not None:        
-            if destination[i] < hard_bounds[i][0]:      
-                point_in = False
-                
-        elif hard_bounds[i][1] is not None:
-            if destination[i] > hard_bounds[i][1]:
-                point_in = False
-            
-    return point_in
 
 ################################ 
 #        Statistical precision analysis       
