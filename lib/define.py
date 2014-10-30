@@ -437,7 +437,13 @@ class Network:
         self.corridors = corridor
         
     def addVissim(self, vissim):
-        self.vissim = vissim    
+        self.vissim = vissim
+        
+    def addVideoComparison(self,data_list):
+        try:
+            self.videoComparison.append(data_list)
+        except:
+            self.videoComparison = data_list        
         
 def buildNetworkObjects(config):
     '''takes all info from calib.cfg and build a network object out of it. This fonction will not duplicate a
