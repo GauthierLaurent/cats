@@ -15,10 +15,10 @@ from scipy.stats.mstats import kruskalwallis
 import cPickle as pickle
 
 #Internal
-import lib.tools_write as write
-import lib.vissim as vissim
-import lib.outputs as outputs
-import lib.define as define
+import pvc_write as write
+import pvc_vissim as vissim
+import pvc_outputs as outputs
+import pvc_define as define
 
 ################################ 
 #        Calibration analysis       

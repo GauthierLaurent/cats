@@ -26,10 +26,10 @@ sys.stdout = oldstdout
 ##################
 # Import Internal Libraries
 ##################
-import lib.define as define
-import lib.tools_write as write
-import lib.outputs as outputs
-import lib.tools_config as config
+import pvc_define  as define
+import pvc_write   as write
+import pvc_outputs as outputs
+import pvc_config  as config
 
 ################################ 
 #        Load settings       

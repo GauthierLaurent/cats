@@ -16,7 +16,7 @@ import numpy as np
 from scipy import stats
 
 #Internal
-import lib.define as define
+import pvc_define as define
 
 ##################
 # Folder tools

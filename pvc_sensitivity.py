@@ -23,11 +23,11 @@ def main():
     import os, sys, time, optparse, random
     
     #Internal
-    import lib.vissim as vissim
-    import lib.tools_write as write 
-    import lib.define as define
-    import lib.tools_config as config
-    import lib.analysis as analysis
+    import pvc_vissim   as vissim
+    import pvc_write    as write 
+    import pvc_define   as define
+    import pvc_config   as config
+    import pvc_analysis as analysis
 
     ################################ 
     #        Os verification       

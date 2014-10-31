@@ -13,9 +13,9 @@ Created on Thu Jul 17 11:29:28 2014
 import os, sys, optparse
 
 #Internal
-import lib.outputs as outputs
-import lib.tools_write as write 
-import lib.tools_config as config
+import pvc_outputs as outputs
+import pvc_write   as write 
+import pvc_config  as config
 
 ################################ 
 #        Load settings       

@@ -4,9 +4,7 @@ Created on Thu Jul 03 11:28:53 2014
 
 @author: Laurent
 """
-##################
-# Version
-##################
+
 #this will be used to verify if the serialised data is still matching the data processsed by pcvtools
 def version():
     '''
@@ -48,7 +46,7 @@ import StringIO
 # Import Traffic Intelligence
 ##################
 #disabling outputs
-import lib.nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
+import nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
 import moving
 sys.stdout = oldstdout #Re-enable output
 
@@ -453,7 +451,7 @@ def buildNetworkObjects(config):
     if config.active_network_1:
         inpx_list[config.path_to_inpx_1.split(os.sep)[-1]] = Network(config.path_to_inpx_1,config.path_to_video_data_1)
         VissimCorridors1, trafIntCorridors1 = extractVissimCorridorsFromCSV(config.path_to_csv_net1, config.path_to_csv_net1.split(os.sep)[-1])
-        inpx_list[config.path_to_inpx_2.split(os.sep)[-1]].addCorridor(VissimCorridors1)
+        inpx_list[config.path_to_inpx_1.split(os.sep)[-1]].addCorridor(VissimCorridors1)
         
     if config.active_network_2:
         if config.path_to_inpx_2.split(os.sep)[-1] not in inpx_list:

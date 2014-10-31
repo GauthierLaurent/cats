@@ -16,7 +16,7 @@ import random, time
 # Import Traffic Intelligence
 ##################
 #disabling outputs
-import lib.nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
+import nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
 import storage as TraffIntStorage
 sys.stdout = oldstdout #Re-enable output
 
