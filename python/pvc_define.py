@@ -205,7 +205,7 @@ class Variable:
         self.vissim_max     = floatOrNone(vissim_max)
         self.point          = floatOrNone(point)
 
-def extractParamFromCSV(dirname, filename): #MIGRATION TO FINISH
+def extractParamFromCSV(dirname, filename):
     '''Reads variable information for a csv file
        CSV file must be build as:
              1rst  line:     $Variables
@@ -302,9 +302,9 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
         return list_to_append
     
     if inpxname in dirname: dirname = dirname.strip(inpxname)
-    if os.path.exists(os.path.join(dirname, inpxname.strip('.inpx') + '.csv')):
+    if os.path.exists(os.path.join(dirname, inpxname.strip(os.path.splitext(inpxname)[0]) + '.csv')):
            
-        with open(os.path.join(dirname, inpxname.strip('.inpx') + '.csv'), 'r+') as f:
+        with open(os.path.join(dirname, inpxname.strip(os.path.splitext(inpxname)[0]) + '.csv'), 'r+') as f:
             
             text_list = []
             

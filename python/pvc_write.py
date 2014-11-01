@@ -110,7 +110,7 @@ def create_history(dirname, filename, networks):
 		
         hist.write('fout\n')		
 	
-def write_history(last_num, points, networks, fout,  dirname, filename):
+def write_history(last_num, points, networks, fout,  dirname, filename):   
     with open(os.path.join(dirname, filename), 'a') as hist:
         hist.write(str(last_num)+'\t')
         hist.write("|\t")
@@ -127,10 +127,7 @@ def write_history(last_num, points, networks, fout,  dirname, filename):
                 for v in xrange(len(variables)):
                     if v == 4:
                         hist.write('*\t')
-                    if isinstance(variables[v],float) is True:
-                        hist.write(str(round(variables[v],4)) + '\t')
-                    else:
-                        hist.write(str(variables[v]) +'\t')
+                    hist.write(str(variables[v]) +'\t')
                 hist.write("|\t")
 
         #fout

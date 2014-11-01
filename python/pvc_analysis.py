@@ -52,36 +52,31 @@ def runVissimForCalibrationAnalysis(network, inputs):
     calib_folderpath = inputs[4]
     multi_networks   = inputs[5]
     
-    '''
     Vissim = network.vissim
-    '''
-
+    
     if multi_networks is True:
         #if we are treating more than one network, than we subdivide the point folder into network folders
-        if not os.path.isdir(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1])):
-            os.mkdir(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1]))
+        if not os.path.isdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])):
+            os.mkdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0]))
         
-        final_inpx_path = os.path.join(point_folderpath,network[0].inpx_path.strip('.inpx'),network[0].inpx_path.split(os.sep)[-1])
-        shutil.copy(os.path.join(calib_folderpath,network.inpx_path.split(os.sep)[-1]),final_inpx_path)    
+        final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0],network[0].inpx_path.split(os.sep)[-1])
+        shutil.copy(os.path.join(calib_folderpath,network[0].inpx_path.split(os.sep)[-1]),final_inpx_path)    
 
     else:
         final_inpx_path = copy.deepcopy(point_folderpath)
-    
-    print final_inpx_path
-    final_inpx_path = copy.deepcopy(calib_folderpath)
-    '''    
+        
     Vissim.LoadNet(final_inpx_path)        
-    '''
+    
     values = []
     for var in variables:
         values.append(var.point)
     
-    simulated = True
-    '''
     #Initializing and running the simulation
     simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)
-    ''' 
+ 
     if simulated is not True:
+        for traj in network[0].traj_paths:
+            network[0].addVideoComparison(['SimulationError'])
         return False
              
     else:
@@ -112,7 +107,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 video_dist_data = video_data_list[3:]
                 secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data)
 
-                #adding videoo comparison data to the network
+                #adding video comparison data to the network                   
                 network[0].addVideoComparison(secondary_values)
 
                 #determining main p_value
@@ -127,7 +122,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     else:
                         p_values.append(secondary_values[5])
     
-        return p_values
+        return p_values, network[0]
 
 ################################ 
 #        Statistical precision analysis       
