@@ -416,6 +416,21 @@ def load_traj(fullpath):
         return [opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed]
     else:
         return ['TrajVersionError']
+
+def write_calib(working_path, parameters, variables, networks):
+    with open(os.path.join(working_path,'pvcdata.calib'), 'wb') as trans:
+        pickle.dump(parameters, trans, protocol=2)
+        pickle.dump(variables, trans, protocol=2)
+        pickle.dump(networks, trans, protocol=2)
+
+def load_calib():
+    '''loads pvcdata.calib''' 
+    with open(os.path.join(os.getcwd(),'pvcdata.calib'), 'rb') as input_file:
+        parameters   = pickle.load(input_file)
+        variables    = pickle.load(input_file)
+        networks     = pickle.load(input_file)
+
+    return parameters, variables, networks
         
 ################################ 
 #        Network Calibration class       
@@ -497,6 +512,12 @@ def sort2lists(list1,list2):
     
     return sorted_list1, sorted_list2
 
+def isbool(iterative):
+    for element in iterative:
+        if isinstance(element,bool):
+            return True
+    return False
+    
 ##################
 # Multiprocessing tools
 ##################

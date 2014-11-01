@@ -11,7 +11,6 @@ call exemples:
 ##################
 import os, sys, time, getopt
 import matplotlib.pyplot as plt
-import cPickle as pickle
 import numpy as np
 
 ##################
@@ -262,7 +261,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     
     #dumping serialised data
     print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())
-    define.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)        
+    write.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)        
 
 ################################ 
 #        Options       

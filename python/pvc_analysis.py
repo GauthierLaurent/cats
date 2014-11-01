@@ -94,7 +94,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
         for traj in network[0].traj_paths:
             
             #loading video data            
-            video_data_list = define.load_traj(traj)          
+            video_data_list = write.load_traj(traj)          
             if video_data_list[0] == 'TrajVersionError':
                 network[0].addVideoComparison(['TrajVersionError'])
             else:          

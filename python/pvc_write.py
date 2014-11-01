@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plb
 import numpy as np
 from scipy import stats
+import cPickle as pickle
 
 #Internal
 import pvc_define as define
@@ -132,6 +133,74 @@ def write_history(last_num, points, networks, fout,  dirname, filename):
 
         #fout
         hist.write(str(fout)+'\n')
+
+################################ 
+#        NOMAD handling functions       
+################################ 
+def read_from_NOMAD(input_name):
+    points = []
+    with open(input_name, 'r') as f:
+        for l in f:
+            inter = l.strip().replace('\t',' ').split(' ')
+            for i in inter:
+                points.append(float(i))
+    return points
+
+def write_for_NOMAD(output_name, fout):
+    with open(output_name, 'w') as f:
+        f.write(str(fout))
+        
+################################ 
+#        Serialized data files     
+################################
+def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_LC_agaps,opp_LC_bgaps,man_LC_agaps,man_LC_bgaps,forwar_speed):
+    '''dumps data into a file named name.traj in the folder provided in depositpath'''    
+    with open(os.path.join(depositpath, name + '.traj'), 'wb') as output:       
+        pickle.dump(define.version(),    output, protocol=2)
+        pickle.dump(opp_LC_count, output, protocol=2)
+        pickle.dump(man_LC_count, output, protocol=2)
+        pickle.dump(flow,         output, protocol=2)
+        pickle.dump(forward_gaps, output, protocol=2)
+        pickle.dump(opp_LC_agaps, output, protocol=2)
+        pickle.dump(opp_LC_bgaps, output, protocol=2)
+        pickle.dump(man_LC_agaps, output, protocol=2)
+        pickle.dump(man_LC_bgaps, output, protocol=2)
+        pickle.dump(forwar_speed, output, protocol=2)
+
+def load_traj(fullpath):
+    '''loads data from the traj file provided in full path
+    full path must end with \name.traj'''
+    with open(fullpath, 'rb') as input_file:
+        version      = pickle.load(input_file)
+        opp_LC_count = pickle.load(input_file)
+        man_LC_count = pickle.load(input_file)
+        flow         = pickle.load(input_file)
+        forward_gaps = pickle.load(input_file)
+        opp_LC_agaps = pickle.load(input_file)
+        opp_LC_bgaps = pickle.load(input_file)
+        man_LC_agaps = pickle.load(input_file)
+        man_LC_bgaps = pickle.load(input_file)
+        forwar_speed = pickle.load(input_file)
+        
+    if define.verify_data_version(version):
+        return [opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed]
+    else:
+        return ['TrajVersionError']
+
+def write_calib(working_path, parameters, variables, networks):
+    with open(os.path.join(working_path,'pvcdata.calib'), 'wb') as trans:
+        pickle.dump(parameters, trans, protocol=2)
+        pickle.dump(variables, trans, protocol=2)
+        pickle.dump(networks, trans, protocol=2)
+
+def load_calib():
+    '''loads pvcdata.calib''' 
+    with open(os.path.join(os.getcwd(),'pvcdata.calib'), 'rb') as input_file:
+        parameters   = pickle.load(input_file)
+        variables    = pickle.load(input_file)
+        networks     = pickle.load(input_file)
+
+    return parameters, variables, networks
     
 ##################
 # Report tools
