@@ -30,11 +30,14 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value):
     H_statistic_list = []
     p_value_list = []
 
-    for i in range(len(calculated_value)):    
-        H_statistic, p_value = kruskalwallis(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
-
-        H_statistic_list.append(H_statistic)
-        p_value_list.append(p_value)
+    for i in range(len(calculated_value)):
+        if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
+            H_statistic, p_value = kruskalwallis(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
+    
+            H_statistic_list.append(H_statistic)
+            p_value_list.append(p_value)
+        else:
+            p_value_list.append('DNE')
     
     return p_value_list
 
@@ -49,28 +52,35 @@ def runVissimForCalibrationAnalysis(network, inputs):
     calib_folderpath = inputs[4]
     multi_networks   = inputs[5]
     
+    '''
     Vissim = network.vissim
+    '''
 
     if multi_networks is True:
         #if we are treating more than one network, than we subdivide the point folder into network folders
-        if not os.path.isdir(os.path.join(point_folderpath,network.inpx_path.split(os.sep)[-1])):
-            os.mkdir(os.path.join(point_folderpath,network.inpx_path.split(os.sep)[-1]))
+        if not os.path.isdir(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1])):
+            os.mkdir(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1]))
         
-        final_inpx_path = os.path.join(point_folderpath,network.inpx_path.strip('.inpx'),network.inpx_path.split(os.sep)[-1])
+        final_inpx_path = os.path.join(point_folderpath,network[0].inpx_path.strip('.inpx'),network[0].inpx_path.split(os.sep)[-1])
         shutil.copy(os.path.join(calib_folderpath,network.inpx_path.split(os.sep)[-1]),final_inpx_path)    
 
     else:
-        final_inpx_path = copy.deepcopy(os.path.join(calib_folderpath,network.inpx_path.split(os.sep)[-1]))
-        
+        final_inpx_path = copy.deepcopy(point_folderpath)
+    
+    print final_inpx_path
+    final_inpx_path = copy.deepcopy(calib_folderpath)
+    '''    
     Vissim.LoadNet(final_inpx_path)        
-
+    '''
     values = []
     for var in variables:
         values.append(var.point)
-        
+    
+    simulated = True
+    '''
     #Initializing and running the simulation
     simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)
-        
+    ''' 
     if simulated is not True:
         return False
              
@@ -78,34 +88,44 @@ def runVissimForCalibrationAnalysis(network, inputs):
         p_values = []
         
         #treating the outputs
-        inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network.corridors]
-        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(final_inpx_path) if f.endswith("fzp")], inputs)
+        inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
+
+        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(final_inpx_path) if f.endswith('fzp')], inputs)
 
         non_dist_data = [flow, oppLCcount, manLCcount]
         dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds]
         
         #setting video values
-        for traj in network.traj_paths:
+        for traj in network[0].traj_paths:
             
             #loading video data            
             video_data_list = define.load_traj(traj)          
             if video_data_list[0] == 'TrajVersionError':
-                network.addVideoComparison(['TrajVersionError'])
+                network[0].addVideoComparison(['TrajVersionError'])
             else:          
                 #starting the building of the secondary values outputs
                 #TODO: poser la question ci-bas à Nicolas...
                 #Question... on veut le data comme ça ou une distance????
-                secondary_values = copy.deepcody(non_dist_data)
+                secondary_values = copy.deepcopy(non_dist_data)
                 
                 #comparing video_values with output values
-                video_dist_data = video_data_list[4:]
+                video_dist_data = video_data_list[3:]
                 secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data)
-            
+
+                #adding videoo comparison data to the network
+                network[0].addVideoComparison(secondary_values)
+
                 #determining main p_value
                 if config.output_forward_gaps:
-                    p_values.append(secondary_values[4])
+                    if secondary_values[4] == 'DNE':
+                        p_values.append('inf')
+                    else:
+                        p_values.append(secondary_values[4])
                 if config.output_lane_change:
-                    p_values.append(secondary_values[5])
+                    if secondary_values[5] == 'DNE':
+                        p_values.append('inf')
+                    else:
+                        p_values.append(secondary_values[5])
     
         return p_values
 

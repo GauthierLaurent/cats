@@ -85,17 +85,17 @@ def findCalibName(dirname):
             if num > last_num: last_num = num
     
     last_num += 1  
-    filename = 'point' + str(last_num)
+    filename = 'point_' + str(last_num)
     
     return filename
 
 ################################ 
 #        Calibration history functions       
 ################################
-def read_history():
+def read_history(filename):
     '''finds the number of the last recorded evaluation and returns the number of the new evaluation'''
     last_num = 0
-    with open('.\history.txt', 'r') as hist:
+    with open(os.path.join(os.getcwd(),filename), 'r') as hist:
         for l in hist:
             if l.strip() != '' and l.startswith('#') is False:
                 last_num += 1
@@ -118,17 +118,19 @@ def write_history(last_num, points, networks, fout,  dirname, filename):
         #tried point
         for p in points:
             hist.write(str(p)+'\t')
-            hist.write("|\t")
+        hist.write("|\t")
 
         #secondary comparaison
         for net in xrange(len(networks)):
             for comp in networks[net].videoComparison:
                 variables = writeToOneList(list(comp))
-                for var in variables:
-                    if isinstance(var,float) is True:
-                        hist.write(str(round(var,4)) + '\t')
+                for v in xrange(len(variables)):
+                    if v == 4:
+                        hist.write('*\t')
+                    if isinstance(variables[v],float) is True:
+                        hist.write(str(round(variables[v],4)) + '\t')
                     else:
-                        hist.write(str(var) +'\t')
+                        hist.write(str(variables[v]) +'\t')
                 hist.write("|\t")
 
         #fout

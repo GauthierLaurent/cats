@@ -90,6 +90,7 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
     if os.path.exists(os.path.join(dirname, inpxname)):
 
         filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+
         f = open(os.path.join(dirname,filename[0]))
         for line in f:
             if '$Corridors' in line.strip(): break
@@ -204,10 +205,11 @@ class Variable:
         self.vissim_max     = floatOrNone(vissim_max)
         self.point          = floatOrNone(point)
 
-def extractParamFromCSV(dirname, inpxname): #MIGRATION TO FINISH
-    '''Reads variable information for a csv named like the inpx
+def extractParamFromCSV(dirname, filename): #MIGRATION TO FINISH
+    '''Reads variable information for a csv file
        CSV file must be build as:
-             1rst line:      VarName,VissimMin,VissimMax,DesiredMin,DesiredMax,VissimName
+             1rst  line:     $Variables
+             2nt   line:     VarName,VissimMin,VissimMax,DesiredMin,DesiredMax,VissimName
              other lines:    stringfloat,float,float,float,string,
              
              where:
@@ -219,11 +221,11 @@ def extractParamFromCSV(dirname, inpxname): #MIGRATION TO FINISH
                      DesiredMin and DesiredMax are the range to be used for the evaluation                           
     '''
 
-    if inpxname in dirname: dirname = dirname.strip(inpxname)
-    if os.path.exists(os.path.join(dirname, inpxname)):
+    if filename in dirname: dirname = dirname.strip(filename)
+    if os.path.exists(os.path.join(dirname, filename)):
 
-        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
-        f = open(os.path.join(dirname,filename[0]))
+        files  = [f for f in os.listdir(dirname) if f == (os.path.splitext(filename)[0] + '.csv')]      #extension can be obtained as os.path.splitext(filename)[1]
+        f = open(os.path.join(dirname,files[0]))
         for line in f:
             if '$Variables' in line.strip(): break
             
@@ -242,7 +244,7 @@ def extractParamFromCSV(dirname, inpxname): #MIGRATION TO FINISH
         
         return parameters
     else:
-        print 'No vissim file named ' + str(inpxname) + ', closing program '
+        print 'No vissim file named ' + str(filename) + ', closing program '
         sys.exit()
         
 def extractDataFromVariablesCSV(filename): 
@@ -398,11 +400,11 @@ def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_
 def load_traj(fullpath):
     '''loads data from the traj file provided in full path
     full path must end with \name.traj'''
-    with open(fullpath, 'r') as input_file:
+    with open(fullpath, 'rb') as input_file:
         version      = pickle.load(input_file)
         opp_LC_count = pickle.load(input_file)
         man_LC_count = pickle.load(input_file)
-        flow         = pickle.dump(input_file)
+        flow         = pickle.load(input_file)
         forward_gaps = pickle.load(input_file)
         opp_LC_agaps = pickle.load(input_file)
         opp_LC_bgaps = pickle.load(input_file)
@@ -410,7 +412,7 @@ def load_traj(fullpath):
         man_LC_bgaps = pickle.load(input_file)
         forwar_speed = pickle.load(input_file)
         
-    if version == version():
+    if verify_data_version(version):
         return [opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed]
     else:
         return ['TrajVersionError']
@@ -441,7 +443,7 @@ class Network:
         try:
             self.videoComparison.append(data_list)
         except:
-            self.videoComparison = data_list        
+            self.videoComparison = [data_list]        
         
 def buildNetworkObjects(config):
     '''takes all info from calib.cfg and build a network object out of it. This fonction will not duplicate a
@@ -449,33 +451,33 @@ def buildNetworkObjects(config):
     
     inpx_list = {}
     if config.active_network_1:
-        inpx_list[config.path_to_inpx_1.split(os.sep)[-1]] = Network(config.path_to_inpx_1,config.path_to_video_data_1)
-        VissimCorridors1, trafIntCorridors1 = extractVissimCorridorsFromCSV(config.path_to_csv_net1, config.path_to_csv_net1.split(os.sep)[-1])
-        inpx_list[config.path_to_inpx_1.split(os.sep)[-1]].addCorridor(VissimCorridors1)
+        inpx_list[config.path_to_inpx_file_1.split(os.sep)[-1]] = Network(config.path_to_inpx_file_1,config.path_to_video_data_1)
+        VissimCorridors1, trafIntCorridors1 = extractVissimCorridorsFromCSV(config.path_to_csv_net1.strip(config.path_to_csv_net1.split(os.sep)[-1]), config.path_to_inpx_file_1.split(os.sep)[-1])
+        inpx_list[config.path_to_inpx_file_1.split(os.sep)[-1]].addCorridor(VissimCorridors1)
         
     if config.active_network_2:
-        if config.path_to_inpx_2.split(os.sep)[-1] not in inpx_list:
-            inpx_list[config.path_to_inpx_2.split(os.sep)[-1]] = Network(config.path_to_inpx_2,config.path_to_video_data_2)
-            VissimCorridors2, trafIntCorridors2 = extractVissimCorridorsFromCSV(config.path_to_csv_net2, config.path_to_csv_net2.split(os.sep)[-1])
-            inpx_list[config.path_to_inpx_2.split(os.sep)[-1]].addCorridor(VissimCorridors2)
+        if config.path_to_inpx_file_2.split(os.sep)[-1] not in inpx_list:
+            inpx_list[config.path_to_inpx_file_2.split(os.sep)[-1]] = Network(config.path_to_inpx_file_2,config.path_to_video_data_2)
+            VissimCorridors2, trafIntCorridors2 = extractVissimCorridorsFromCSV(config.path_to_csv_net2.strip(config.path_to_csv_net2.split(os.sep)[-1]), config.path_to_inpx_file_2.split(os.sep)[-1])
+            inpx_list[config.path_to_inpx_file_2.split(os.sep)[-1]].addCorridor(VissimCorridors2)
         else:
-            inpx_list[config.path_to_inpx_2.split(os.sep)[-1]].addtraj(config.path_to_video_data_2)
+            inpx_list[config.path_to_inpx_file_2.split(os.sep)[-1]].addtraj(config.path_to_video_data_2)
             
     if config.active_network_3:
-        if config.path_to_inpx_3.split(os.sep)[-1] not in inpx_list:
-            inpx_list[config.path_to_inpx_3.split(os.sep)[-1]] = Network(config.path_to_inpx_3,config.path_to_video_data_3)
-            VissimCorridors3, trafIntCorridors3 = extractVissimCorridorsFromCSV(config.path_to_csv_net3, config.path_to_csv_net3.split(os.sep)[-1])
-            inpx_list[config.path_to_inpx_3.split(os.sep)[-1]].addCorridor(VissimCorridors3)
+        if config.path_to_inpx_file_3.split(os.sep)[-1] not in inpx_list:
+            inpx_list[config.path_to_inpx_file_3.split(os.sep)[-1]] = Network(config.path_to_inpx_file_3,config.path_to_video_data_3)
+            VissimCorridors3, trafIntCorridors3 = extractVissimCorridorsFromCSV(config.path_to_csv_net3.strip(config.path_to_csv_net3.split(os.sep)[-1]), config.path_to_inpx_file_3.split(os.sep)[-1])
+            inpx_list[config.path_to_inpx_file_3.split(os.sep)[-1]].addCorridor(VissimCorridors3)
         else:
-            inpx_list[config.path_to_inpx_3.split(os.sep)[-1]].addtraj(config.path_to_video_data_3)    
+            inpx_list[config.path_to_inpx_file_3.split(os.sep)[-1]].addtraj(config.path_to_video_data_3)    
 
     if config.active_network_4:
-        if config.path_to_inpx_4.split(os.sep)[-1] not in inpx_list:
-            inpx_list[config.path_to_inpx_4.split(os.sep)[-1]] = Network(config.path_to_inpx_4,config.path_to_video_data_4)
-            VissimCorridors4, trafIntCorridors4 = extractVissimCorridorsFromCSV(config.path_to_csv_net4, config.path_to_csv_net4.split(os.sep)[-1])
-            inpx_list[config.path_to_inpx_4.split(os.sep)[-1]].addCorridor(VissimCorridors4)
+        if config.path_to_inpx_file_4.split(os.sep)[-1] not in inpx_list:
+            inpx_list[config.path_to_inpx_file_4.split(os.sep)[-1]] = Network(config.path_to_inpx_file_4,config.path_to_video_data_4)
+            VissimCorridors4, trafIntCorridors4 = extractVissimCorridorsFromCSV(config.path_to_csv_net4.strip(config.path_to_csv_net4.split(os.sep)[-1]), config.path_to_inpx_file_4.split(os.sep)[-1])
+            inpx_list[config.path_to_inpx_file_4.split(os.sep)[-1]].addCorridor(VissimCorridors4)
         else:
-            inpx_list[config.path_to_inpx_4.split(os.sep)[-1]].addtraj(config.path_to_video_data_4)    
+            inpx_list[config.path_to_inpx_file_4.split(os.sep)[-1]].addtraj(config.path_to_video_data_4)    
         
     return inpx_list.values()  
         

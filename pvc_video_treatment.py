@@ -18,7 +18,7 @@ import numpy as np
 # Import Traffic Intelligence
 ##################
 #disabling outputs
-import lib.nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
+import nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
 import moving, storage
 sys.stdout = oldstdout
 #Re-enable output
@@ -75,16 +75,16 @@ def processVideolist(config, video_names, save):
         
         for a in alignments:
             print a
-        import pdb;pdb.set_trace()
+
         if save is True:
             print '>> Saving data to the CSV file'
             define.writeAlignToCSV(config.path_to_inpx, config.inpx_name, video_name, alignments)
+            print '>> Saving successfull'
         else:
             print '>> No-Saving option chosen, here are the data for manual copy-pasting:'
             print video_name
             for a in xrange(len(alignments)):
                 print str(a)+';'+str(alignments[a])
-    return
             
 ################################ 
 #        Process functions       
@@ -263,8 +263,6 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     #dumping serialised data
     print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())
     define.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)        
-    
-    return
 
 ################################ 
 #        Options       
@@ -339,6 +337,6 @@ def main(argv):
         else:
             return usage()
        
-    return
+    return 0
     
 if __name__ == '__main__': sys.exit(main(sys.argv))
