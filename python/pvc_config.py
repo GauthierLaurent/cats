@@ -176,7 +176,7 @@ class Config:
         self.active_network_3         = self.parse('active_network_3',     'False',  c_type='bool')  
         self.active_network_4         = self.parse('active_network_4',     'False',  c_type='bool')  
 
-        self.section = 'Calibration paths'
+        self.section = 'Calibration paths (complete paths)'
         self.path_to_calib_csv        = self.parse('path_to_calib_csv',     '',       c_type='string')
         self.path_to_NOMAD	         = self.parse('path_to_NOMAD',         '',       c_type='string')
         self.path_to_NOMAD_param      = self.parse('path_to_NOMAD_param',   '',       c_type='string')

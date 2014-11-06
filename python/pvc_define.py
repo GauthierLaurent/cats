@@ -39,7 +39,6 @@ from pylab import csv2rec
 import multiprocessing, random
 import math, sys, os
 import numpy as np
-import cPickle as pickle
 import StringIO
 
 ##################
@@ -53,25 +52,6 @@ sys.stdout = oldstdout #Re-enable output
 ##################
 # Read file data tools
 ##################
-def loadDataFromTraj(path, filename):
-    with open(os.path.join(path, filename), 'rb') as input_data:
-        trajversion = pickle.dump(input_data)
-        if verify_data_version(trajversion): 
-            oppLCcount  = pickle.load(input_data)
-            manLCcount  = pickle.load(input_data)
-            flow        = pickle.load(input_data)
-            forFMgap    = pickle.load(input_data)
-            oppLCagap   = pickle.load(input_data)
-            oppLCbgap   = pickle.load(input_data)
-            manLCagap   = pickle.load(input_data)
-            manLCbgap   = pickle.load(input_data)
-            Speeds      = pickle.load(input_data)
-            return [oppLCcount, manLCcount, flow, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, Speeds]
-        
-        else:
-             print 'Data version outdated, aborting calculations. Please recalculate video data'
-             sys.exit()
-
 #corridor information             
 class Corridor:
     def __init__(self,data):
@@ -379,58 +359,6 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
               for i in to_write_list:
                   f.write(i)
         f.close()
-
-################################ 
-#        Serialized data files     
-################################
-def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_LC_agaps,opp_LC_bgaps,man_LC_agaps,man_LC_bgaps,forwar_speed):
-    '''dumps data into a file named name.traj in the folder provided in depositpath'''    
-    with open(os.path.join(depositpath, name + '.traj'), 'wb') as output:       
-        pickle.dump(version(),    output, protocol=2)
-        pickle.dump(opp_LC_count, output, protocol=2)
-        pickle.dump(man_LC_count, output, protocol=2)
-        pickle.dump(flow,         output, protocol=2)
-        pickle.dump(forward_gaps, output, protocol=2)
-        pickle.dump(opp_LC_agaps, output, protocol=2)
-        pickle.dump(opp_LC_bgaps, output, protocol=2)
-        pickle.dump(man_LC_agaps, output, protocol=2)
-        pickle.dump(man_LC_bgaps, output, protocol=2)
-        pickle.dump(forwar_speed, output, protocol=2)
-
-def load_traj(fullpath):
-    '''loads data from the traj file provided in full path
-    full path must end with \name.traj'''
-    with open(fullpath, 'rb') as input_file:
-        version      = pickle.load(input_file)
-        opp_LC_count = pickle.load(input_file)
-        man_LC_count = pickle.load(input_file)
-        flow         = pickle.load(input_file)
-        forward_gaps = pickle.load(input_file)
-        opp_LC_agaps = pickle.load(input_file)
-        opp_LC_bgaps = pickle.load(input_file)
-        man_LC_agaps = pickle.load(input_file)
-        man_LC_bgaps = pickle.load(input_file)
-        forwar_speed = pickle.load(input_file)
-        
-    if verify_data_version(version):
-        return [opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed]
-    else:
-        return ['TrajVersionError']
-
-def write_calib(working_path, parameters, variables, networks):
-    with open(os.path.join(working_path,'pvcdata.calib'), 'wb') as trans:
-        pickle.dump(parameters, trans, protocol=2)
-        pickle.dump(variables, trans, protocol=2)
-        pickle.dump(networks, trans, protocol=2)
-
-def load_calib():
-    '''loads pvcdata.calib''' 
-    with open(os.path.join(os.getcwd(),'pvcdata.calib'), 'rb') as input_file:
-        parameters   = pickle.load(input_file)
-        variables    = pickle.load(input_file)
-        networks     = pickle.load(input_file)
-
-    return parameters, variables, networks
         
 ################################ 
 #        Network Calibration class       
