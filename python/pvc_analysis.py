@@ -99,10 +99,20 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 network[0].addVideoComparison(['TrajVersionError'])
             else:          
                 #starting the building of the secondary values outputs
-                #TODO: poser la question ci-bas à Nicolas...
-                #Question... on veut le data comme ça ou une distance????
-                secondary_values = copy.deepcopy(non_dist_data)
-                
+                #for the first 3 variables, which are intergers, we use:
+                #                       PE = (M-V)/V
+                #       with:    V = number from video
+                #                M = number from modelisation
+                # of course this would fail is V = 0, in which case we must turn to
+                #                       AE = M-V...   with V = 0: AE = M
+                #to which we will add a " * "
+                secondary_values = []                
+                for d in xrange(len(non_dist_data)):
+                    if video_data_list[d] != 0:
+                        secondary_values.append((non_dist_data[d]-video_data_list[d])/video_data_list[d])
+                    else:
+                        secondary_values.append(str(non_dist_data[d])+'*')
+                        
                 #comparing video_values with output values
                 video_dist_data = video_data_list[3:]
                 secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data)
