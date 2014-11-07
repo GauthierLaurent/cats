@@ -191,14 +191,21 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
                     
         #Forward gaps and speeds calculations
         onevid_forward_gaps = []
-        onevid_forward_speeds = []        
+        onevid_forward_speeds = []
+
         for index,lane in enumerate(alignments):
             [snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
         
             if index in to_eval:
-                raw_gaps, raw_speeds = outputs.forwardGaps(objects, S, index)
+                sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                                
+                raw_gaps = outputs.calculateGaps(sorted_instants) 
                 onevid_forward_gaps += list(raw_gaps)
                 onevid_forward_speeds += list(raw_speeds)
+                
+                #trace graph: flow vs time during video
+                if fps is not None:
+                    write.plot_qt(sorted_instants[:-1], onevid_forward_gaps, index, config.path_to_inpx, fps)
+                
             print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
         
         #mandatory lane change gaps
@@ -228,6 +235,12 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     mandatory_LCbgap = outputs.stats([man_bgaps])
     forward_speeds = outputs.stats([forward_speeds])
 
+    #from forward TIV, calculate density:
+    raw_flow_dist = []
+    for dist in forward_gaps.distributions:
+        raw_flow_dist.append(list(3600*30*np.asarray(dist.raw)))    
+    flowDist = outputs.stats(raw_flow_dist)
+    
     #TODO:
     #putting the calculated information into a report file
     ##calculating 13 usefull centiles for tracing speeds in vissim
@@ -245,16 +258,19 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
         else:
             video_names += video_infos[i].video_name + ', '
             
-    ##building the other_info list to print   
+    ##building the other_info list to print
+	#TODO: plot density on time... might be tricky: use firstinstant to get the density time data
     other_info = [['flow:', flow],
                   ['number of opportunistic lane changes:', opportunisticLC],
                   ['number of mandatory lane changes:', mandatoryLC],
                   ['variable_name','mean','25th centile','median','75th centile','standard deviation'],
-                  ['Opportunistic gaps (after):',opportunistic_LCagap.cumul_all.mean,opportunistic_LCagap.cumul_all.firstQuart,opportunistic_LCagap.cumul_all.median,opportunistic_LCagap.cumul_all.thirdQuart,opportunistic_LCagap.cumul_all.std],
-                  ['Opportunistic gaps (before):',opportunistic_LCbgap.cumul_all.mean,opportunistic_LCbgap.cumul_all.firstQuart,opportunistic_LCbgap.cumul_all.median,opportunistic_LCbgap.cumul_all.thirdQuart,opportunistic_LCbgap.cumul_all.std],
-                  ['Mandatory gaps (after):',mandatory_LCagap.cumul_all.mean,mandatory_LCagap.cumul_all.firstQuart,mandatory_LCagap.cumul_all.median,mandatory_LCagap.cumul_all.thirdQuart,mandatory_LCagap.cumul_all.std],
-                  ['Mandatory gaps (before):',mandatory_LCbgap.cumul_all.mean,mandatory_LCbgap.cumul_all.firstQuart,mandatory_LCbgap.cumul_all.median,mandatory_LCbgap.cumul_all.thirdQuart,mandatory_LCbgap.cumul_all.std],
-                  ['Speeds:',forward_speeds.cumul_all.mean,forward_speeds.cumul_all.firstQuart,forward_speeds.cumul_all.median,forward_speeds.cumul_all.thirdQuart,forward_speeds.cumul_all.std],
+                  ['Forward follow gaps:',          forward_followgap.cumul_all.mean,    forward_followgap.cumul_all.firstQuart,    forward_followgap.cumul_all.median,    forward_followgap.thirdQuart,              forward_followgap.cumul_all.std]
+                  ['Flow distribution (3600/gap):', flowDist.cumul_all.mean,             flowDist.cumul_all.firstQuart,             flowDist.cumul_all.median,             flowDist.cumul_all.thirdQuart,             flowDist.cumul_all.std],
+                  ['Opportunistic gaps (after):',   opportunistic_LCagap.cumul_all.mean, opportunistic_LCagap.cumul_all.firstQuart, opportunistic_LCagap.cumul_all.median, opportunistic_LCagap.cumul_all.thirdQuart, opportunistic_LCagap.cumul_all.std],
+                  ['Opportunistic gaps (before):',  opportunistic_LCbgap.cumul_all.mean, opportunistic_LCbgap.cumul_all.firstQuart, opportunistic_LCbgap.cumul_all.median, opportunistic_LCbgap.cumul_all.thirdQuart, opportunistic_LCbgap.cumul_all.std],
+                  ['Mandatory gaps (after):',       mandatory_LCagap.cumul_all.mean,     mandatory_LCagap.cumul_all.firstQuart,     mandatory_LCagap.cumul_all.median,     mandatory_LCagap.cumul_all.thirdQuart,     mandatory_LCagap.cumul_all.std],
+                  ['Mandatory gaps (before):',      mandatory_LCbgap.cumul_all.mean,     mandatory_LCbgap.cumul_all.firstQuart,     mandatory_LCbgap.cumul_all.median,     mandatory_LCbgap.cumul_all.thirdQuart,     mandatory_LCbgap.cumul_all.std],
+                  ['Speeds:',                       forward_speeds.cumul_all.mean,       forward_speeds.cumul_all.firstQuart,       forward_speeds.cumul_all.median,       forward_speeds.cumul_all.thirdQuart,       forward_speeds.cumul_all.std],                 
                  ]
     ##generating the output    
     write.writeRealDataReport(config.path_to_inpx, video_names, config.inpx_name, min_time, max_time, [percentages,values_at_p], other_info)

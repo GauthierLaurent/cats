@@ -524,6 +524,24 @@ def plot_st(objects, alignments, fps, dirname):
         plt.close(fig)    
     return
     
+def plot_qt(time_serie, gaps_serie, align_num, dirname, fps):
+    '''generates a flow on time diagram for alignment number "align_num" using gap information
+       only handles one lane at a time'''
+       
+    time = list(np.asarray(time_serie)/fps)
+    flow = list(np.asarray(gaps_serie)/fps*3600)
+    
+    fig = plt.figure()
+    plt.plot(time, flow)
+    
+    plt.xlabel('time (sec)')
+    plt.ylabel('flow (veh/h)')
+    plt.title('Flow on alignment '+str(align_num)+' with regard to time')
+    plt.savefig(os.path.join(dirname, 'Flow-time diagram for alignment ' + str(align_num)))
+    plt.clf()
+    plt.close(fig)    
+    return
+    
 ##################
 # Drawing tools
 ##################
