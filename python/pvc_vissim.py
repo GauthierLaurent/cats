@@ -20,29 +20,31 @@ def isVissimRunning(kill):
        The first time it is called in the program, firstTime should be called as True:
        This is to make sure Vissim was not left open in non COM mode before starting the python program
     '''
-    running = False    
-    list = psutil.get_pid_list()
-
+    running = False
+    
     # Go through list and check each processes executeable name for 'Vissim.exe'
-    for i in range(0, len(list)):
+    for p in psutil.get_process_list():
         try:
-            p = psutil.Process(list[i])
-            if p.cmdline[0].find("Vissim.exe") != -1:
+            if p.name == 'VISSIM.exe':
                 if kill is True:
                     # killing Vissim so it can be restarted with the COM module enabled
                     p.kill()
                 else:
                     running = True
         except:
-            pass       
+            pass             
     return running
 
 def startVissim():
     '''start an instance of Vissim. Returns the object Vissim if successfull, StartError otherwise'''
     try:
-        return win32com.client.Dispatch("Vissim.Vissim.600")
+        return win32com.client.dynamic.Dispatch("Vissim.Vissim.600")
+        #Note: win32com.client.dynamic.Dispatch() works both with an open or unopened vissim. It can be called multiple
+        #                                         times, and will first assign already opened instances, then start new ones
+        #      win32com.client.Dispatch() will ignore already opened vissim instances and start a fresh one
     except:
         return 'StartError'
+        
    
 def loadNetwork(Vissim, InpxPath):
     '''start a Vissim network. Returns True if successfull, LoadNetError otherwise
