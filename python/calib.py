@@ -33,7 +33,8 @@ def main(argv):
     import pvc_write    as write 
     import pvc_define   as define
     import pvc_config   as pconfig
-    import pvc_analysis as analysis 
+    import pvc_analysis as analysis
+    import pvc_vissim   as vissim
 
     #load informations from pvcdata.calib
     parameters, variables, networks = write.load_calib()
@@ -72,6 +73,9 @@ def main(argv):
     point_folderpath = write.createSubFolder(os.path.join(os.getcwd(), filename), filename)
 
     config = pconfig.Config('calib.cfg')  
+    #assing vissim instances to each network
+    for net in networks:
+        net.addVissim = vissim.startVissim()
         
     #pass data to vissim and simulate
     if len(networks) == 1:
