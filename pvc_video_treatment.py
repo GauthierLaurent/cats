@@ -149,6 +149,8 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     opp_bgaps = []
 
     for i in xrange(len(video_infos)):
+        print ' >> starting work on ' + str(video_infos[i].video_name) + ' <<'
+        
         objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite,video_infos[i].video_name), 'object')
 
         if min_time is not None or max_time is not None:        
@@ -177,8 +179,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             to_eval += trafIntCorridors[j].to_eval
         
         #plot s/t graph
-        if fps is not None:
-            write.plot_st(objects, alignNames, fps, config.path_to_inpx)
+        write.plot_st(objects, alignNames, fps, config.path_to_inpx)
         
         #flow
         onevid_flow = len(objects)
@@ -197,14 +198,13 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             [snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
         
             if index in to_eval:
-                sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                                
-                raw_gaps = outputs.calculateGaps(sorted_instants) 
+                sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                              
+                raw_gaps = outputs.calculateGaps(sorted_instants)
                 onevid_forward_gaps += list(raw_gaps)
                 onevid_forward_speeds += list(raw_speeds)
                 
                 #trace graph: flow vs time during video
-                if fps is not None:
-                    write.plot_qt(sorted_instants[:-1], onevid_forward_gaps, index, config.path_to_inpx, fps)
+                write.plot_qt(sorted_instants[:-1], list(raw_gaps), index, config.path_to_inpx, fps)
                 
             print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
         
@@ -235,13 +235,12 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     mandatory_LCbgap = outputs.stats([man_bgaps])
     forward_speeds = outputs.stats([forward_speeds])
 
-    #from forward TIV, calculate density:
+    #from forward TIV, calculate flow:
     raw_flow_dist = []
-    for dist in forward_gaps.distributions:
-        raw_flow_dist.append(list(3600*30*np.asarray(dist.raw)))    
+    for dist in forward_followgap.distributions:
+        raw_flow_dist.append(list(3600*fps/np.asarray(dist.raw)))    
     flowDist = outputs.stats(raw_flow_dist)
-    
-    #TODO:
+
     #putting the calculated information into a report file
     ##calculating 13 usefull centiles for tracing speeds in vissim
     percentages = []
@@ -257,14 +256,14 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             video_names += video_infos[i].video_name
         else:
             video_names += video_infos[i].video_name + ', '
-            
+       
     ##building the other_info list to print
 	#TODO: plot density on time... might be tricky: use firstinstant to get the density time data
     other_info = [['flow:', flow],
                   ['number of opportunistic lane changes:', opportunisticLC],
                   ['number of mandatory lane changes:', mandatoryLC],
                   ['variable_name','mean','25th centile','median','75th centile','standard deviation'],
-                  ['Forward follow gaps:',          forward_followgap.cumul_all.mean,    forward_followgap.cumul_all.firstQuart,    forward_followgap.cumul_all.median,    forward_followgap.thirdQuart,              forward_followgap.cumul_all.std]
+                  ['Forward follow gaps:',          forward_followgap.cumul_all.mean,    forward_followgap.cumul_all.firstQuart,    forward_followgap.cumul_all.median,    forward_followgap.cumul_all.thirdQuart,    forward_followgap.cumul_all.std],                                  
                   ['Flow distribution (3600/gap):', flowDist.cumul_all.mean,             flowDist.cumul_all.firstQuart,             flowDist.cumul_all.median,             flowDist.cumul_all.thirdQuart,             flowDist.cumul_all.std],
                   ['Opportunistic gaps (after):',   opportunistic_LCagap.cumul_all.mean, opportunistic_LCagap.cumul_all.firstQuart, opportunistic_LCagap.cumul_all.median, opportunistic_LCagap.cumul_all.thirdQuart, opportunistic_LCagap.cumul_all.std],
                   ['Opportunistic gaps (before):',  opportunistic_LCbgap.cumul_all.mean, opportunistic_LCbgap.cumul_all.firstQuart, opportunistic_LCbgap.cumul_all.median, opportunistic_LCbgap.cumul_all.thirdQuart, opportunistic_LCbgap.cumul_all.std],
@@ -278,7 +277,9 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     #dumping serialised data
     print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())
     write.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)        
-
+ 
+    print ' == Processing of video ' + str(video_infos[i].video_name) + ' done <<'
+    
 ################################ 
 #        Options       
 ################################
@@ -305,7 +306,7 @@ def main(argv):
     #process options
     min_time = None
     max_time = None
-    fps = None
+    fps = 30
     #trace options
     video_name = None
     video_names = []
@@ -349,6 +350,7 @@ def main(argv):
             print '== Enabling alignment drawing for the following videos: '+str(string) +' =='  
     
             processVideolist(config, video_names, save)
+
         else:
             return usage()
        
