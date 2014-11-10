@@ -179,7 +179,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             to_eval += trafIntCorridors[j].to_eval
         
         #plot s/t graph
-        write.plot_st(objects, alignNames, fps, config.path_to_inpx)
+        write.plot_st(objects, alignNames, fps, config.path_to_inpx, video_infos[i].video_name)
         
         #flow
         onevid_flow = len(objects)
@@ -204,7 +204,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
                 onevid_forward_speeds += list(raw_speeds)
                 
                 #trace graph: flow vs time during video
-                write.plot_qt(sorted_instants[:-1], list(raw_gaps), index, config.path_to_inpx, fps)
+                write.plot_qt(sorted_instants[:-1], list(raw_gaps), index, config.path_to_inpx, video_infos[i].video_name, fps, min_time, max_time)
                 
             print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
         

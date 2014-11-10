@@ -504,7 +504,7 @@ def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, 
         plt.close(fig)                  
     return True
 
-def plot_st(objects, alignments, fps, dirname):
+def plot_st(objects, alignments, fps, dirname, video_name):
     '''generates a time-space diagram for each alignment'''
     for a in xrange(len(alignments)):
         fig = plt.figure()
@@ -520,25 +520,50 @@ def plot_st(objects, alignments, fps, dirname):
         plt.xlabel('time (sec)' )
         plt.ylabel('distance (m)')
         plt.title('Time-space diagram for alignment ' + alignments[a])
-        plt.savefig(os.path.join(dirname, 'Time-space diagram for alignment ' + alignments[a]))
+        plt.savefig(os.path.join(dirname, 'Time-space diagram for alignment ' + alignments[a] + ' for video ' + str(video_name.strip('sqlite'))))
         plt.clf()
         plt.close(fig)    
     return
     
-def plot_qt(time_serie, gaps_serie, align_num, dirname, fps):
+def plot_qt(time_serie, gaps_serie, align_num, dirname, video_name, fps, min_time, max_time):
     '''generates a flow on time diagram for alignment number "align_num" using gap information
        only handles one lane at a time'''
-       
+
+    #plot data       
     time = list(np.asarray(time_serie)/fps)
-    flow = list(np.asarray(gaps_serie)/fps*3600)
+    #flow = list(fps*3600/np.asarray(gaps_serie))
+
+    #histogram data
+    if min_time is None:
+        min_bintime = define.myfloor(min(time), base=20)
+    else:
+        min_bintime = define.myfloor(min_time/fps, base=20)
+        
+    if max_time is None:
+        max_bintime = define.myceil(max(time), base=20)
+    else:
+        max_bintime = define.myceil(max_time/fps, base=20)
+
+    nbr_bins =  (max_bintime-min_bintime)/20
+    pass_serie = []
+    cumul = time[0]    
+    for i in np.asarray(gaps_serie)/fps:
+        cumul += i
+        #transforming the current 20sec bin into hourly data
+        for i in xrange(int(3600/20)):
+            pass_serie.append(cumul)
     
     fig = plt.figure()
-    plt.plot(time, flow)
+
+    plt.hist(pass_serie, nbr_bins, facecolor = 'red', range=(min_bintime,max_bintime))        
+    #plt.plot(time, flow, color = 'b')
     
+    plt.xlim(min_bintime, max_bintime)
+    plt.xticks(range(min_bintime,max_bintime,40))
     plt.xlabel('time (sec)')
     plt.ylabel('flow (veh/h)')
     plt.title('Flow on alignment '+str(align_num)+' with regard to time')
-    plt.savefig(os.path.join(dirname, 'Flow-time diagram for alignment ' + str(align_num)))
+    plt.savefig(os.path.join(dirname, 'Flow-time diagram for alignment ' + str(align_num) + ' for video ' + str(video_name.strip('sqlite'))))
     plt.clf()
     plt.close(fig)    
     return
