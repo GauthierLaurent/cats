@@ -14,7 +14,7 @@ def version():
             Y is the serialized data version
             Z is the subrelease update version
     '''
-    return 'R1.3.0 u. 29-10-2014'
+    return 'R1.4.0 u. 09-11-2014'
     
 def verify_release_version(in_version):
     '''looks for the X part of the version number'''
