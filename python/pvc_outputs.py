@@ -61,7 +61,7 @@ class stats:
         else:
             self.cumul_all = sublvl(raw)
 
-def CalculateInstants(objects, s, lane):
+def calculateInstants(objects, s, lane):
     instants = []
     speeds = []
     for o in objects:
@@ -69,8 +69,8 @@ def CalculateInstants(objects, s, lane):
         if t != []:
             instants.append(o.getFirstInstant()+t[0])
             speeds.append(o.curvilinearVelocities.getXCoordinates()[int(np.floor(t[0]))])
-               
-    return instants.sort(), speeds
+    instants.sort()          
+    return instants, speeds
 
 def calculateGaps(sorted_instants):
     x = np.asarray(sorted_instants)    
@@ -79,7 +79,7 @@ def calculateGaps(sorted_instants):
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
     
-    instants, speeds = CalculateInstants(objects, s, lane)
+    instants, speeds = calculateInstants(objects, s, lane)
     gaps = calculateGaps(instants)
     
     return gaps, speeds
