@@ -427,7 +427,15 @@ def buildNetworkObjects(config):
 ##################
 # Define tools
 ##################
-
+def myround(x, base=5):
+    return int(base * round(float(x)/base))
+    
+def myceil(x, base=5):
+    return int(base * math.ceil((float(x)/base)))
+    
+def myfloor(x, base=5):
+    return int(base * math.floor((float(x)/base)))
+    
 def sort2lists(list1,list2):
     '''Sorts list2 according to the sorting of the content of list1
        list1 must contain values that can be sorted while
