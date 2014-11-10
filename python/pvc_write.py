@@ -152,11 +152,12 @@ def write_for_NOMAD(output_name, fout):
         
 ################################ 
 #        Serialized data files     
-################################
+################################    
 def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_LC_agaps,opp_LC_bgaps,man_LC_agaps,man_LC_bgaps,forwar_speed):
     '''dumps data into a file named name.traj in the folder provided in depositpath'''    
     with open(os.path.join(depositpath, name + '.traj'), 'wb') as output:       
-        pickle.dump(define.version(),    output, protocol=2)
+        Version = define.version()        
+        pickle.dump(Version,      output, protocol=2)
         pickle.dump(opp_LC_count, output, protocol=2)
         pickle.dump(man_LC_count, output, protocol=2)
         pickle.dump(flow,         output, protocol=2)
