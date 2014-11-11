@@ -103,10 +103,10 @@ def read_history(filename):
     return last_num + 1
 
 def create_history(dirname, filename, networks):
-    with open(os.path.join(dirname, filename), 'r') as hist:
+    with open(os.path.join(dirname, filename), 'w') as hist:
         hist.write('Itt\t|\tpoint\t|\t')
         for net in xrange(len(networks)):
-            for comp in xrange(len(networks[net].videoComparison)):
+            for comp in xrange(len(networks[net].traj_paths)):
                 hist.write('Network_'+str(net)+'Video_'+str(comp)+'|\t')
 		
         hist.write('fout\n')		
@@ -531,7 +531,7 @@ def plot_qt(time_serie, gaps_serie, align_num, dirname, video_name, fps, min_tim
 
     #plot data       
     time = list(np.asarray(time_serie)/fps)
-    #flow = list(fps*3600/np.asarray(gaps_serie))
+    flow = list(fps*3600/np.asarray(gaps_serie))
 
     #histogram data
     if min_time is None:

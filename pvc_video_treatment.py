@@ -186,8 +186,8 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
         
         #lane change count by type        
         oppObjDict, manObjDict, laneDict = outputs.laneChange(objects,trafIntCorridors)
-        onevid_opportunisticLC = sum([len(oppObjDict[i]) for i in oppObjDict])
-        onevid_mandatoryLC = sum([len(manObjDict[i]) for i in manObjDict])
+        onevid_opportunisticLC = sum([len(oppObjDict[j]) for j in oppObjDict])
+        onevid_mandatoryLC = sum([len(manObjDict[j]) for j in manObjDict])
         print ' == Lane change compilation done ==  |' + str(time.clock())
                     
         #Forward gaps and speeds calculations

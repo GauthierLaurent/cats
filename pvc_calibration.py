@@ -123,20 +123,29 @@ def main():
     write.create_history(working_path, 'calib_history.txt', networks)
     
     #launching NOMADS
-    call = subprocess.call('cd ' + str(working_path), shell = True )
-    call = subprocess.check_call('nomad.exe ' + str(config.path_to_NOMAD_param.split(os.sep)[-1]), shell = True) 
+    try:    
+        call = subprocess.call('cd ' + str(working_path), shell = True )
+        call = subprocess.check_call('nomad.exe ' + str(config.path_to_NOMAD_param.split(os.sep)[-1]), shell = True) 
+    except subprocess.CalledProcessError as c:
+        print ('The call ' + str(c.cmd) + ' raised an exception \n'
+               'Nomad does not permit error capture from the cmd line... \n'
+               'Please open a command window and start Nomad... and type: \n'
+               '...\n'
+               '   cd ' + str(working_path) + '\n'
+               '   nomad.exe ' + str(config.path_to_NOMAD_param.split(os.sep)[-1]) + '\n'
+               '...\n'
+               'Look for the error and correct it before relaunching pvc_calibration \n')
+        sys.exit()
+        
 
-    if call == 0:
-        #load and print NOMAD output
-        if config.NOMAD_solution_filename != '':
-            if os.path.isfile(os.path.join(os.sep(),config.NOMAD_solution_filename)):
-                with open(os.path.join(working_path,config.NOMAD_solution_filename), 'w') as solution:
-                    for l in solution:
-                        print l.strip()
-            else:
-                print 'no solution file found, see history file'
-    else:
-        print 'NOMAD returned and error flag with the calibration process'
+    #load and print NOMAD output
+    if config.NOMAD_solution_filename != '':
+        if os.path.isfile(os.path.join(os.sep(),config.NOMAD_solution_filename)):
+            with open(os.path.join(working_path,config.NOMAD_solution_filename), 'w') as solution:
+                for l in solution:
+                    print l.strip()
+        else:
+            print 'no solution file found, see history file'
 
     #delete copied files ... NOMAD, NOMAD_param, inpx, calib.py
     os.remove(os.path.join(working_path,'nomad.exe'))   #NOMAD
