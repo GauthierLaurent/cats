@@ -11,7 +11,7 @@ Created on Thu Jul 10 14:43:44 2014
 #Natives
 import os, shutil, sys, copy
 from scipy.stats import t, chi2
-from scipy.stats.mstats import kruskalwallis
+from scipy.stats.mstats import ks_twosamp
 import cPickle as pickle
 
 #Internal
@@ -27,19 +27,18 @@ import pvc_define as define
 def checkCorrespondanceOfOutputs(video_value, calculated_value):
     '''Test a range of values with the kruskalwallis test'''
 
-    H_statistic_list = []
-    p_value_list = []
+    D_statistic_list = []
+    to_minimise_p_value_list = []
 
     for i in range(len(calculated_value)):
         if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
-            H_statistic, p_value = kruskalwallis(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
-    
-            H_statistic_list.append(H_statistic)
-            p_value_list.append(p_value)
+            D_statistic, p_value = ks_twosamp(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
+            D_statistic_list.append(D_statistic)
+            to_minimise_p_value_list.append(1 - p_value)
         else:
-            p_value_list.append('DNE')
+            to_minimise_p_value_list.append('DNE')
     
-    return p_value_list
+    return to_minimise_p_value_list
 
 def runVissimForCalibrationAnalysis(network, inputs):
     '''Note: Vissim is passed in the Network class variable "network" '''
@@ -49,23 +48,22 @@ def runVissimForCalibrationAnalysis(network, inputs):
     variables        = inputs[1]
     parameters       = inputs[2]
     point_folderpath = inputs[3]
-    calib_folderpath = inputs[4]
-    multi_networks   = inputs[5]
+    multi_networks   = inputs[4]
     
-    Vissim = network.vissim
+    Vissim = network[0].vissim
     
     if multi_networks is True:
         #if we are treating more than one network, than we subdivide the point folder into network folders
         if not os.path.isdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])):
             os.mkdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0]))
         
-        final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0],network[0].inpx_path.split(os.sep)[-1])
-        shutil.copy(os.path.join(calib_folderpath,network[0].inpx_path.split(os.sep)[-1]),final_inpx_path)    
+        final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])
+        shutil.copy(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1]),os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]))    
 
     else:
         final_inpx_path = copy.deepcopy(point_folderpath)
-        
-    Vissim.LoadNet(final_inpx_path)        
+
+    Vissim.LoadNet(os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]))
     
     values = []
     for var in variables:
