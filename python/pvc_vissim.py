@@ -17,8 +17,10 @@ import win32com.client
 
 def isVissimRunning(kill):
     '''This function is used to verify if the Vissim program is running
-       The first time it is called in the program, firstTime should be called as True:
-       This is to make sure Vissim was not left open in non COM mode before starting the python program
+       The first time it is called in the program, firstTime should be called
+       as True:
+       This is to make sure Vissim was not left open in non COM mode before
+       starting the python program
     '''
     running = False
     
@@ -36,7 +38,8 @@ def isVissimRunning(kill):
     return running
 
 def startVissim():
-    '''start an instance of Vissim. Returns the object Vissim if successfull, StartError otherwise'''
+    '''start an instance of Vissim. Returns the object Vissim if successfull,
+       StartError otherwise'''
     try:
         return win32com.client.dynamic.Dispatch("Vissim.Vissim.600")
         #Note: win32com.client.dynamic.Dispatch() works both with an open or unopened vissim. It can be called multiple
@@ -69,7 +72,8 @@ def stopVissim(Vissim):
         
 def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
-        the sim_parameters variables must be [simulationStepsPerTimeUnit, first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
+        the sim_parameters variables must be [simulationStepsPerTimeUnit,
+        first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
 
     try:
         Simulation = Vissim.Simulation

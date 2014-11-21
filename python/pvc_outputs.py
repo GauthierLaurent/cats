@@ -85,9 +85,12 @@ def forwardGaps(objects, s, lane):
     return gaps, speeds
 
 def laneChangeGaps(listDict, laneDict, objects):
-    '''Determines the width of lane change gaps for a list of objects who make lane changes
-        agaps represent the gap present after the insertion of the lane changing vehicule
-        bgaps reprensent the gap present before the insertion of the lane changing vehicule'''
+    '''Determines the width of lane change gaps for a list of objects who make
+       lane changes
+        - agaps represent the gap present after the insertion of the lane
+          changing vehicule
+        - bgaps reprensent the gap present before the insertion of the lane
+          changing vehicule'''
     
     x = []  #agaps construction variable
     y = []  #bgaps construction variable
@@ -443,7 +446,8 @@ def randomGaussRange(low, high, n):
     return out
 
 def generateRandomOutputs(parameters):
-    '''This fonction serves to bypass everything produced by Vissim to gain speed while testing the code'''
+    '''This fonction serves to bypass everything produced by Vissim to gain
+       speed while testing the code'''
     RandSeed = parameters[1]
     NumRuns = parameters[2]   
     

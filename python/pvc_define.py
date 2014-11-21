@@ -62,8 +62,9 @@ class Corridor:
 
 def extractVissimCorridorsFromCSV(dirname, inpxname):
     '''Reads corridor information for a csv named like the inpx
-       CSV file must be build as:    Corridor_name,vissim list,traffic intelligence list
-       both list must be separated by "-"
+        - CSV file must be build as: Corridor_name,vissim list,traffic intelligence
+          list 
+        - Both list must be separated by "-"
     '''
 
     if inpxname in dirname: dirname = dirname.strip(inpxname)
@@ -189,16 +190,19 @@ def extractParamFromCSV(dirname, filename):
     '''Reads variable information for a csv file
        CSV file must be build as:
              1rst  line:     $Variables
-             2nt   line:     VarName,VissimMin,VissimMax,DesiredMin,DesiredMax,VissimName
+             2nt   line:     VarName,VissimMin,VissimMax,DesiredMin,DesiredMax,
+                             VissimName
              other lines:    stringfloat,float,float,float,string,
              
              where:
-                     VarName is a name given by the user and will be used to write
-                     pcvtools reports
-                     VissimName is the name of the variable found in the Vissim COM manual
-                     VissimMin and VissimMax are the min and max values found in the
-                     Vissim COM manual
-                     DesiredMin and DesiredMax are the range to be used for the evaluation                           
+                     VarName is a name given by the user and will be used to
+                     write pcvtools reports
+                     VissimName is the name of the variable found in the Vissim
+                     COM manual
+                     VissimMin and VissimMax are the min and max values found in
+                     the Vissim COM manual
+                     DesiredMin and DesiredMax are the range to be used for the
+                     evaluation                           
     '''
 
     if filename in dirname: dirname = dirname.strip(filename)
@@ -241,6 +245,8 @@ def extractDataFromVariablesCSV(filename):
     return vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV
 
 def verifyDesiredRanges(variables):
+    '''checks for coherence between bounds and desired min/max values entered
+       in the csv file loaded to build the variables''' 
     for i in xrange(len(variables)):
         if variables[i].vissim_min is not None:
             if variables[i].desired_min < variables[i].vissim_min:
@@ -254,6 +260,8 @@ def verifyDesiredRanges(variables):
     return variables
     
 def verifyDesiredPoints(variables):
+    '''Checks if the point contained in variable.point respects the bounds of said
+       variable'''
     chk = True
     for i in xrange(len(variables)):
         if variables[i].vissim_min is not None:
@@ -389,8 +397,9 @@ class Network:
             self.videoComparison = [data_list]        
         
 def buildNetworkObjects(config):
-    '''takes all info from calib.cfg and build a network object out of it. This fonction will not duplicate a
-    network that has been entered multiple times to be processed on two different videos files'''
+    '''takes all info from calib.cfg and build a network object out of it. This
+       fonction will not duplicate a network that has been entered multiple times
+       to be processed on two different videos files'''
     
     inpx_list = {}
     if config.active_network_1:
@@ -428,12 +437,15 @@ def buildNetworkObjects(config):
 # Define tools
 ##################
 def myround(x, base=5):
+    '''version of math.round that rounds to the neerest base multiple'''
     return int(base * round(float(x)/base))
     
 def myceil(x, base=5):
+    '''version of math.ceil that ceils to the neerest base multiple'''    
     return int(base * math.ceil((float(x)/base)))
     
 def myfloor(x, base=5):
+    '''version of math.floor that floors to the neerest base multiple'''  
     return int(base * math.floor((float(x)/base)))
     
 def sort2lists(list1,list2):
@@ -448,11 +460,19 @@ def sort2lists(list1,list2):
     
     return sorted_list1, sorted_list2
 
-def isbool(iterative):
-    for element in iterative:
+def isbool(lists):
+    '''checks if at least one element in lists is a boolean value''' 
+    for element in lists:
         if isinstance(element,bool):
             return True
     return False
+
+def isallbool(lists):
+    '''checks if all elements in lists is are boolean values''' 
+    for element in lists:
+        if isinstance(element,bool) is False:
+            return False
+    return True
     
 ##################
 # Multiprocessing tools
@@ -466,20 +486,21 @@ def toChunks(n, iterable, padvalue=None, asList=True):
     if(asList): return [list(x) for x in izip(*[chain(iterable, repeat(padvalue, n-1))]*n)]
     else:       return izip(*[chain(iterable, repeat(padvalue, n-1))]*n)
 
-def cleanChunks(n, iterable, padvalue=None, asList=True):
-    chunks = toChunks(n, iterable, padvalue, asList)
-    if padvalue is None:
-        clean_chunks = [[] for i in range(len(chunks))]
-        for i in range(len(chunks)):
-            for j in range(len(chunks[i])):
-                if chunks[i][j] != None:
-                    clean_chunks[i].append(chunks[i][j])
-    else:
-        clean_chunks = chunks
-    return clean_chunks
+def cleanChunks(n, iterable, asList=True):
+    '''Splits an iterable into chunks of n size using the toChunks function but
+       removes the padvalue'''
+    chunks = toChunks(n, iterable, padvalue='TO_REMOVE', asList = asList) 
+    print chunks    
+    for i in xrange(len(chunks)):
+        for j in reversed(xrange(len(chunks[i]))):
+            print i,j
+            if chunks[i][j] == 'TO_REMOVE':
+                chunks[i].pop(j)
+    return chunks
     
 def intelligentChunks(n, iterable, value_names):
-    '''Cuts the variables into chunks keeping together the variables that need to relate to others'''           
+    '''Cuts the variables into chunks keeping together the variables that need
+       to relate to others'''           
     
     intelligent_chunk = []
     if len(iterable) != n:
