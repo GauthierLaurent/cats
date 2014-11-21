@@ -9,7 +9,7 @@ Created on Thu Jul 03 11:32:08 2014
 # Import Libraries
 ##################
 #Native
-import os, time, shutil
+import os, time, shutil, re
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plb
 import numpy as np
@@ -93,63 +93,207 @@ def findCalibName(dirname):
 ################################ 
 #        Calibration history functions       
 ################################
-def read_history(filename):
-    '''finds the number of the last recorded evaluation and returns the number of the new evaluation'''
-    last_num = 0
-    with open(os.path.join(os.getcwd(),filename), 'r') as hist:
-        for l in hist:
-            if l.strip() != '' and l.startswith('#') is False:
-                last_num += 1
-    return last_num + 1
-
-def create_history(dirname, filename, networks):
-    with open(os.path.join(dirname, filename), 'w') as hist:
-        hist.write('Itt\t|\tpoint\t|\t')
-        for net in xrange(len(networks)):
-            for comp in xrange(len(networks[net].traj_paths)):
-                hist.write('Network_'+str(net)+'Video_'+str(comp)+'|\t')
-		
-        hist.write('fout\n')		
-	
-def write_history(last_num, points, networks, fout,  dirname, filename):   
-    with open(os.path.join(dirname, filename), 'a') as hist:
-        hist.write(str(last_num)+'\t')
-        hist.write("|\t")
-
-        #tried point
-        for p in points:
-            hist.write(str(p)+'\t')
-        hist.write("|\t")
-
-        #secondary comparaison
-        for net in xrange(len(networks)):
-            for comp in networks[net].videoComparison:
-                variables = writeToOneList(list(comp))
-                for v in xrange(len(variables)):
-                    if v == 4:
-                        hist.write('*\t')
-                    hist.write(str(variables[v]) +'\t')
-                hist.write("|\t")
-
-        #fout
-        hist.write(str(fout)+'\n')
+class History:
+    '''stores all history related functions for easy access'''
+    @staticmethod
+    def read_history(filename):
+        '''finds the number of the last recorded evaluation and returns the number of the new evaluation'''
+        last_num = 0
+        with open(os.path.join(os.getcwd(),filename), 'r') as hist:
+            for l in hist:
+                if l.strip() != '' and l.startswith('#') is False:
+                    last_num += 1
+        return last_num + 1
+        
+    @staticmethod
+    def create_history(dirname, filename, networks):
+        with open(os.path.join(dirname, filename), 'w') as hist:
+            hist.write('Itt\t|\tpoint\t|\t')
+            for net in xrange(len(networks)):
+                for comp in xrange(len(networks[net].traj_paths)):
+                    hist.write('Network_'+str(net)+'Video_'+str(comp)+'|\t')
+    		
+            hist.write('fout\n')
+            
+    @staticmethod
+    def write_history(last_num, points, networks, fout,  dirname, filename):   
+        with open(os.path.join(dirname, filename), 'a') as hist:
+            hist.write(str(last_num)+'\t')
+            hist.write("|\t")
+    
+            #tried point
+            for p in points:
+                hist.write(str(p)+'\t')
+            hist.write("|\t")
+    
+            #secondary comparaison
+            for net in xrange(len(networks)):
+                for comp in networks[net].videoComparison:
+                    variables = writeToOneList(list(comp))
+                    for v in xrange(len(variables)):
+                        if v == 4:
+                            hist.write('*\t')
+                        hist.write(str(variables[v]) +'\t')
+                    hist.write("|\t")
+    
+            #fout
+            hist.write(str(fout)+'\n')
 
 ################################ 
 #        NOMAD handling functions       
-################################ 
-def read_from_NOMAD(input_name):
-    points = []
-    with open(input_name, 'r') as f:
-        for l in f:
-            inter = l.strip().replace('\t',' ').split(' ')
-            for i in inter:
-                points.append(float(i))
-    return points
-
-def write_for_NOMAD(output_name, fout):
-    with open(output_name, 'w') as f:
-        f.write(str(fout))
+################################                     
+class NOMAD:
+    '''Stores all NOMAD related functions for easy access'''
+    
+    @staticmethod
+    def read_from_NOMAD(input_name):
+        '''Get input point from NOMAD for current evaluation'''
+        points = []
+        with open(input_name, 'r') as f:
+            for l in f:
+                inter = l.strip().replace('\t',' ').split(' ')
+                for i in inter:
+                    points.append(float(i))
+        return points
         
+    @staticmethod
+    def create_NOMAD_params(filepath, variables, starting_point = [], biobj = False):
+        '''Writes a default parameter file... no fancy options included'''
+        num_dim = str(len(variables))
+        X0 = ' '
+        LB = ' '
+        UB = ' '
+        if starting_point != []:
+            for p in starting_point:
+                X0 += str(p) + ' '
+        for var in variables:
+            if starting_point == []:
+                X0 += str(var.vissim_default) + ' '
+            if var.vissim_min is not None:
+                LB += str(var.vissim_min) + ' '
+            else:
+                LB += '- '
+            if var.vissim_max is not None:
+                UB += str(var.vissim_max) + ' '
+            else:
+                UB += '- '
+                
+        with open(filepath,'w') as param:
+            param.write('DIMENSION      '+num_dim+'					                  # number of variables\n'
+                        '\n'
+                        'BB_EXE        \'$python calib.py\'                      # blackbox program\n')
+            if biobj is False:
+                param.write('BB_OUTPUT_TYPE OBJ \n')
+            else:
+                param.write('BB_OUTPUT_TYPE OBJ OBJ \n')
+            param.write('\n'
+                        'X0             (' + X0 + ')    # starting point\n'
+                        '\n'
+                        'LOWER_BOUND    (' + LB + ')\n'
+                        'UPPER_BOUND    (' + UB + ')\n'
+                        '\n'
+                        '\n'
+                        'MAX_BB_EVAL    1000             				# the algorithm terminates when\n'
+                        '                              				# 100 black-box evaluations have\n'
+                        '                              				# been made\n')
+    
+    @staticmethod                    
+    def verify_params(filepath, variables, starting_point = [], biobj = False):
+        '''verifies the param file for Dimensions, X0, LB, and UB lenght
+           Sets X0 as default parameters unless a point is specified as a list
+           in starting_point'''
+        
+        if os.path.isfile(filepath):
+            flag = [0,0]    
+            current_lines = []    
+            with open(filepath,'r') as current:
+                for l in current:
+                    current_lines.append(l)
+            
+            num_dim = str(len(variables))
+            
+            for l in xrange(len(current_lines)):
+                if 'DIMENSION' in current_lines[l]:
+                    if int(re.sub('[a-z,A-Z,\t,\s,#,$,]', ' ', current_lines[l].strip())) != num_dim:
+                        flag[0] = 1
+                        current_lines[l] = 'DIMENSION      '+num_dim+'					                  # number of variables\n'
+                
+                elif 'BB_OUTPUT_TYPE' in current_lines[l]:
+                    objcount = current_lines[l].count('OBJ')
+                    if biobj is False and objcount != 1:
+                        flag[1] = 1
+                        current_lines[l] = 'BB_OUTPUT_TYPE OBJ \n'
+                    if biobj is True and objcount != 2:
+                        flag[1] = 1
+                        current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ\n'                
+        
+            #correcting x0, lower_bounds and upper_bounds lines  
+            if flag[0] == 1:
+                X0 = ' '
+                LB = ' '
+                UB = ' '
+                if starting_point != []:
+                    for p in starting_point:
+                        X0 += str(p) + ' '
+                for var in variables:
+                    if starting_point == []:
+                        X0 += str(var.vissim_default) + ' ' 
+                    if var.vissim_min is not None:
+                        LB += str(var.vissim_min) + ' '
+                    else:
+                        LB += '- '
+                    if var.vissim_max is not None:
+                        UB += str(var.vissim_max) + ' '
+                    else:
+                        UB += '- '  
+                        
+            for l in xrange(len(current_lines)):
+                if 'X0' in current_lines[l]:
+                    current_lines[l] = 'X0             (' + X0 + ')\n'
+                elif 'LOWER_BOUND' in current_lines[l]:
+                    current_lines[l] = 'LOWER_BOUND    (' + LB + ')\n'
+                elif 'UPPER_BOUND' in current_lines[l]:
+                    current_lines[l] = 'UPPER_BOUND    (' + UB + ')\n'
+        
+            with open(filepath,'w') as new:
+                for line in current_lines:
+                    new.write(line)
+        else:
+            print 'No parameter file found for NOMAD at the specified path. Creating default parameter file'
+            NOMAD.create_NOMAD_params(filepath, variables, starting_point, biobj)
+    
+    @staticmethod
+    def set_BB_path(filepath, BB_fullpath):
+        '''Updates the Black box path NOMAD will try to use'''
+        current_lines = []    
+        with open(filepath,'r') as current:
+            for l in current:
+                current_lines.append(l)
+        
+        for l in xrange(len(current_lines)):
+            if 'BB_EXE' in current_lines[l]:
+                current_lines[l] = 'BB_EXE        \'$python ' + str(BB_fullpath) + '\'\n'
+
+        with open(filepath,'w') as new:
+            for line in current_lines:
+                new.write(line)
+                
+    @staticmethod
+    def set_max_eval(filepath, max_eval):
+        '''Updates the number of evaluations NOMAD try at most run before stoping'''
+        current_lines = []    
+        with open(filepath,'r') as current:
+            for l in current:
+                current_lines.append(l)
+        
+        for l in xrange(len(current_lines)):
+            if 'MAX_BB_EVAL' in current_lines[l]:
+                current_lines[l] = 'MAX_BB_EVAL    ' + str(max_eval) +'\n'
+
+        with open(filepath,'w') as new:
+            for line in current_lines:
+                new.write(line)
+            
 ################################ 
 #        Serialized data files     
 ################################    
@@ -336,7 +480,8 @@ def writeRealDataReport(dirname, video_name, inpxname, min_time, max_time, speed
    
     return
     
-def writeListToCSV(lists, name):    
+def writeListToCSV(lists, name):
+    '''writes a CSV file which will contain one line per element in lists'''
     out = open(name, 'w')
     for sublist in lists:
         writeInFile(out,sublist)
@@ -372,6 +517,7 @@ def writeInFile(out, *args):
     out.write("\n")
    
 def timeStamp(variables, points, sim, itt = None):
+    '''adds a timer recap to a file'''
     text = []
     total_time = time.clock()
     avg_per_point = total_time/(len(variables) * points + 1 ) 
@@ -420,8 +566,11 @@ def verboseIntro(commands, config, TypeOfAnalysis):
 ##################
 # Graphic tools
 ##################        
-def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, nsim, subpath = ""):
-    '''create graphs for a type 'Stats' variable'''
+def printStatGraphs(graphspath, variable, value_name, variable_name, graphformat, nsim, subpath = ""):
+    '''create graphs for a type 'Stats' variable | data comes from vissim output
+       file
+    
+       Primarily used to plot data from sensitivity analysis'''
 
     #creating the cumulative graph                         
     if variable.distributions[0].value != []:    #checks if the variable is empty
@@ -505,7 +654,9 @@ def printStatGraphs(graphspath,variable,value_name, variable_name, graphformat, 
     return True
 
 def plot_st(objects, alignments, fps, dirname, video_name):
-    '''generates a time-space diagram for each alignment'''
+    '''generates a time-space diagram for each alignment
+    
+       Primarily used for video data'''
     for a in xrange(len(alignments)):
         fig = plt.figure()
         for o in objects:
@@ -525,45 +676,46 @@ def plot_st(objects, alignments, fps, dirname, video_name):
         plt.close(fig)    
     return
     
-def plot_qt(time_serie, gaps_serie, align_num, dirname, video_name, fps, min_time, max_time):
-    '''generates a flow on time diagram for alignment number "align_num" using gap information
-       only handles one lane at a time'''
+def plot_qt(time_serie, gaps_serie, dirname, video_name, fps, min_time, max_time):
+    '''generates a flow on time diagram for alignment number "align_num" using gap
+       information only handles one time/gap serie at a time
+                  
+       Primarily used for video data'''
 
     #plot data       
     time = list(np.asarray(time_serie)/fps)
-    flow = list(fps*3600/np.asarray(gaps_serie))
 
-    #histogram data
+    #flow is obtained with an arithmetic mobile mean
+    flow = []
+    for g in xrange(len(gaps_serie)):
+        if g == 0 or g == 1:        
+            mean_gap = np.mean(gaps_serie[0:5])
+        elif g == len(gaps_serie) -1 or g == len(gaps_serie) -2:
+            mean_gap = np.mean(gaps_serie[-5:])
+        else:
+            mean_gap = np.mean(gaps_serie[g-2:g+3])
+        flow.append(fps*3600/mean_gap)
+    
+    #finding min and max time for the graph axis
     if min_time is None:
-        min_bintime = define.myfloor(min(time), base=20)
+        min_gtime = define.myfloor(min(time), base=20)
     else:
-        min_bintime = define.myfloor(min_time/fps, base=20)
+        min_gtime = define.myfloor(min_time/fps, base=20)
         
     if max_time is None:
-        max_bintime = define.myceil(max(time), base=20)
+        max_gtime = define.myceil(max(time), base=20)
     else:
-        max_bintime = define.myceil(max_time/fps, base=20)
-
-    nbr_bins =  (max_bintime-min_bintime)/20
-    pass_serie = []
-    cumul = time[0]    
-    for i in np.asarray(gaps_serie)/fps:
-        cumul += i
-        #transforming the current 20sec bin into hourly data
-        for i in xrange(int(3600/20)):
-            pass_serie.append(cumul)
+        max_gtime = define.myceil(max_time/fps, base=20)
     
     fig = plt.figure()
-
-    plt.hist(pass_serie, nbr_bins, facecolor = 'red', range=(min_bintime,max_bintime))        
-    #plt.plot(time, flow, color = 'b')
+    plt.plot(time, flow, color = 'b')
     
-    plt.xlim(min_bintime, max_bintime)
-    plt.xticks(range(min_bintime,max_bintime,40))
+    plt.xlim(min_gtime, max_gtime)
+    plt.xticks(range(min_gtime,max_gtime,20))
     plt.xlabel('time (sec)')
     plt.ylabel('flow (veh/h)')
-    plt.title('Flow on alignment '+str(align_num)+' with regard to time')
-    plt.savefig(os.path.join(dirname, 'Flow-time diagram for alignment ' + str(align_num) + ' for video ' + str(video_name.strip('sqlite'))))
+    plt.title('Flow in video '+str(video_name.strip('sqlite'))+' with regard to time')
+    plt.savefig(os.path.join(dirname, 'Flow-time diagram for video ' + str(video_name.strip('sqlite'))))
     plt.clf()
     plt.close(fig)    
     return
@@ -572,6 +724,7 @@ def plot_qt(time_serie, gaps_serie, align_num, dirname, video_name, fps, min_tim
 # Drawing tools
 ##################
 def tellMe(s, target=False):
+    '''Used in drawAlign'''
     if(not target):
         target = plt
     
