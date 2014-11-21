@@ -1,19 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #  Laurent Gauthier, Ecole Polytechnique de Montreal, 2014
-#  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
+#  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit;
+#  NOMAD 3.6.2 https://www.gerad.ca/nomad/Project/Home.html 
 #  Dependencies listed in Libraries; 
 ################################################################################
 '''Dev stuff
 import pdb; pdb.set_trace()
+
+IMPORTANT INFORMATION:
+except in the function write.write_for_NOMAD, **no** print command
+must be present in any part of this code or any of it's function calls. Such a
+print would give NOMAD an erronous result of the called point
 '''
 ################################################################################
 
 ################################ 
 #        Native dependencies      
 ################################
-import os, sys, multiprocessing
-import cPickle as pickle
+import os, sys, multiprocessing, shutil
 
 ################################ 
 #        Misc tools     
@@ -40,13 +45,16 @@ def main(argv):
     parameters, variables, networks = write.load_calib()
 
     #load NOMAD points to try
-    nomad_points = write.read_from_NOMAD(argv)
+    nomad_points = write.NOMAD.read_from_NOMAD(argv)
         
     #define NOMAD output name
     output_name = argv.replace('input','output')
-
+    with open('networks.txt','w') as test:
+        test.write(str(argv))
+        test.write(str(output_name))
+        
     #load last_num from history file
-    last_num = write.read_history('calib_history.txt')
+    last_num = write.History.read_history('calib_history.txt')
     
     #add the value of the points in this new variable
     for i in xrange(len(variables)):
@@ -64,37 +72,43 @@ def main(argv):
 		net.addVideoComparison(['BoundingError'])
 
         #history
-        write.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')        
-        write.write_for_NOMAD(output_name, fout)                
+        write.History.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
+        
+        #output
+        print fout                 
         return 0
 
     #create subfolder for this point's evaluation
     filename = write.findCalibName(os.getcwd())
     point_folderpath = write.createSubFolder(os.path.join(os.getcwd(), filename), filename)
 
+    #move all inpx files to the point folder
+    for net in networks:
+        shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
+
     config = pconfig.Config('calib.cfg')  
     #assing vissim instances to each network
     for net in networks:
-        net.addVissim = vissim.startVissim()
+        net.addVissim(vissim.startVissim())
         
     #pass data to vissim and simulate
     if len(networks) == 1:
         ##run the analysis
         parameters[5] = multiprocessing.cpu_count() - 1
-        inputs = [config, variables, parameters, point_folderpath, os.getcwd(), False]
+        inputs = [config, variables, parameters, point_folderpath, False]
         packed_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
 
         if packed_outputs[0] is False:
-            write.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
+            write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
-            fout = packed_outputs[0]
-            networks = packed_outputs[1]
+            fout = max(packed_outputs[0])
+            networks = [packed_outputs[1]]
 
     else:
         ##run the analysis through workers -- separate with networks
         commands = FalseCommands()
-        inputs = [config, variables, parameters, point_folderpath, os.getcwd(), True]
+        inputs = [config, variables, parameters, point_folderpath, True]
         for net in networks:            
             unpacked_outputs = define.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
         
@@ -106,17 +120,16 @@ def main(argv):
             networks.append(packed[1])
 
         if define.isbool(p_values):
-            write.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
+            write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = max(p_values)
 
     #write to history
-    write.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
+    write.History.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
     
-    #write for NOMAD
-    write.write_for_NOMAD(output_name, fout) 
-
+    #output for NOMAD
+    print fout 
     return 0
 
 ###################
