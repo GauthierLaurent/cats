@@ -48,13 +48,11 @@ def main(argv):
     nomad_points = write.NOMAD.read_from_NOMAD(argv)
         
     #define NOMAD output name
-    output_name = argv.replace('input','output')
-    with open('networks.txt','w') as test:
-        test.write(str(argv))
-        test.write(str(output_name))
+    #output_name = argv.replace('input','output')
         
     #load last_num from history file
-    last_num = write.History.read_history('calib_history.txt')
+    #NB: because of the header line, we must substract one from the standard output of the read_history function
+    last_num = write.History.read_history('calib_history.txt') - 1
     
     #add the value of the points in this new variable
     for i in xrange(len(variables)):
