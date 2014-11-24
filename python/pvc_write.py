@@ -653,7 +653,7 @@ def printStatGraphs(graphspath, variable, value_name, variable_name, graphformat
         plt.close(fig)                  
     return True
 
-def plot_st(objects, alignments, fps, dirname, video_name):
+def plot_st(objects, align_corr_dict, alignments, fps, dirname, video_name):
     '''generates a time-space diagram for each alignment
     
        Primarily used for video data'''
@@ -667,16 +667,16 @@ def plot_st(objects, alignments, fps, dirname, video_name):
                     t.append((o.getFirstInstant()+pos)/float(fps))
                     s.append(o.getCurvilinearPositions().getSCoordinates()[pos])
             plt.plot(t,s,'b')
-        
+
         plt.xlabel('time (sec)' )
         plt.ylabel('distance (m)')
-        plt.title('Time-space diagram for alignment ' + alignments[a])
-        plt.savefig(os.path.join(dirname, 'Time-space diagram for alignment ' + alignments[a] + ' for video ' + str(video_name.strip('sqlite'))))
+        plt.title('Time-space diagram for alignment ' + alignments[a] + ' in corridor ' + str(align_corr_dict[int(alignments[a])]))
+        plt.savefig(os.path.join(dirname, 'Time-space diagram for alignment ' + alignments[a] + ' for corridor ' + str(align_corr_dict[int(alignments[a])]) + ' for video ' + str(video_name.strip('.sqlite'))))
         plt.clf()
         plt.close(fig)    
     return
     
-def plot_qt(time_serie, gaps_serie, dirname, video_name, fps, min_time, max_time):
+def plot_qt(time_serie, gaps_serie, dirname, video_name, corridor, fps, min_time, max_time):
     '''generates a flow on time diagram for alignment number "align_num" using gap
        information only handles one time/gap serie at a time
                   
@@ -714,8 +714,8 @@ def plot_qt(time_serie, gaps_serie, dirname, video_name, fps, min_time, max_time
     plt.xticks(range(min_gtime,max_gtime,20))
     plt.xlabel('time (sec)')
     plt.ylabel('flow (veh/h)')
-    plt.title('Flow in video '+str(video_name.strip('sqlite'))+' with regard to time')
-    plt.savefig(os.path.join(dirname, 'Flow-time diagram for video ' + str(video_name.strip('sqlite'))))
+    plt.title('Flow in corridor '+str(corridor)+' for video '+str(video_name.strip('.sqlite'))+' with regard to time')
+    plt.savefig(os.path.join(dirname, 'Flow-time diagram for corridor ' + str(corridor) + ' for video ' + str(video_name.strip('.sqlite'))))
     plt.clf()
     plt.close(fig)    
     return

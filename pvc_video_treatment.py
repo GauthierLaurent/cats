@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 '''
 call exemples:
-   to draw aligmenets:  %run pvc_video_treatment trace 3 GP060001.sqlite
-   to process sqlite:   %run pvc_video_treatment process
+   to draw aligmeents:  -v GP060001.sqlite trace
+   to process sqlite:   -M 9000 -g 30 process
 '''
 
 ##################
@@ -172,14 +172,6 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
         for o in objects:
             o.projectCurvilinear(alignments)
             o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
-            
-        #Calculation of stats stuff
-        to_eval = []
-        for j in xrange(len(trafIntCorridors)):
-            to_eval += trafIntCorridors[j].to_eval
-        
-        #plot s/t graph
-        write.plot_st(objects, alignNames, fps, config.path_to_inpx, video_infos[i].video_name)
         
         #flow
         onevid_flow = len(objects)
@@ -189,25 +181,42 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
         onevid_opportunisticLC = sum([len(oppObjDict[j]) for j in oppObjDict])
         onevid_mandatoryLC = sum([len(manObjDict[j]) for j in manObjDict])
         print ' == Lane change compilation done ==  |' + str(time.clock())
-                    
-        #Forward gaps and speeds calculations
+            
+        #Calculation of stats stuff
         onevid_forward_gaps = []
         onevid_forward_speeds = []
 
-        for index,lane in enumerate(alignments):
-            [snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
+        #dictionnary of corridor name per alignement number
+        align_corr_dict = {}        
+        for corridor in trafIntCorridors:
+            for align in corridor.to_eval:
+                if align not in align_corr_dict.keys():
+                    align_corr_dict[align] = corridor.name
+
+        #plot s/t graph
+        write.plot_st(objects, align_corr_dict, alignNames, fps, config.path_to_inpx, video_infos[i].video_name)
         
-            if index in to_eval:
-                sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                              
-                raw_gaps = outputs.calculateGaps(sorted_instants)
-                onevid_forward_gaps += list(raw_gaps)
-                onevid_forward_speeds += list(raw_speeds)
-                
-                #trace graph: flow vs time during video
-                write.plot_qt(sorted_instants[:-1], list(raw_gaps), index, config.path_to_inpx, video_infos[i].video_name, fps, min_time, max_time)
-                
-            print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
-        
+        for c in xrange(len(trafIntCorridors)):                              
+            #Forward gaps and speeds calculations        
+            graph_inst = []
+            graph_gaps = []
+            for index,lane in enumerate(alignments):
+                if index in trafIntCorridors[c].to_eval:
+                    [snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
+                    sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                              
+                    raw_gaps = outputs.calculateGaps(sorted_instants)
+                    onevid_forward_gaps += list(raw_gaps)
+                    onevid_forward_speeds += list(raw_speeds)
+                    graph_inst += sorted_instants[:-1]
+                    graph_gaps += list(raw_gaps)
+                    
+                    print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
+           
+            #trace graph: flow vs time during video
+            sorted_graph_inst, sorted_graph_gaps = define.sort2lists(graph_inst,graph_gaps)
+            if len(sorted_graph_inst) > 0:
+                write.plot_qt(sorted_graph_inst, sorted_graph_gaps, config.path_to_inpx, video_infos[i].video_name, trafIntCorridors[c].name, fps, min_time, max_time)
+           
         #mandatory lane change gaps
         onevid_man_agaps, onevid_man_bgaps = outputs.laneChangeGaps(manObjDict, laneDict, objects)
         print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
@@ -258,7 +267,6 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             video_names += video_infos[i].video_name + ', '
        
     ##building the other_info list to print
-	#TODO: plot density on time... might be tricky: use firstinstant to get the density time data
     other_info = [['flow:', flow],
                   ['number of opportunistic lane changes:', opportunisticLC],
                   ['number of mandatory lane changes:', mandatoryLC],
@@ -286,7 +294,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
 def usage():
     print ('usage: %s'
            'Process: [-m min_time] [-M max_time] [-g fps_factor]'
-           'Trace:   [-s] [-v single_video_name] [-b]'
+           'Trace:   [-s] [-v single_video_name]'
            ' mode ... process/trace?' % sys.argv[0])
     return 100
     
@@ -298,7 +306,7 @@ def main(argv):
     time.clock()
 
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'g:v:b:m:M:s')
+        (opts, args) = getopt.getopt(argv[1:], 'g:v:m:M:s')
     except getopt.GetoptError:
         return usage()
     if not args: return usage()
@@ -310,13 +318,11 @@ def main(argv):
     #trace options
     video_name = None
     video_names = []
-    batch = False
     save = False
 
     for (k, v) in opts:
         if k == '-v': video_name = v
         elif k == '-g': fps = int(v)
-        elif k == '-b': batch = True
         elif k == '-m': min_time = int(v)
         elif k == '-M': max_time = int(v)
         elif k == '-s': save = True
@@ -335,8 +341,7 @@ def main(argv):
                 else:
                     print 'video " ' + str(video_name) + ' " not found'
                     return usage()
-                    
-            if batch is not False:
+            else:
                 video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
                 
             if video_names == []:
