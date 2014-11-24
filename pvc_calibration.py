@@ -36,7 +36,7 @@ def main():
     ################################ 
     #        Load settings       
     ################################    
-    commands = config.commands(optparse.OptionParser())
+    commands = config.commands(optparse.OptionParser(),'Cali')
     config   = config.Config('calib.cfg')      
             
     ################################ 
@@ -72,7 +72,23 @@ def main():
         
     #generating the raw variables contained in the csv
     variables = define.extractParamFromCSV(config.path_to_calib_csv, 'calib.csv')
-    
+
+    ##looking for an input starting point
+    if commands.start_point is not None:    
+        starting_point = commands.start_point.replace('[','').replace(']','').split(',')
+        
+        #checking for compatibility with the number of parameter specified
+        if len(starting_point) == len(variables):
+            for p in xrange(len(starting_point)):
+                starting_point[p] = float(starting_point[p])            
+        else:
+            print ('Lenght of startign point does not match the number of variables to be be processed...\n'
+                   'Aborting current evaluation\n'
+                   'Please correct starting point vector')
+            return
+    else:
+        starting_point = []
+        
     #TODO: allow different wiedemann model to cohabit and to modify only the one we are truly working on      
     
     #creating an output folder for that calibration
@@ -92,7 +108,7 @@ def main():
             if video_data_list[0] == 'TrajVersionError':
                 print 'traj file ' +str(traj.split(os.sep)[-1]) + 'yielded incorect version number'
                 running = vissim.isVissimRunning(True)
-                sys.exit()
+                return
 
         #launching a vissim instance for each network object
         ### currently there is a maximum of 4 networks objects because of the maximum of 4 vissim instances....
@@ -101,61 +117,52 @@ def main():
         #moving required inpx file to the calibration location
         shutil.copy(net.inpx_path, os.path.join(working_path, net.inpx_path.split(os.sep)[-1]))
         
-    #moving calib.py
-    calib_path = os.path.join(working_path, 'calib.py')
-    shutil.copy('.\include\calib.py', calib_path)
+    #moving calib.py and calib.cfg
+    shutil.copy('.\include\calib.py', os.path.join(working_path, 'calib.py'))
+    shutil.copy('.\calib.cfg', os.path.join(working_path, 'calib.cfg'))
+    
+    #making sure the param file exists and is well suited to the present task
+    write.NOMAD.verify_params(config.path_to_NOMAD_param, variables, starting_point)    
+    write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
     
     #moving NOMAD and param.txt
-    #TODO: parse param file to adjust:
-    #                           DIMENSION     = len(variables)
-    #                           X0            = variables.vissim_default OR a sampling method with a loop on the calling of NOMAD to search the space
-    #                           LOWER_BOUNDS  = variables.vissim_min
-    #                           UPPER_BOUNDS  = variables.vissim_max
-    #                           SOLUTION_FILE = decide the path to make it consistant with the printing
+    param_file = config.path_to_NOMAD_param.split(os.sep)[-1]        
     shutil.copy(config.path_to_NOMAD, os.path.join(working_path,'nomad.exe'))
-    shutil.copy(config.path_to_NOMAD_param,os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))
-
-    ##TODO: this is where i stoped the debugging so far        
+    shutil.copy(config.path_to_NOMAD_param,os.path.join(working_path,param_file))
+     
     #generating a config file to be read by calib.py
     write.write_calib(working_path, parameters, variables, networks)
 		
     #creating an history file for calib.py
-    write.create_history(working_path, 'calib_history.txt', networks)
+    write.History.create_history(working_path, 'calib_history.txt', networks)    
     
     #launching NOMADS
-    try:    
-        call = subprocess.call('cd ' + str(working_path), shell = True )
-        call = subprocess.check_call('nomad.exe ' + str(config.path_to_NOMAD_param.split(os.sep)[-1]), shell = True) 
-    except subprocess.CalledProcessError as c:
-        print ('The call ' + str(c.cmd) + ' raised an exception \n'
-               'Nomad does not permit error capture from the cmd line... \n'
-               'Please open a command window and start Nomad... and type: \n'
-               '...\n'
-               '   cd ' + str(working_path) + '\n'
-               '   nomad.exe ' + str(config.path_to_NOMAD_param.split(os.sep)[-1]) + '\n'
-               '...\n'
-               'Look for the error and correct it before relaunching pvc_calibration \n')
-        sys.exit()
+    try:
+        os.chdir(working_path)
+        out = open('this_file.txt','w')
+        subprocess.check_call('nomad.exe' + ' ' + param_file, stderr = out, shell = True) 
         
+    except subprocess.CalledProcessError:
+        out.close()
+        err = open('this_file.txt','r')
+        for l in err:
+            print l.strip()
+        err.close()
+        return
 
-    #load and print NOMAD output
-    if config.NOMAD_solution_filename != '':
-        if os.path.isfile(os.path.join(os.sep(),config.NOMAD_solution_filename)):
-            with open(os.path.join(working_path,config.NOMAD_solution_filename), 'w') as solution:
-                for l in solution:
-                    print l.strip()
-        else:
-            print 'no solution file found, see history file'
-
-    #delete copied files ... NOMAD, NOMAD_param, inpx, calib.py
-    os.remove(os.path.join(working_path,'nomad.exe'))   #NOMAD
-    os.remove(os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))    #NOMAD param.txt
-    os.remove(os.path.join(working_path,'pvcdata.calib'))    #Serialized data
-    os.remove(os.path.join(working_path,config.inpx_path.split(os.sep)[-1]))    #main inpx
+    #delete copied files ... NOMAD, NOMAD_param, inpx, calib.py   
+    os.remove(os.path.join(working_path,'nomad.exe'))                                       #NOMAD
+    os.remove(os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))      #NOMAD param.txt
+    os.remove(os.path.join(working_path,'pvcdata.calib'))                                   #Serialized data
+    os.remove(os.path.join(working_path,'calib.py'))                                        #calib.py
+    os.remove(os.path.join(working_path,'calib.cfg'))                                       #calib config file
+    for net in networks:    
+        os.remove(os.path.join(working_path,net.inpx_path.split(os.sep)[-1]))               #main inpx
     
+    return
 
 ###################
 # Launch main
 ###################
-if __name__ == "__main__":
+if __name__ == "__main__": 
     main()
