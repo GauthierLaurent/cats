@@ -4,8 +4,9 @@
 #  Python 2.7; (dt) Spyder Windows 7 64-bit; Vissim 6.0 64-bit
 #  Dependencies listed in Libraries; 
 ################################################################################
-'''Dev stuff
-import pdb; pdb.set_trace()
+'''
+to import a starting point, call with -p __list of points separated by comma__
+ex: -p 1.0,-2.0,3.0,4.5,6  | the list may or may not be enclosed in brackets
 '''
 ################################################################################
 
