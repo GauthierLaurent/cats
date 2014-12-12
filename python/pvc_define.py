@@ -489,11 +489,9 @@ def toChunks(n, iterable, padvalue=None, asList=True):
 def cleanChunks(n, iterable, asList=True):
     '''Splits an iterable into chunks of n size using the toChunks function but
        removes the padvalue'''
-    chunks = toChunks(n, iterable, padvalue='TO_REMOVE', asList = asList) 
-    print chunks    
+    chunks = toChunks(n, iterable, padvalue='TO_REMOVE', asList = asList)     
     for i in xrange(len(chunks)):
         for j in reversed(xrange(len(chunks[i]))):
-            print i,j
             if chunks[i][j] == 'TO_REMOVE':
                 chunks[i].pop(j)
     return chunks
