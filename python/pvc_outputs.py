@@ -161,7 +161,7 @@ def laneChange(objects, corridors):
             if first_appeareance == last_appeareance:
                 for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
                     #keeping only the evaluated links                            
-                    if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval or int(objects[o+1].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval:'''this is probably the problematic line (and all the others with the same function'''
+                    if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval or int(objects[o].curvilinearPositions.lanes[pos+1].split('_')[0]) in to_eval:
                         #eliminating link interface change
                         if objects[o].curvilinearPositions.lanes[pos].split('_')[0] == objects[o].curvilinearPositions.lanes[pos + 1].split('_')[0]:
                             if objects[o].curvilinearPositions.lanes[pos].split('_')[1] != objects[o].curvilinearPositions.lanes[pos + 1].split('_')[1]:
@@ -171,7 +171,7 @@ def laneChange(objects, corridors):
             else:      
                 for pos in range(len(objects[o].curvilinearPositions.lanes) -1):                  
                     #keeping only the evaluated links                            
-                    if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval or int(objects[o+1].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval:                    
+                    if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval or int(objects[o].curvilinearPositions.lanes[pos+1].split('_')[0]) in to_eval:                    
                         #if link is not the same
                         if objects[o].curvilinearPositions.lanes[pos].split('_')[0] != objects[o].curvilinearPositions.lanes[pos + 1].split('_')[0]:
                             start = None
@@ -220,7 +220,7 @@ def laneChange(objects, corridors):
             if first_appeareance == last_appeareance:
                 for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
                     #keeping only the evaluated links                            
-                    if objects[o].curvilinearPositions.lanes[pos] in to_eval or objects[o+1].curvilinearPositions.lanes[pos] in to_eval:
+                    if objects[o].curvilinearPositions.lanes[pos] in to_eval or objects[o].curvilinearPositions.lanes[pos+1] in to_eval:
                         if objects[o].curvilinearPositions.lanes[pos] != objects[o].curvilinearPositions.lanes[pos + 1]:
                             oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)                        
                         
@@ -228,7 +228,7 @@ def laneChange(objects, corridors):
 
                 for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
                     #keeping only the evaluated links                            
-                    if objects[o].curvilinearPositions.lanes[pos] in to_eval or objects[o+1].curvilinearPositions.lanes[pos] in to_eval:                                            
+                    if objects[o].curvilinearPositions.lanes[pos] in to_eval or objects[o].curvilinearPositions.lanes[pos+1] in to_eval:                                            
                         #if alignment is not the same
                         if objects[o].curvilinearPositions.lanes[pos] != objects[o].curvilinearPositions.lanes[pos + 1]:
                             start = None
