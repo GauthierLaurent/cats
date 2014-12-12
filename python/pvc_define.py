@@ -525,7 +525,7 @@ def intelligentChunks(n, iterable, value_names):
             if keptAssembled_g1 != []: intelligent_chunk.append(keptAssembled_g1)
             if keptAssembled_g2 != []: intelligent_chunk.append(keptAssembled_g2)
         if other_iterables != []:
-            clean_chunks = cleanChunks(n, other_iterables, padvalue=None, asList=True)
+            clean_chunks = cleanChunks(n, other_iterables, asList=True)
             for i in range(len(clean_chunks)): intelligent_chunk.append(clean_chunks[i])
     else:
         for i in range(len(iterable)):

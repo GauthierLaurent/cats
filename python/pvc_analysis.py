@@ -574,7 +574,9 @@ def OAT_sensitivity(values, inputs, default = False):
     
        note: rangevalues = [range, position in the complete list]
     '''    
-
+    if isinstance(values[0], list) is False:
+        values = [values]
+        
     #unpacking inputs - should eventually be changed directly in the code
     all_values          = inputs [0]
     InpxPath            = inputs [1]
