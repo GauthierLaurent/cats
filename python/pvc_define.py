@@ -666,25 +666,22 @@ def genMCsample(variables, n):
         valuesVector.append(thisVector)
     return valuesVector
 
-def choose(n):
-    '''returns a list of n intergers randomly order from the range 0 to n-1'''
-    final = []
-    for i in xrange(n):
-        chosen = False        
-        while chosen is False:
-            test = random.randint(0,n-1)
-            if test not in final:
-                chosen = True
-                final.append(test)       
-    return final
-    
 def choose_xn(n,m):
-    '''chooses n points m times'''
-    mat = []    
-    for i in xrange(m):
-        mat.append(choose(n))
-    
-    return mat
+    '''chooses n points with m dimensions'''
+    possibility_mat = []    
+    for i in xrange(m):        
+        possibility_mat.append(range(n))
+        
+    points = []
+    for i in xrange(n):
+        point = []
+        for j in xrange(len(possibility_mat)):
+            coord = random.randint(0,len(possibility_mat[j])-1)
+            point.append(possibility_mat[j][coord])
+            possibility_mat[j].pop(coord)
+        points.append(point)
+        
+    return points
     
 def boolTable(n):
     out = []
