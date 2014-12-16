@@ -152,6 +152,9 @@ class Config:
         
         self.section = 'Video'
         self.path_to_sqlite           = self.parse('path_to_sqlite',       '',        c_type='string')
+        self.path_to_image            = self.parse('path_to_image',        '',        c_type='string')
+        self.image_name               = self.parse('image_name',           '',        c_type='string')
+        self.pixel_to_unit_ratio      = self.parse('pixel_to_unit_ratio',  '',        c_type='string')
                                                                                         
         self.section = 'Simulation'                                                              
         self.sim_steps                = self.parse('steps_per_sec',        '10',      c_type='int')      #10 recommended
@@ -270,7 +273,20 @@ def commands(parser, script_type = 'Sensi'):
         parser.add_option('-p','--point', dest = 'start_point', default = None)
         #parser.add_option('-c', '--cali',           type = list,   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration"               - off by default')        
     
+    if script_type == 'Video':
+        parser.add_option('-a', '--analysis',                             dest='mode',            default='',     help='[str] ')    
+        parser.add_option('-i', '--image',         action='store_true',   dest='loadImage',       default=False,  help='[bool] ')    
+        parser.add_option('-s', '--save',          action='store_true',   dest='save',            default=False,  help='[bool] ')    
+        parser.add_option('-v', '--video',                                dest='video_name',      default=None,   help='[str] ')    
+        parser.add_option('-g', '--fps',           type='int',            dest='fps',             default=30,     help='[int] ')    
+        parser.add_option('-m', '--min',           type='int',            dest='min_time',        default=None,   help='[int] ')    
+        parser.add_option('-M', '--max',           type='int',            dest='max_time',        default=None,   help='[int] ')    
+            
     (commands, args) = parser.parse_args() 
 
-    return commands
+    if script_type == 'Video':
+        return commands, args
+
+    else:    
+        return commands
 

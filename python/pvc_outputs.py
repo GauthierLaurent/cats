@@ -60,6 +60,31 @@ class stats:
             self.cumul_all = sublvl(allvalues)                                
         else:
             self.cumul_all = sublvl(raw)
+            
+    def add_one_dist_list(self, raw, regen=True):
+        '''adds a litst of raw data to the distributions'''
+        self.distributions.append(sublvl(raw))
+        if regen is True:
+            self.regen_cumul_all()
+        
+    def add_many_dist_list(self, raw_list):
+        '''needs a list of list to call the add one version'''
+        for raw in raw_list:
+            self.add_one_dist_list(raw, False)
+        self.regen_cumul_all()
+        
+    def pop_dist_list(self, mylist):
+        '''removes a list of distributions'''
+        for i in reversed(sorted(mylist)):
+            self.distributions.pop(i)
+        self.regen_cumul_all()
+        
+    def regen_cumul_all(self):
+        '''recalculates the cumum_all distribution'''
+        allvalues = []
+        for dist in self.distributions:
+            allvalues += dist.raw
+        self.cumul_all = sublvl(allvalues)    
 
 def calculateInstants(objects, s, lane):
     instants = []

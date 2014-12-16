@@ -23,7 +23,52 @@ import pvc_define as define
 ################################ 
 #        Calibration analysis       
 ################################
+def ks_matrix(dist_list):
+    '''building the 2 by 2 matrix'''
+    matrix = []
+    for i in xrange(len(dist_list)):
+        line_i = []
+        for j in xrange(len(dist_list)):
+            d_v, p_v = ks_twosamp(dist_list[i],dist_list[j])
+            line_i.append(d_v)
+        matrix.append(line_i)
+    return matrix
 
+def count_mat(matrix, treshold):
+    '''count how many members of each line respect the treshold'''
+    count_list = []
+    for line in matrix:
+        count_list.append(np.count_nonzero(line < treshold))
+    return count_list
+
+def filter_dist_with_ks(dist_list, treshold):
+    '''filter a list of distribution with the Komolgorov-Smirnov test to
+       keep only the distributions with the d value lower than threshold.
+       
+       returns a concatenated distribution and the list of indexes of the
+       rejected distributions
+    '''
+    
+    matrix = np.asarray(ks_matrix(dist_list))
+    count_list = count_mat(matrix, treshold)
+    index = count_list.index(max(count_list))
+
+    toconcat = []
+    rejected = []
+    for i in range(len(dist_list)):
+        if i != index and (matrix[index] < treshold )[i]:
+            toconcat.append(i)
+        elif not (matrix[index] < treshold )[i]:
+            rejected.append(i)
+    return toconcat, rejected
+
+def treat_stats_list(stats_list):
+
+    raw_list = []
+    for i in xrange(len(stats_list.distributions)):
+        raw_list.append(stats_list.distributions[i].raw)
+    return raw_list
+    
 def checkCorrespondanceOfOutputs(video_value, calculated_value):
     '''Test a range of values with the kruskalwallis test'''
 
@@ -82,8 +127,18 @@ def runVissimForCalibrationAnalysis(network, inputs):
         
         #treating the outputs
         inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
-
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(final_inpx_path) if f.endswith('fzp')], inputs)
+
+        if config.output_forward_gaps:
+            stats_list = forFMgap
+
+        if config.output_lane_change:
+            stats_list = oppLCbgap    #using before lane change gaps
+        
+        toconcat, rejected = treat_stats_list(stats_list)
+
+
+
 
         non_dist_data = [flow, oppLCcount, manLCcount]
         dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds]
@@ -125,10 +180,10 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     else:
                         p_values.append(secondary_values[4])
                 if config.output_lane_change:
-                    if secondary_values[5] == 'DNE':
+                    if secondary_values[6] == 'DNE':        #using the before gap to calibrate
                         p_values.append('inf')
                     else:
-                        p_values.append(secondary_values[5])
+                        p_values.append(secondary_values[6])
     
         return p_values, network[0]
 

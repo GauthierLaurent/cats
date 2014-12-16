@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 '''
 call exemples:
-   to draw aligmeents:  -v GP060001.sqlite trace
-   to process sqlite:   -M 9000 -g 30 process
+   to draw aligmeents:  -i -s -v GP060001.sqlite -a trace
+   to process sqlite:   -M 9000 -g 30 -a process
 '''
 
 ##################
 # Import Native Libraries
 ##################
-import os, sys, time, getopt
+import os, sys, time, getopt, optparse
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -28,27 +28,35 @@ sys.stdout = oldstdout
 import pvc_define  as define
 import pvc_write   as write
 import pvc_outputs as outputs
-import pvc_config  as config
+import pvc_config
 
 ################################ 
 #        Load settings       
 ################################    
-config   = config.Config('pvc.cfg')
+config   = pvc_config.Config('pvc.cfg')
     
 ################################ 
 #        Trace functions       
 ################################
-def traceAndclick(objects):
+def traceAndclick(objects, pixelUnitRatio = None, imgPath = None):
     '''Pops-up the drawing interface and converts the results to Traffic Intelligence point
        list format for futur conversion into Traffic Intelligence alignement data'''
 
-    fig = plt.figure()       
-    for i in range(len(objects)):        
-        #object
-        plt.plot(objects[i].getXCoordinates(), objects[i].getYCoordinates(), color = '0.75')
-        
-        #origine
-        plt.plot(objects[i].getXCoordinates()[0], objects[i].getYCoordinates()[0], 'ro', color = '0.75')
+    fig = plt.figure()
+    
+    if imgPath is not None:
+        img = plt.imread(imgPath)
+        plt.imshow(img)
+
+    for i in range(len(objects)):
+        if pixelUnitRatio is not None:
+            objects[i].plotOnWorldImage(float(pixelUnitRatio), withOrigin = True, color = '0.75')
+            
+        else:
+            #object
+            plt.plot(objects[i].getXCoordinates(), objects[i].getYCoordinates(), color = '0.75')
+            #origine
+            plt.plot(objects[i].getXCoordinates()[0], objects[i].getYCoordinates()[0], 'ro', color = '0.75')
     
     alignments = write.drawAlign(fig)
     plt.close()
@@ -63,10 +71,15 @@ def traceAndclick(objects):
         
     return Alignments
 
-def processVideolist(config, video_names, save):
+def processVideolist(config, video_names, save, loadImage):
+        
     for video_name in video_names:
         objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite, video_name), 'object')
-        points = traceAndclick(objects)
+        
+        if loadImage:
+            points = traceAndclick(objects, config.pixel_to_unit_ratio, os.path.join(config.path_to_image, config.image_name))
+        else:
+            points = traceAndclick(objects)
                     
         alignments = []
         for p in points:
@@ -292,10 +305,10 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
 #        Options       
 ################################
 def usage():
-    print ('usage: %s'
-           'Process: [-m min_time] [-M max_time] [-g fps_factor]'
-           'Trace:   [-s] [-v single_video_name]'
-           ' mode ... process/trace?' % sys.argv[0])
+    print ('usage: %s\n'
+           '\tprocess options:    [-m min_time] [-M max_time] [-g fps_factor]\n'
+           '\ttrace options:      [-s] [-v single_video_name] [-i]\n'
+           '\tanalysis choice... -a process/trace?' % sys.argv[0])
     return 100
     
 ################################ 
@@ -305,60 +318,52 @@ def usage():
 def main(argv):
     time.clock()
 
-    try:
-        (opts, args) = getopt.getopt(argv[1:], 'g:v:m:M:s')
-    except getopt.GetoptError:
-        return usage()
-    if not args: return usage()
+    commands = pvc_config.commands(optparse.OptionParser(), 'Video')
+
+    import pdb;pdb.set_trace()
+    if not commands.mode: return usage()
 
     #process options
-    min_time = None
-    max_time = None
-    fps = 30
+    min_time = commands.min_time
+    max_time = commands.max_time
+    fps      = commands.fps
     #trace options
-    video_name = None
+    video_name = commands
     video_names = []
-    save = False
+    save       = commands.save
+    loadImage  = commands.loadImage
 
-    for (k, v) in opts:
-        if k == '-v': video_name = v
-        elif k == '-g': fps = int(v)
-        elif k == '-m': min_time = int(v)
-        elif k == '-M': max_time = int(v)
-        elif k == '-s': save = True
 
     print '== Starting work for the following network : ' + str(config.inpx_name) +' =='
-
-    for arg in args:    
-        if arg == 'process':
-            print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
-            turnSqliteIntoTraj(config, min_time, max_time, fps)
-            
-        elif arg == 'trace':
-            if video_name is not None:
-                if os.path.isfile(os.path.join(config.path_to_sqlite, video_name)):
-                    video_names = [video_name]
-                else:
-                    print 'video " ' + str(video_name) + ' " not found'
-                    return usage()
+    
+    if commands.mode == 'process':
+        print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
+        turnSqliteIntoTraj(config, min_time, max_time, fps)
+        
+    elif commands.mode == 'trace':
+        if video_name is not None:
+            if os.path.isfile(os.path.join(config.path_to_sqlite, video_name)):
+                video_names = [video_name]
             else:
-                video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
-                
-            if video_names == []:
-                print 'No video specified'
+                print 'video " ' + str(video_name) + ' " not found'
                 return usage()
-    
-            print '== Loading sqlites from ' + str(config.path_to_sqlite) +' =='
-            string = video_names[0]
-            for i in xrange(len(video_names)-1):
-                string = string +', '+ str(video_names[i+1])
-            print '== Enabling alignment drawing for the following videos: '+str(string) +' =='  
-    
-            processVideolist(config, video_names, save)
-
         else:
+            video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
+            
+        if video_names == []:
+            print 'No video specified'
             return usage()
+
+        print '== Loading sqlites from ' + str(config.path_to_sqlite) +' =='
+        string = video_names[0]
+        for i in xrange(len(video_names)-1):
+            string = string +', '+ str(video_names[i+1])
+        print '== Enabling alignment drawing for the following videos: '+str(string) +' =='  
+
+        processVideolist(config, video_names, save, loadImage)
+
+    else:
+        return usage()
        
-    return 0
     
 if __name__ == '__main__': sys.exit(main(sys.argv))
