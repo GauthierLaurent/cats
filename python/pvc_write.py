@@ -12,6 +12,7 @@ Created on Thu Jul 03 11:32:08 2014
 import os, time, shutil, re
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plb
+from matplotlib import rcParams
 import numpy as np
 from scipy import stats
 import cPickle as pickle
@@ -748,11 +749,12 @@ def drawAlign(target=False):
     pj = []
     j = 0
     ## Segments
+    rcParams['lines.markersize']=24
     while not exit_cond:
         pts = []
         while len(pts) < 2:
             tellMe('Draw alignments. Left click: select points, right click: undo, middle click: exit.', target=target)
-            pts = [list(x) for x in plb.ginput(0,timeout=-1)]
+            pts = [list(x) for x in plb.ginput(0, timeout=-1)]
             if(len(pts) < 2):
                 tellMe('Too few points, starting over.', target=target)
                 time.sleep(1) # Wait a second
@@ -769,7 +771,7 @@ def drawAlign(target=False):
         
         tellMe('Add alignments? Mouse for yes, key for no.', target=target)
         exit_cond = plb.waitforbuttonpress()
-    
+    rcParams['lines.markersize']=6 #back to default value
     return alignments
 
 
