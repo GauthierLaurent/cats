@@ -422,7 +422,7 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
         for var in variables:
             out.write(str(var) + ";")
         if TypeOfAnalysis == 'Sensitivity': 
-            out.write("flow;nbr_opp;% diff;nbr_man;% diff;"
+            out.write("flow;% diff;nbr_opp;% diff;nbr_man;% diff;"
                       "m_forward;% diff;fq_forward;% diff;md_forward;% diff;tq_forward;% diff;std_forward;% diff;"
                       "m_LC_Aopp;% diff;fq_LC_Aopp;% diff;md_LC_Aopp;% diff;tq_LC_Aopp;% diff;std_LC_Aopp;% diff;"
                       "m_LC_Bopp;% diff;fq_LC_Bopp;% diff;md_LC_Bopp;% diff;tq_LC_Bopp;% diff;std_LC_Bopp;% diff;"

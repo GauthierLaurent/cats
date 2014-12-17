@@ -731,9 +731,10 @@ def OAT_sensitivity(values, inputs, default = False):
                 firstrun_results = createFirstRun_results(firstrun_results, oppLCagap)
                 firstrun_results = createFirstRun_results(firstrun_results, oppLCbgap)
                 firstrun_results = createFirstRun_results(firstrun_results, manLCagap)
-                firstrun_results = createFirstRun_results(firstrun_results, manLCbgap)               
-                firstrun_results.append(float(oppLCcount))
-                firstrun_results.append(float(manLCcount))
+                firstrun_results = createFirstRun_results(firstrun_results, manLCbgap)
+                firstrun_results.append(float(flow.mean))
+                firstrun_results.append(float(oppLCcount.mean))
+                firstrun_results.append(float(manLCcount.mean))
                 firstrun_results = createFirstRun_results(firstrun_results, forward_speeds)
                 
             else:
@@ -768,20 +769,25 @@ def OAT_sensitivity(values, inputs, default = False):
                 delta_std_Bmangap         = createDelta(firstrun_results[24], manLCbgap.cumul_all.std)
                 
                 if firstrun_results[25] != 0:
-                    delta_oppLCcount = (oppLCcount.mean - firstrun_results[25])/firstrun_results[25]
+                    delta_flow = (flow.mean - firstrun_results[25])/firstrun_results[25]
+                else:
+                    delta_flow = '---'
+                
+                if firstrun_results[26] != 0:
+                    delta_oppLCcount = (oppLCcount.mean - firstrun_results[26])/firstrun_results[26]
                 else:
                     delta_oppLCcount = '---'
                     
-                if firstrun_results[26] != 0:
-                    delta_manLCcount = (manLCcount.mean - firstrun_results[26])/firstrun_results[26]
+                if firstrun_results[27] != 0:
+                    delta_manLCcount = (manLCcount.mean - firstrun_results[27])/firstrun_results[27]
                 else:
                     delta_manLCcount = '---'                    
                 
-                delta_mean_Speeds         = createDelta(firstrun_results[27], forward_speeds.cumul_all.mean)
-                delta_firstQuart_Speeds   = createDelta(firstrun_results[28], forward_speeds.cumul_all.firstQuart)
-                delta_median_Speeds       = createDelta(firstrun_results[29], forward_speeds.cumul_all.median)
-                delta_thirdQuart_Speeds   = createDelta(firstrun_results[30], forward_speeds.cumul_all.thirdQuart)
-                delta_std_Speeds          = createDelta(firstrun_results[31], forward_speeds.cumul_all.std)
+                delta_mean_Speeds         = createDelta(firstrun_results[28], forward_speeds.cumul_all.mean)
+                delta_firstQuart_Speeds   = createDelta(firstrun_results[29], forward_speeds.cumul_all.firstQuart)
+                delta_median_Speeds       = createDelta(firstrun_results[30], forward_speeds.cumul_all.median)
+                delta_thirdQuart_Speeds   = createDelta(firstrun_results[31], forward_speeds.cumul_all.thirdQuart)
+                delta_std_Speeds          = createDelta(firstrun_results[32], forward_speeds.cumul_all.std)
                             
             #printing graphs
             if commands.vis_save:
@@ -799,7 +805,7 @@ def OAT_sensitivity(values, inputs, default = False):
                     
             #writing to file
             if default is True:
-                text.append(["Default_values", corrected_values, flow.mean, oppLCcount.mean, "---", manLCcount.mean, "---",
+                text.append(["Default_values", corrected_values, flow.mean, "---",  oppLCcount.mean, "---", manLCcount.mean, "---",
                              forFMgap.cumul_all.mean,  "---", forFMgap.cumul_all.firstQuart,  "---", forFMgap.cumul_all.median,  "---", forFMgap.cumul_all.thirdQuart,  "---", forFMgap.cumul_all.std,  "---",
                              oppLCagap.cumul_all.mean, "---", oppLCagap.cumul_all.firstQuart, "---", oppLCagap.cumul_all.median, "---", oppLCagap.cumul_all.thirdQuart, "---", oppLCagap.cumul_all.std, "---",
                              oppLCbgap.cumul_all.mean, "---", oppLCbgap.cumul_all.firstQuart, "---", oppLCbgap.cumul_all.median, "---", oppLCbgap.cumul_all.thirdQuart, "---", oppLCbgap.cumul_all.std, "---",
@@ -808,7 +814,7 @@ def OAT_sensitivity(values, inputs, default = False):
                              forward_speeds.cumul_all.mean, "---", forward_speeds.cumul_all.firstQuart, "---", forward_speeds.cumul_all.median, "---", forward_speeds.cumul_all.thirdQuart, "---", forward_speeds.cumul_all.std, "---"])       
 
             else:
-                text.append([value_name, corrected_values, flow.mean, oppLCcount.mean, delta_oppLCcount, manLCcount.mean, delta_manLCcount,
+                text.append([value_name, corrected_values, flow.mean, delta_flow, oppLCcount.mean, delta_oppLCcount, manLCcount.mean, delta_manLCcount,
                              forFMgap.cumul_all.mean,  delta_mean_fgap,    forFMgap.cumul_all.firstQuart,  delta_firstQuart_fgap,    forFMgap.cumul_all.median,  delta_median_fgaps,   forFMgap.cumul_all.thirdQuart,  delta_thirdQuart_fgaps,   forFMgap.cumul_all.std,  delta_std_fgaps,
                              oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCagap.cumul_all.firstQuart, delta_firstQuart_Aoppgap, oppLCagap.cumul_all.median, delta_median_Aoppgap, oppLCagap.cumul_all.thirdQuart, delta_thirdQuart_Aoppgap, oppLCagap.cumul_all.std, delta_std_Aoppgap,
                              oppLCbgap.cumul_all.mean, delta_mean_Boppgap, oppLCbgap.cumul_all.firstQuart, delta_firstQuart_Boppgap, oppLCbgap.cumul_all.median, delta_median_Boppgap, oppLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Boppgap, oppLCbgap.cumul_all.std, delta_std_Boppgap,
