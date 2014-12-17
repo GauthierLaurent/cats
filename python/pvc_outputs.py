@@ -21,9 +21,24 @@ import storage as TraffIntStorage
 sys.stdout = oldstdout #Re-enable output
 
 ##################
-# Output treatment tools
+# Data classes
 ##################
-
+def dist(x):
+    xx = np.array(x)
+    nlist = np.unique(xx)
+    l = float(len(x))
+    if len(nlist)==len(x):
+        stats = [1./l]*len(x)
+    else:
+        stats = [np.sum(xx==i)/l for i in nlist]
+    cumul = np.cumsum(stats)
+    mean = np.mean(xx)
+    firstQuart = np.percentile(xx,25)
+    median = np.median(xx)
+    thirdQuart = np.percentile(xx,75)
+    var = np.var(xx)      
+    return cumul,nlist,mean,firstQuart,median,thirdQuart,var
+    
 class sublvl:
     def __init__(self, raw):
         if raw != []:
@@ -51,30 +66,27 @@ class sublvl:
 class stats:
     def __init__(self, raw):
         self.distributions  = []
-        allvalues = []
+
         if raw != []:
             for l in raw:
-                for m in l:
-                    allvalues.append(m)
                 self.distributions.append(sublvl(l))
-            self.cumul_all = sublvl(allvalues)                                
+            self.regen_cumul_all()                                
         else:
             self.cumul_all = sublvl(raw)
-            
-    def add_one_dist_list(self, raw, regen=True):
-        '''adds a litst of raw data to the distributions'''
+    
+    def add_one_dist_list(self, raw):
+        '''adds a raw data list to the distributions'''
         self.distributions.append(sublvl(raw))
-        if regen is True:
-            self.regen_cumul_all()
+        self.regen_cumul_all()
         
     def add_many_dist_list(self, raw_list):
-        '''needs a list of list to call the add one version'''
+        '''needs a list of raw data list'''
         for raw in raw_list:
-            self.add_one_dist_list(raw, False)
+            self.distributions.append(sublvl(raw))
         self.regen_cumul_all()
         
     def pop_dist_list(self, mylist):
-        '''removes a list of distributions'''
+        '''mylist must refer to the indexes of the list of distributions to pop'''
         for i in reversed(sorted(mylist)):
             self.distributions.pop(i)
         self.regen_cumul_all()
@@ -84,8 +96,44 @@ class stats:
         allvalues = []
         for dist in self.distributions:
             allvalues += dist.raw
-        self.cumul_all = sublvl(allvalues)    
+        self.cumul_all = sublvl(allvalues) 
+        
+class singleValueStats:
+    def __init__(self,raw):
+        self.raw = raw
+        self.recalculate()
+        
+    def addOne(self,number):
+        self.raw.append(number)
+        self.recalculate()
+        
+    def addMany(self,mylist):
+        for i in mylist:
+            self.raw.append(i)
+        self.recalculate()
+        
+    def popList(self,mylist):
+        '''mylist must refer to the indexes of the numbers to pop'''
+        for i in reversed(sorted(mylist)):
+            self.raw.pop(i)
+        self.recalculate()
+        
+    def recalculate(self):
+        '''calculates usfull data'''
+        if self.raw != []:
+            self.mean = np.mean(self.raw)
+            self.var = np.var(self.raw)
+            self.std = np.std(self.raw)
+            self.count = len(self.raw)
+        else:
+            self.mean = 0
+            self.var = 0
+            self.std = 0
+            self.count = len(self.raw)         
 
+##################
+# Output treatment tools
+##################
 def calculateInstants(objects, s, lane):
     instants = []
     speeds = []
@@ -288,27 +336,6 @@ def laneChange(objects, corridors):
                                         manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
     
     return oppObjDict, manObjDict, laneDict
-    
-def dist(x):
-    xx = np.array(x)
-    nlist = np.unique(xx)
-    l = float(len(x))
-    if len(nlist)==len(x):
-        stats = [1./l]*len(x)
-    else:
-        stats = [np.sum(xx==i)/l for i in nlist]
-    cumul = np.cumsum(stats)
-    mean = np.mean(xx)
-    firstQuart = np.percentile(xx,25)
-    median = np.median(xx)
-    thirdQuart = np.percentile(xx,75)
-    var = np.var(xx)      
-    return cumul,nlist,mean,firstQuart,median,thirdQuart,var
-    
-def computeMeanfromOld(data,old_num):
-    '''data must be provided as a list: [old_mean, a,b,c,...]'''
-    new_mean = (data[0] * old_num + sum(data[1:]) ) / ( old_num + len(data[1:]) )                
-    return new_mean
 
 def treatVissimOutputs(files, inputs):
     '''Treat outputs in the given folder 
@@ -337,82 +364,80 @@ def treatVissimOutputs(files, inputs):
         raw_man_LC_bgaps    = []
         raw_forward_speeds  = []
     else:
-        raw_opportunisticLC = old_data[0]
-        raw_mandatoryLC     = old_data[1] 
-        raw_flow            = old_data[2]
-        raw_forward_gaps    = old_data[3]
-        raw_opp_LC_agaps    = old_data[4]
-        raw_opp_LC_bgaps    = old_data[5]
-        raw_man_LC_agaps    = old_data[6]
-        raw_man_LC_bgaps    = old_data[7]
-        old_num             = old_data[8]   #Number of previous data. Is used to calculate the new means (old_mean*N+new_stuff)/(N+nbr_new_stuff)
-        raw_forward_speeds  = old_data[9]
+        mean_flow            = old_data[0]
+        mean_opportunisticLC = old_data[1]
+        mean_mandatoryLC     = old_data[2]
+        forward_followgap    = old_data[3]
+        opportunistic_LCagap = old_data[4]
+        opportunistic_LCbgap = old_data[5]
+        mandatory_LCagap     = old_data[6]
+        mandatory_LCbgap     = old_data[7]
+        forward_speeds       = old_data[8]
 
-    if files is not None:    #this was implemented to be able to concatenate data received by a multiprocessing run
-        for filename in files:
-            if verbose:
-                print ' === Starting calculations for ' + filename + ' ===  |'    
-            objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
-            raw_flow.append(len(objects))
-            
-            #lane building block
-            to_eval = []
-            for j in xrange(len(corridors)):
-                to_eval += corridors[j].to_eval
+    for filename in files:
+        if verbose:
+            print ' === Starting calculations for ' + filename + ' ===  |'    
+        objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
+        raw_flow.append(len(objects))
+        
+        #lane building block
+        to_eval = []
+        for j in xrange(len(corridors)):
+            to_eval += corridors[j].to_eval
    
-            lanes = {}
-            for o in objects:
-                o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
-                for i in xrange(len(o.curvilinearPositions.lanes)):
-                    p = o.curvilinearPositions[i]
-                    lane = p[2]
-                    s = p[0]
-                    if int(lane.split('_')[0]) in to_eval:
-                        if lane not in lanes:
-                            lanes[lane] = [s, s]
-                        else:
-                            if s < lanes[str(lane)][0]:
-                                lanes[str(lane)][0] = s
-                            elif s > lanes[str(lane)][1]:
-                                lanes[str(lane)][1] = s
-    
-            #lane change count by type        
-            oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
-               
-            if verbose:
-                print ' == Lane change compilation done ==  |' + str(time.clock())
-            raw_opportunisticLC.append(sum([len(oppObjDict[i]) for i in oppObjDict]))
-            raw_mandatoryLC.append(sum([len(manObjDict[i]) for i in manObjDict]))
-            
-            #forward gap analysis
-            temp_raw_forward_gaps = []
-            temp_raw_speeds = []
-            for index,lane in enumerate(lanes):  
-                s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
-                raw_gaps, raw_speeds = forwardGaps(objects, s, lane)
-                if raw_gaps != []: temp_raw_forward_gaps += list(raw_gaps)
-                if raw_speeds != []: temp_raw_speeds += list(raw_speeds)    
-                if verbose:
-                    print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock())
-            if temp_raw_forward_gaps != []:
-                raw_forward_gaps.append(temp_raw_forward_gaps)
-                raw_forward_speeds.append(temp_raw_speeds)
-                
-            #mandatory lane change gaps
-            agaps, bgaps = laneChangeGaps(manObjDict, laneDict, objects)
-            if agaps.any(): raw_man_LC_agaps.append(agaps)
-            if bgaps.any(): raw_man_LC_bgaps.append(bgaps)
-            if verbose:
-                print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
+        lanes = {}
+        for o in objects:
+            o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
+            for i in xrange(len(o.curvilinearPositions.lanes)):
+                p = o.curvilinearPositions[i]
+                lane = p[2]
+                s = p[0]
+                if int(lane.split('_')[0]) in to_eval:
+                    if lane not in lanes:
+                        lanes[lane] = [s, s]
+                    else:
+                        if s < lanes[str(lane)][0]:
+                            lanes[str(lane)][0] = s
+                        elif s > lanes[str(lane)][1]:
+                            lanes[str(lane)][1] = s
 
-            #opportunistic lane change gaps
-            agaps, bgaps = laneChangeGaps(oppObjDict, laneDict, objects)
-            if agaps.any(): raw_opp_LC_agaps.append(agaps)
-            if bgaps.any(): raw_opp_LC_bgaps.append(bgaps)
+        #lane change count by type        
+        oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
+           
+        if verbose:
+            print ' == Lane change compilation done ==  |' + str(time.clock())
+        raw_opportunisticLC.append(sum([len(oppObjDict[i]) for i in oppObjDict]))
+        raw_mandatoryLC.append(sum([len(manObjDict[i]) for i in manObjDict]))
+        
+        #forward gap analysis
+        temp_raw_forward_gaps = []
+        temp_raw_speeds = []
+        for index,lane in enumerate(lanes):  
+            s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
+            raw_gaps, raw_speeds = forwardGaps(objects, s, lane)
+            if raw_gaps != []: temp_raw_forward_gaps += list(raw_gaps)
+            if raw_speeds != []: temp_raw_speeds += list(raw_speeds)    
             if verbose:
-                print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
-                 
-                print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
+                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock())
+        if temp_raw_forward_gaps != []:
+            raw_forward_gaps.append(temp_raw_forward_gaps)
+            raw_forward_speeds.append(temp_raw_speeds)
+            
+        #mandatory lane change gaps
+        agaps, bgaps = laneChangeGaps(manObjDict, laneDict, objects)
+        if agaps.any(): raw_man_LC_agaps.append(agaps)
+        if bgaps.any(): raw_man_LC_bgaps.append(bgaps)
+        if verbose:
+            print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
+
+        #opportunistic lane change gaps
+        agaps, bgaps = laneChangeGaps(oppObjDict, laneDict, objects)
+        if agaps.any(): raw_opp_LC_agaps.append(agaps)
+        if bgaps.any(): raw_opp_LC_bgaps.append(bgaps)
+        if verbose:
+            print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
+             
+            print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
 
     '''
     write.writeListToCSV(raw_forward_gaps, './raw_forward_gaps.csv')
@@ -423,39 +448,27 @@ def treatVissimOutputs(files, inputs):
     '''
                
     #Treating raw outputs to compute means
-    if raw_opportunisticLC != []:
-        if old_data == []:
-            mean_opportunisticLC = scipy.mean(raw_opportunisticLC)
-        else:
-            mean_opportunisticLC = computeMeanfromOld(raw_opportunisticLC,old_num)
-    else:
-        mean_opportunisticLC = 0
+    if old_data == []:
+        mean_flow.addMany(raw_flow)
+        mean_opportunisticLC.addMany(raw_opportunisticLC)
+        mean_mandatoryLC.addMany(raw_mandatoryLC)
+        forward_followgap.add_many_dist_list(raw_forward_gaps)
+        opportunistic_LCagap.add_many_dist_list(raw_opp_LC_agaps)
+        opportunistic_LCbgap.add_many_dist_list(raw_opp_LC_bgaps)
+        mandatory_LCagap.add_many_dist_list(raw_man_LC_agaps)
+        mandatory_LCbgap.add_many_dist_list(raw_man_LC_bgaps)
+        forward_speeds.add_many_dist_list(raw_forward_speeds)    
     
-    if raw_mandatoryLC != []:
-        if old_data == []:
-            mean_mandatoryLC = scipy.mean(raw_mandatoryLC)
-
-        else:
-            mean_mandatoryLC = computeMeanfromOld(raw_mandatoryLC,old_num)
-            
     else:
-        mean_mandatoryLC = 0
-    
-    if raw_flow != []:
-        if old_data == []:
-            mean_flow = scipy.mean(raw_flow)
-        else:
-            mean_flow = computeMeanfromOld(raw_flow,old_num)
-    else:
-        mean_flow = 0
-    
-
-    forward_followgap = stats(raw_forward_gaps)
-    opportunistic_LCagap = stats(raw_opp_LC_agaps)
-    opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
-    mandatory_LCagap = stats(raw_man_LC_agaps)
-    mandatory_LCbgap = stats(raw_man_LC_bgaps)
-    forward_speeds = stats(raw_forward_speeds)
+        mean_flow            = singleValueStats(raw_flow)
+        mean_opportunisticLC = singleValueStats(raw_opportunisticLC)
+        mean_mandatoryLC     = singleValueStats(raw_mandatoryLC)    
+        forward_followgap    = stats(raw_forward_gaps)
+        opportunistic_LCagap = stats(raw_opp_LC_agaps)
+        opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
+        mandatory_LCagap     = stats(raw_man_LC_agaps)
+        mandatory_LCbgap     = stats(raw_man_LC_bgaps)
+        forward_speeds       = stats(raw_forward_speeds)
     
     return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap, forward_speeds
 
@@ -498,15 +511,14 @@ def generateRandomOutputs(parameters):
         raw_man_LC_bgaps.append(randomGaussRange(7,10,100))
         raw_foward_speed.append(randomGaussRange(7,10,100))
     
-    mean_opportunisticLC =  scipy.mean(raw_opportunisticLC)
-    mean_mandatoryLC =  scipy.mean(raw_mandatoryLC)  
-    mean_flow =  scipy.mean(raw_flow)
-    
-    forward_followgap = stats(raw_forward_gaps)
+    mean_opportunisticLC = singleValueStats(raw_opportunisticLC)
+    mean_mandatoryLC     = singleValueStats(raw_mandatoryLC)  
+    mean_flow            = singleValueStats(raw_flow)    
+    forward_followgap    = stats(raw_forward_gaps)
     opportunistic_LCagap = stats(raw_opp_LC_agaps)
     opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
-    mandatory_LCagap = stats(raw_man_LC_agaps)
-    mandatory_LCbgap = stats(raw_man_LC_bgaps)
-    forward_speeds = stats(raw_foward_speed)
+    mandatory_LCagap     = stats(raw_man_LC_agaps)
+    mandatory_LCbgap     = stats(raw_man_LC_bgaps)
+    forward_speeds       = stats(raw_foward_speed)
     
     return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap, forward_speeds

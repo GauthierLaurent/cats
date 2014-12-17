@@ -13,6 +13,7 @@ import os, shutil, sys, copy
 from scipy.stats import t, chi2
 from scipy.stats.mstats import ks_twosamp
 import cPickle as pickle
+import numpy as np
 
 #Internal
 import pvc_write as write
@@ -249,39 +250,31 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
                     if commands.multi is True:
                         inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
                         results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands)            
+                        
                         #building the old_data            
                         for i in range(len(results)):
                             if i == 0:
-                                                    
-                                old_nb_opp = [ results[i][1] ]
-                                old_nb_man = [ results[i][2] ]
-                                old_flow   = [ results[i][0] ]
-                                old_FM     = [ results[i][3].distributions[j].raw for j in range(len(results[i][3].distributions)) if results[i][3].distributions[j] != [] ]
-                                old_oppA   = [ results[i][4].distributions[j].raw for j in range(len(results[i][4].distributions)) if results[i][4].distributions[j] != [] ]
-                                old_oppB   = [ results[i][5].distributions[j].raw for j in range(len(results[i][5].distributions)) if results[i][5].distributions[j] != [] ]
-                                old_manA   = [ results[i][6].distributions[j].raw for j in range(len(results[i][6].distributions)) if results[i][6].distributions[j] != [] ]
-                                old_manB   = [ results[i][7].distributions[j].raw for j in range(len(results[i][7].distributions)) if results[i][7].distributions[j] != [] ]
+                                flow            = results[i][0]
+                                oppLCcount      = results[i][1]
+                                manLCcount      = results[i][2]
+                                forFMgap        = results[i][3]
+                                oppLCagap       = results[i][4]
+                                oppLCbgap       = results[i][5]
+                                manLCagap       = results[i][6]
+                                manLCbgap       = results[i][7]
+                                forward_speeds  = results[i][8]                  
                                                    
                             else:
-                                old_nb_opp.append(results[i][1])
-                                old_nb_man.append(results[i][2])
-                                old_flow.append(results[i][0])
-                                for j in range(len(results[i][3].distributions)):
-                                    if results[i][3].distributions[j] != []: old_FM.append(results[i][3].distributions[j].raw)
-                                for j in range(len(results[i][4].distributions)):
-                                    if results[i][4].distributions[j] != []: old_oppA.append(results[i][4].distributions[j].raw)
-                                for j in range(len(results[i][5].distributions)):
-                                    if results[i][5].distributions[j] != []: old_oppB.append(results[i][5].distributions[j].raw)
-                                for j in range(len(results[i][6].distributions)):
-                                    if results[i][6].distributions[j] != []: old_manA.append(results[i][6].distributions[j].raw)
-                                for j in range(len(results[i][7].distributions)):
-                                    if results[i][7].distributions[j] != []: old_manB.append(results[i][7].distributions[j].raw)
-                               
-                        old_num    = iterrations_ran
-                        old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]
-                        inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
-                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs(None, inputs)
-                                            
+                                flow.addMany(                     results[i][0] )
+                                oppLCcount.addMany(               results[i][1] )
+                                manLCcount.addMany(               results[i][2] )
+                                forFMgap.add_many_dist_list(      results[i][3] )
+                                oppLCagap.add_many_dist_list(     results[i][4] )
+                                oppLCbgap.add_many_dist_list(     results[i][5] )
+                                manLCagap.add_many_dist_list(     results[i][6] )
+                                manLCbgap.add_many_dist_list(     results[i][7] )
+                                forward_speeds.add_many_dist_list(results[i][8] ) 
+
                     else:
                         inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
                         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
@@ -315,16 +308,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
         
         #building the old_data
-        old_nb_opp = [oppLCcount]
-        old_nb_man = [manLCcount]
-        old_flow   = [flow]
-        old_FM     = [ forFMgap.distributions[i].raw for i in range(len(forFMgap.distributions)) ]
-        old_oppA   = [ oppLCagap.distributions[i].raw for i in range(len(oppLCagap.distributions)) ]
-        old_oppB   = [ oppLCbgap.distributions[i].raw for i in range(len(oppLCbgap.distributions)) ]
-        old_manA   = [ manLCagap.distributions[i].raw for i in range(len(manLCagap.distributions)) ]
-        old_manB   = [ manLCbgap.distributions[i].raw for i in range(len(manLCbgap.distributions)) ]
-        old_num    = iterrations_ran
-        old_data   = [old_nb_opp, old_nb_man, old_flow, old_FM, old_oppA, old_oppB, old_manA, old_manB, old_num]        
+        old_data   = [flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds]        
         
         #incrementing needed parameters                
         parameters[1] = first_seed + iterrations_ran    #need to increment the starting Rand Seed by the number of it. already ran
@@ -562,7 +546,7 @@ def monteCarlo_outputs(valuesVector, inputs):
                 
         #writing to file
         if success == True:
-            text.append([value+lowerbound, valuesVector[value][0],flow,oppLCcount,manLCcount,
+            text.append([value+lowerbound, valuesVector[value][0],flow.mean,oppLCcount.mean,manLCcount.mean,
                          forFMgap.cumul_all.mean,  forFMgap.cumul_all.firstQuart,  forFMgap.cumul_all.median,  forFMgap.cumul_all.thirdQuart,  forFMgap.cumul_all.std,  
                          oppLCagap.cumul_all.mean, oppLCagap.cumul_all.firstQuart, oppLCagap.cumul_all.median, oppLCagap.cumul_all.thirdQuart, oppLCagap.cumul_all.std,
                          oppLCbgap.cumul_all.mean, oppLCbgap.cumul_all.firstQuart, oppLCbgap.cumul_all.median, oppLCbgap.cumul_all.thirdQuart, oppLCbgap.cumul_all.std,
@@ -784,12 +768,12 @@ def OAT_sensitivity(values, inputs, default = False):
                 delta_std_Bmangap         = createDelta(firstrun_results[24], manLCbgap.cumul_all.std)
                 
                 if firstrun_results[25] != 0:
-                    delta_oppLCcount = (oppLCcount - firstrun_results[25])/firstrun_results[25]
+                    delta_oppLCcount = (oppLCcount.mean - firstrun_results[25])/firstrun_results[25]
                 else:
                     delta_oppLCcount = '---'
                     
                 if firstrun_results[26] != 0:
-                    delta_manLCcount = (manLCcount - firstrun_results[26])/firstrun_results[26]
+                    delta_manLCcount = (manLCcount.mean - firstrun_results[26])/firstrun_results[26]
                 else:
                     delta_manLCcount = '---'                    
                 
@@ -815,7 +799,7 @@ def OAT_sensitivity(values, inputs, default = False):
                     
             #writing to file
             if default is True:
-                text.append(["Default_values", corrected_values, flow, oppLCcount, "---", manLCcount, "---",
+                text.append(["Default_values", corrected_values, flow.mean, oppLCcount.mean, "---", manLCcount.mean, "---",
                              forFMgap.cumul_all.mean,  "---", forFMgap.cumul_all.firstQuart,  "---", forFMgap.cumul_all.median,  "---", forFMgap.cumul_all.thirdQuart,  "---", forFMgap.cumul_all.std,  "---",
                              oppLCagap.cumul_all.mean, "---", oppLCagap.cumul_all.firstQuart, "---", oppLCagap.cumul_all.median, "---", oppLCagap.cumul_all.thirdQuart, "---", oppLCagap.cumul_all.std, "---",
                              oppLCbgap.cumul_all.mean, "---", oppLCbgap.cumul_all.firstQuart, "---", oppLCbgap.cumul_all.median, "---", oppLCbgap.cumul_all.thirdQuart, "---", oppLCbgap.cumul_all.std, "---",
@@ -824,7 +808,7 @@ def OAT_sensitivity(values, inputs, default = False):
                              forward_speeds.cumul_all.mean, "---", forward_speeds.cumul_all.firstQuart, "---", forward_speeds.cumul_all.median, "---", forward_speeds.cumul_all.thirdQuart, "---", forward_speeds.cumul_all.std, "---"])       
 
             else:
-                text.append([value_name, corrected_values, flow,oppLCcount, delta_oppLCcount, manLCcount, delta_manLCcount,
+                text.append([value_name, corrected_values, flow.mean, oppLCcount.mean, delta_oppLCcount, manLCcount.mean, delta_manLCcount,
                              forFMgap.cumul_all.mean,  delta_mean_fgap,    forFMgap.cumul_all.firstQuart,  delta_firstQuart_fgap,    forFMgap.cumul_all.median,  delta_median_fgaps,   forFMgap.cumul_all.thirdQuart,  delta_thirdQuart_fgaps,   forFMgap.cumul_all.std,  delta_std_fgaps,
                              oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCagap.cumul_all.firstQuart, delta_firstQuart_Aoppgap, oppLCagap.cumul_all.median, delta_median_Aoppgap, oppLCagap.cumul_all.thirdQuart, delta_thirdQuart_Aoppgap, oppLCagap.cumul_all.std, delta_std_Aoppgap,
                              oppLCbgap.cumul_all.mean, delta_mean_Boppgap, oppLCbgap.cumul_all.firstQuart, delta_firstQuart_Boppgap, oppLCbgap.cumul_all.median, delta_median_Boppgap, oppLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Boppgap, oppLCbgap.cumul_all.std, delta_std_Boppgap,
