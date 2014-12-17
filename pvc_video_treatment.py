@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 '''
 call exemples:
-   to draw aligmeents:  -i -s -v GP060001.sqlite -a trace
+   to draw aligmeents:  -i -s -v GP060001.sqlite
    to process sqlite:   -M 9000 -g 30 -a process
 '''
 
 ##################
 # Import Native Libraries
 ##################
-import os, sys, time, getopt, optparse
+import os, sys, time, argparse
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -318,10 +318,7 @@ def usage():
 def main(argv):
     time.clock()
 
-    commands = pvc_config.commands(optparse.OptionParser(), 'Video')
-
-    import pdb;pdb.set_trace()
-    if not commands.mode: return usage()
+    commands = pvc_config.commands(argparse.ArgumentParser(), 'Video')
 
     #process options
     min_time = commands.min_time
@@ -332,7 +329,6 @@ def main(argv):
     video_names = []
     save       = commands.save
     loadImage  = commands.loadImage
-
 
     print '== Starting work for the following network : ' + str(config.inpx_name) +' =='
     
@@ -346,13 +342,13 @@ def main(argv):
                 video_names = [video_name]
             else:
                 print 'video " ' + str(video_name) + ' " not found'
-                return usage()
+                return 100
         else:
             video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
             
         if video_names == []:
             print 'No video specified'
-            return usage()
+            return 100
 
         print '== Loading sqlites from ' + str(config.path_to_sqlite) +' =='
         string = video_names[0]
@@ -363,7 +359,7 @@ def main(argv):
         processVideolist(config, video_names, save, loadImage)
 
     else:
-        return usage()
+        return 100
        
     
 if __name__ == '__main__': sys.exit(main(sys.argv))

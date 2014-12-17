@@ -5,8 +5,8 @@
 #  Dependencies listed in Libraries; 
 ################################################################################
 '''
-to import a starting point, call with -p __list of points separated by comma__
-ex: -p 1.0,-2.0,3.0,4.5,6  | the list may or may not be enclosed in brackets
+to import a starting point, call with -p __list of points separated by spaces__
+ex: -p 1.0 -2.0 3.0 4.5 6  
 '''
 ################################################################################
 
@@ -16,7 +16,7 @@ def main():
     ################################ 
     
     #Native dependencies
-    import os, sys, shutil, optparse, subprocess
+    import os, sys, shutil, argparse, subprocess
     
     #Internal
     import pvc_write  as write
@@ -37,7 +37,7 @@ def main():
     ################################ 
     #        Load settings       
     ################################    
-    commands = config.commands(optparse.OptionParser(),'Cali')
+    commands = config.commands(argparse.ArgumentParser(),'Cali')
     config   = config.Config('calib.cfg')      
             
     ################################ 
@@ -76,7 +76,7 @@ def main():
 
     ##looking for an input starting point
     if commands.start_point is not None:    
-        starting_point = commands.start_point.replace('[','').replace(']','').split(',')
+        starting_point = commands.start_point
         
         #checking for compatibility with the number of parameter specified
         if len(starting_point) == len(variables):

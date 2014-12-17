@@ -246,6 +246,7 @@ class Config:
 ##################
 # Parse commands
 ##################
+'''
 def commands(parser, script_type = 'Sensi'):
     ## Trajectory extraction (Traffic Intelligence), off by default
     parser.add_option(      '--concat',         action='store_true',   dest='concat',         default=False,  help='[bool] Run concatenation functions')
@@ -274,7 +275,7 @@ def commands(parser, script_type = 'Sensi'):
         #parser.add_option('-c', '--cali',           type = list,   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration"               - off by default')        
     
     if script_type == 'Video':
-        parser.add_option('-a', '--analysis',                             dest='mode',            default='',     help='[str] ')    
+        parser.add_option('-a', '--analysis',                             dest='analysis',        default='',     help='[str] ')    
         parser.add_option('-i', '--image',         action='store_true',   dest='loadImage',       default=False,  help='[bool] ')    
         parser.add_option('-s', '--save',          action='store_true',   dest='save',            default=False,  help='[bool] ')    
         parser.add_option('-v', '--video',                                dest='video_name',      default=None,   help='[str] ')    
@@ -283,10 +284,32 @@ def commands(parser, script_type = 'Sensi'):
         parser.add_option('-M', '--max',           type='int',            dest='max_time',        default=None,   help='[int] ')    
             
     (commands, args) = parser.parse_args() 
+        
+    return commands
+'''
+def commands(parser, script_type):
+    if script_type == 'Sensi':
+        ## Analysis, on by default
+        parser.add_argument('-a', '--analysis',       choices=['S','MC','OAT'],     dest='analysis',       default='OAT',  help='Choose from either S, MC or OAT.\n      S activates the Student analysis,\n      MC activates the Monte Carlo sensitivity analysis,\n      OAT activates the One-at-a-time sensitivity analysis') 
+        parser.add_argument('-m', '--multi',          action='store_false',         dest='multi',          default=True,   help='Disables multiprocessing while running the analysis')
+        parser.add_argument('-u', '--multi_testing',  action='store_true',          dest='multi_test',     default=False,  help='Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback when a process terminates')
+        parser.add_argument('-f', '--inpx_file',                                    dest='file',                           help='[str]  Load specific inpx file')
+        parser.add_argument('-a', '--save-figures',   action='store_true',          dest='vis_save',       default=False,  help='Save figures')
+        parser.add_argument(      '--figure-format',                                dest='fig_format',     default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')
+        parser.add_argument('-l', '--save-swp',       action='store_true',          dest='save_swp',       default=False,  help='Enables Vissim lane change (.swp) outputs')
+        parser.add_argument('-v', '--verbose',        action='store_true',          dest='verbose',        default=False,  help='Level of detail of results')
+        parser.add_argument('-t', '--test',           action='store_true',          dest='mode',           default=False,  help='Put the code into test mode, bypassing Vissim and generating random outputs')
 
+    if script_type == 'Cali':
+        parser.add_argument('-p','--point',          type=float, nargs='*',         dest = 'start_point',   default = None,  help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
+    
     if script_type == 'Video':
-        return commands, args
-
-    else:    
-        return commands
-
+        parser.add_argument('-a', '--analysis',      choices=['trace','process'],   dest='analysis',        default='trace', help='Chosse between trace and process. To draw alignements onto a visualisation of the data, select trace, to assign vehicule trajectories to predefined alignements select process')
+        parser.add_argument('-i', '--image',         action='store_true',           dest='loadImage',       default=False,   help='Trace option. Loads the trajectories onto the image specified in the calib.cfg file')    
+        parser.add_argument('-s', '--save',          action='store_true',           dest='save',            default=False,   help='Trace option. Saves the alignement data into the csv file specified in the calib.cfg file ')    
+        parser.add_argument('-v', '--video',         nargs='*',                     dest='video_name',                       help='[str] ')    
+        parser.add_argument('-g', '--fps',           type=int,                      dest='fps',             default=30,      help='Process option. Frame per second of the choosen video. Needed to only to trace accurate graphs and if different than 30')    
+        parser.add_argument('-m', '--min',           type=int,                      dest='min_time',        default=None,    help='Process option. Choose if some of the early frames of the video is to be cut out. Number is in frames (conversions with fps has to be done before input) ')    
+        parser.add_argument('-M', '--max',           type=int,                      dest='max_time',        default=None,    help='Process option. Choose if some of the late frames of the video is to be cut out. Number is in frames (conversions with fps has to be done before input)  ')
+    
+    return parser.parse_args()

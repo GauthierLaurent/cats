@@ -20,7 +20,7 @@ def main():
     ################################ 
     
     #Native dependencies
-    import os, sys, time, optparse, random
+    import os, sys, time, argparse
     
     #Internal
     import pvc_vissim   as vissim
@@ -42,7 +42,7 @@ def main():
     ################################ 
     #        Load settings       
     ################################    
-    commands = config.commands(optparse.OptionParser())
+    commands = config.commands(argparse.ArgumentParser(),'Sensi')
     config   = config.Config('pvc.cfg')
     
     #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
@@ -66,25 +66,6 @@ def main():
         print '*                                                              *'
         print '*           Reverting to the default value (99)                *'        
         print '****************************************************************'
-        
-    ################################ 
-    #        Module verifications       
-    ################################
-    '''as -s is on by default, this is presently useless. It will become usefull
-       in the futur when -s is turned off by default '''
-       
-    if not (commands.sensitivity or commands.student or commands.calibration or commands.montecarlo):
-        print '****************************************************************'     
-        print '*   No module was chosen, please use:                          *'
-        print '*                                                              *'
-        print '*        -d to start the Statistical precision Analysis,       *'
-        print '*        -o to start the Sensitivity Monte Carlo Analysis,     *'        
-        print '*   or                                                         *'
-        print '*        -s to start the Sensitivity One-at-a-time Analysis    *'
-        print '*                                                              *'
-        print '*                 ==== Closing program ===                     *'
-        print '****************************************************************'
-        sys.exit()
         
     ############################################### 
     #        Definition of important variables       
@@ -117,7 +98,7 @@ def main():
     ###################################### 
     #        Statistical precision Analysis       
     ###################################### 
-    if commands.student:
+    if commands.analysis == 'S':
         TypeOfAnalysis = 'Statistical-precision'
         
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
@@ -169,7 +150,7 @@ def main():
     ###################################### 
     #        One at a time Sensitivity Analysis       
     ######################################        
-    if commands.sensitivity:
+    if analysis == 'OAT':
         TypeOfAnalysis = 'Sensitivity'
         
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
@@ -250,7 +231,7 @@ def main():
     ###################################### 
     #        Monte Carlo Sensitivity Analysis       
     ######################################        
-    if commands.montecarlo:
+    if commands.analysis == 'MC':
         TypeOfAnalysis = 'Monte Carlo'
         
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
