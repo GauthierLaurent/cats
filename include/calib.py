@@ -110,18 +110,18 @@ def main(argv):
         for net in networks:            
             unpacked_outputs = define.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
         
-        p_values = []
+        d_stat = []
         networks = []
 
         for packed in unpacked_outputs:
-            p_values += packed[0]
+            d_stat += packed[0]
             networks.append(packed[1])
 
-        if define.isbool(p_values):
+        if define.isbool(d_stat):
             write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
-            fout = max(p_values)
+            fout = max(d_stat)
 
     #write to history
     write.History.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')

@@ -71,20 +71,20 @@ def treat_stats_list(stats_list):
     return raw_list
     
 def checkCorrespondanceOfOutputs(video_value, calculated_value):
-    '''Test a range of values with the kruskalwallis test'''
+    '''Test a range of values with the kolmolgorov-Smirnov test'''
 
     D_statistic_list = []
-    to_minimise_p_value_list = []
+    p_value_list = []
 
     for i in range(len(calculated_value)):
         if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
             D_statistic, p_value = ks_twosamp(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
             D_statistic_list.append(D_statistic)
-            to_minimise_p_value_list.append(1 - p_value)
+            p_value_list.append(p_value)
         else:
-            to_minimise_p_value_list.append('DNE')
+            D_statistic_list.append('DNE')
     
-    return to_minimise_p_value_list
+    return D_statistic_list
 
 def runVissimForCalibrationAnalysis(network, inputs):
     '''Note: Vissim is passed in the Network class variable "network" '''
@@ -124,7 +124,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
         return False
              
     else:
-        p_values = []
+        d_stat = []
         rejected_files = []
         
         #treating the outputs
@@ -244,16 +244,16 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #determining main p_value
                 if config.output_forward_gaps:
                     if secondary_values[4] == 'DNE':
-                        p_values.append('inf')
+                        d_stat.append('inf')
                     else:
-                        p_values.append(secondary_values[4])
+                        d_stat.append(secondary_values[4])
                 if config.output_lane_change:
                     if secondary_values[6] == 'DNE':        #using the before gap to calibrate
-                        p_values.append('inf')
+                        d_stat.append('inf')
                     else:
-                        p_values.append(secondary_values[6])
+                        d_stat.append(secondary_values[6])
     
-        return p_values, network[0]
+        return d_stat, network[0]
 
 ################################ 
 #        Statistical precision analysis       
