@@ -71,30 +71,34 @@ def traceAndclick(objects, pixelUnitRatio = None, imgPath = None):
         
     return Alignments
 
-def processVideolist(config, video_names, save, loadImage):
+def processVideolist(config, video_names, save, loadImage, keep_align):
         
-    for video_name in video_names:
-        objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite, video_name), 'object')
+    for v in xrange(len(video_names)):
         
-        if loadImage:
-            points = traceAndclick(objects, config.pixel_to_unit_ratio, os.path.join(config.path_to_image, config.image_name))
+        if keep_align is True or v > 0:
+            pass
         else:
-            points = traceAndclick(objects)
-                    
-        alignments = []
-        for p in points:
-            alignments.append(moving.Trajectory.fromPointList(p))         
-        
-        for a in alignments:
-            print a
+            objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite, video_names[v]), 'object')
+            
+            if loadImage:
+                points = traceAndclick(objects, config.pixel_to_unit_ratio, os.path.join(config.path_to_image, config.image_name))
+            else:
+                points = traceAndclick(objects)
+                        
+            alignments = []
+            for p in points:
+                alignments.append(moving.Trajectory.fromPointList(p))         
+            
+            for a in alignments:
+                print a
 
         if save is True:
-            print '>> Saving data to the CSV file'
-            define.writeAlignToCSV(config.path_to_inpx, config.inpx_name, video_name, alignments)
+            print '>> Saving data for '+str(video_names[v])+' to the CSV file'
+            define.writeAlignToCSV(config.path_to_csv, config.inpx_name, video_names[v], alignments)
             print '>> Saving successfull'
         else:
             print '>> No-Saving option chosen, here are the data for manual copy-pasting:'
-            print video_name
+            print video_names[v]
             for a in xrange(len(alignments)):
                 print str(a)+';'+str(alignments[a])
             
@@ -325,29 +329,29 @@ def main(argv):
     max_time = commands.max_time
     fps      = commands.fps
     #trace options
-    video_name = commands
-    video_names = []
-    save       = commands.save
-    loadImage  = commands.loadImage
+    video_names = commands.video_names
+    save        = commands.save
+    loadImage   = commands.loadImage
+    keep_align  = commands.keep_align
 
     print '== Starting work for the following network : ' + str(config.inpx_name) +' =='
     
-    if commands.mode == 'process':
+    if commands.analysis == 'process':
         print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
         turnSqliteIntoTraj(config, min_time, max_time, fps)
         
-    elif commands.mode == 'trace':
-        if video_name is not None:
-            if os.path.isfile(os.path.join(config.path_to_sqlite, video_name)):
-                video_names = [video_name]
-            else:
-                print 'video " ' + str(video_name) + ' " not found'
-                return 100
+    elif commands.analysis == 'trace':
+        if video_names is not None:
+            for v in reversed(xrange(len(video_names))):
+                if not os.path.isfile(os.path.join(config.path_to_sqlite, video_names[v])):
+                    video_names.pop(video_names[v])
+                    print 'video " ' + str(video_names) + ' " not found'
+
         else:
             video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
             
         if video_names == []:
-            print 'No video specified'
+            print 'No valid video specified'
             return 100
 
         print '== Loading sqlites from ' + str(config.path_to_sqlite) +' =='
@@ -356,7 +360,7 @@ def main(argv):
             string = string +', '+ str(video_names[i+1])
         print '== Enabling alignment drawing for the following videos: '+str(string) +' =='  
 
-        processVideolist(config, video_names, save, loadImage)
+        processVideolist(config, video_names, save, loadImage, keep_align)
 
     else:
         return 100

@@ -290,9 +290,9 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
         return list_to_append
     
     if inpxname in dirname: dirname = dirname.strip(inpxname)
-    if os.path.exists(os.path.join(dirname, inpxname.strip(os.path.splitext(inpxname)[0]) + '.csv')):
+    if os.path.exists(os.path.join(dirname, os.path.splitext(inpxname)[0] + '.csv')):
            
-        with open(os.path.join(dirname, inpxname.strip(os.path.splitext(inpxname)[0]) + '.csv'), 'r+') as f:
+        with open(os.path.join(dirname, os.path.splitext(inpxname)[0] + '.csv'), 'r+') as f:
             
             text_list = []
             
@@ -323,7 +323,7 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                     #no video of that name found
                     if found is False:
                         modified_section_list.append('$Video_alignments\n')
-                        modified_section_list += section_list[0:found]
+                        modified_section_list += section_list[:]
                         modified_section_list.append(str(video_name)+'\n')
                         modified_section_list = add_end(modified_section_list, video_name, text_to_add)
                                        
@@ -340,6 +340,20 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                         #adding the last part if it exists
                         if found < index_list[-1]:
                             modified_section_list += section_list[index_list[index_list.index(found)+1]:]
+
+                    #making sure the section title is not followed by trailing empty lines
+                    to_pop = []
+                    for j in xrange(1,len(modified_section_list)):
+                        if modified_section_list[j] != '\n':
+                            break
+                        else:
+                            to_pop.append(j)
+                    for p in reversed(to_pop):
+                        modified_section_list.pop(p)
+                    
+                    #correcting for removed section in-between empty line if the whole section was empty
+                    if modified_section_list[-1] != '\n':
+                        modified_section_list('\n')
 
                     #adding modified section and rest of the file
                     to_write_list += modified_section_list
@@ -367,6 +381,8 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
               for i in to_write_list:
                   f.write(i)
         f.close()
+    else:
+        print 'CSV file not found in the specified location, please verify info entered in the pvc.cfg file'
         
 ################################ 
 #        Network Calibration class       

@@ -301,13 +301,14 @@ def commands(parser, script_type):
         parser.add_argument('-t', '--test',           action='store_true',          dest='mode',           default=False,  help='Put the code into test mode, bypassing Vissim and generating random outputs')
 
     if script_type == 'Cali':
-        parser.add_argument('-p','--point',          type=float, nargs='*',         dest = 'start_point',   default = None,  help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
+        parser.add_argument('-p','--point',          type=float, nargs='*',         dest = 'start_point',   default = [],    help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
     
     if script_type == 'Video':
         parser.add_argument('-a', '--analysis',      choices=['trace','process'],   dest='analysis',        default='trace', help='Chosse between trace and process. To draw alignements onto a visualisation of the data, select trace, to assign vehicule trajectories to predefined alignements select process')
         parser.add_argument('-i', '--image',         action='store_true',           dest='loadImage',       default=False,   help='Trace option. Loads the trajectories onto the image specified in the calib.cfg file')    
         parser.add_argument('-s', '--save',          action='store_true',           dest='save',            default=False,   help='Trace option. Saves the alignement data into the csv file specified in the calib.cfg file ')    
-        parser.add_argument('-v', '--video',         nargs='*',                     dest='video_name',                       help='[str] ')    
+        parser.add_argument('-v', '--video',         nargs='*',                     dest='video_names',                      help='[str] A list')    
+        parser.add_argument('-k', '--keep_align',    action='store_true',           dest='keep_align',      default=False,   help='Trace option. If activated, the alignements will be drawn for the first video and the result will be saved for all specified videos')        
         parser.add_argument('-g', '--fps',           type=int,                      dest='fps',             default=30,      help='Process option. Frame per second of the choosen video. Needed to only to trace accurate graphs and if different than 30')    
         parser.add_argument('-m', '--min',           type=int,                      dest='min_time',        default=None,    help='Process option. Choose if some of the early frames of the video is to be cut out. Number is in frames (conversions with fps has to be done before input) ')    
         parser.add_argument('-M', '--max',           type=int,                      dest='max_time',        default=None,    help='Process option. Choose if some of the late frames of the video is to be cut out. Number is in frames (conversions with fps has to be done before input)  ')
