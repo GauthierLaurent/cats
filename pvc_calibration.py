@@ -39,21 +39,6 @@ def main():
     ################################    
     commands = config.commands(argparse.ArgumentParser(),'Cali')
     config   = config.Config('calib.cfg')      
-            
-    ################################ 
-    #        Car following model verification        
-    ################################
-    if config.wiedemann not in [74,99]:
-        config.wiedemann = 99
-        
-        print '****************************************************************'
-        print '*   The car-following model has to be one of the following:    *'
-        print '*                                                              *'        
-        print '*           -> Wiedemann 99 (99 or nothing)                    *'
-        print '*           -> Wiedemann 74 (74)                               *'
-        print '*                                                              *'
-        print '*           Reverting to the default value (99)                *'        
-        print '****************************************************************'
                  
     ###################################### 
     #        Preparing  environnement       
@@ -66,7 +51,7 @@ def main():
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
     sim_cores = 1
-    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, int(config.wiedemann), Sim_lenght, sim_cores]
+    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, Sim_lenght, sim_cores]
     
     #determining vissim, video, and corridor lists
     networks = define.buildNetworkObjects(config)      

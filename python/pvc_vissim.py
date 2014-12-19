@@ -88,10 +88,10 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
         Simulation.SetAttValue("RandSeed", sim_parameters[1])       #Hitchhiker's Guide to the Galaxy!
         Simulation.SetAttValue("RandSeedIncr", 1)
         Simulation.SetAttValue("NumRuns", sim_parameters[2])        #To be verified
-        Simulation.SetAttValue("SimPeriod",sim_parameters[4])
+        Simulation.SetAttValue("SimPeriod",sim_parameters[3])
         
         #Setting the number of cores to use
-        Simulation.SetAttValue("NumCores",sim_parameters[5])       
+        Simulation.SetAttValue("NumCores",sim_parameters[4])       
         
         #Enabling the Quick Mode
         Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
@@ -103,8 +103,6 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
         #Setting driving behavior attributes
         if sim_parameters[3] is not None:
             for i in xrange(len(Vissim.Net.DrivingBehaviors)):                       
-                Type = "WIEDEMANN"+str(sim_parameters[3])
-                Vissim.Net.DrivingBehaviors[i].SetAttValue("CarFollowModType",Type)
                 for variable in xrange(len(parameters)):
                     if caracterizedParameter('DrivingBehaviors', parameters[variable]):
                         Vissim.Net.DrivingBehaviors[i].SetAttValue(parameters[variable].vissim_name,values[variable])

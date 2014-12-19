@@ -163,7 +163,6 @@ class Config:
         self.simulation_time          = self.parse('simulation_time',      '900',     c_type='int')
         self.warm_up_time             = self.parse('warm_up_time',         '120',     c_type='int')
         self.nbr_points               = self.parse('nbr_points',           '5',       c_type='int')
-        self.wiedemann                = self.parse('wiedemann',            '99',      c_type='int')
         
         self.section = 'Statistical precision'
         self.desired_pct_error        = self.parse('desired_pct_error',    '20' ,     c_type='float')
