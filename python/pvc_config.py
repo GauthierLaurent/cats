@@ -294,7 +294,7 @@ def commands(parser, script_type):
         parser.add_argument('-m', '--multi',          action='store_false',         dest='multi',          default=True,   help='Disables multiprocessing while running the analysis')
         parser.add_argument('-u', '--multi_testing',  action='store_true',          dest='multi_test',     default=False,  help='Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback when a process terminates')
         parser.add_argument('-f', '--inpx_file',                                    dest='file',                           help='[str]  Load specific inpx file')
-        parser.add_argument('-a', '--save-figures',   action='store_true',          dest='vis_save',       default=False,  help='Save figures')
+        parser.add_argument('-s', '--save-figures',   action='store_true',          dest='vis_save',       default=False,  help='Save figures')
         parser.add_argument(      '--figure-format',                                dest='fig_format',     default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')
         parser.add_argument('-l', '--save-swp',       action='store_true',          dest='save_swp',       default=False,  help='Enables Vissim lane change (.swp) outputs')
         parser.add_argument('-v', '--verbose',        action='store_true',          dest='verbose',        default=False,  help='Level of detail of results')
