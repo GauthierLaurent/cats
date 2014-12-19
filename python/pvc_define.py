@@ -175,8 +175,15 @@ def floatOrBool(stringvalue):
         elif stringvalue.lower() == 'true':
             return True
 
+def YesorTrue(stringvalue):
+    if stringvalue.lower() == 'yes' or stringvalue.lower() == 'true':
+        return True
+    if stringvalue.lower() == 'no' or stringvalue.lower() == 'flase':
+        return False
+        
 class Variable:
-    def __init__(self, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, point = None):
+    def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, point = None):
+        self.include        = YesorTrue(include)     
         self.name           = name
         self.vissim_name    = vissim_name
         self.vissim_default = floatOrBool(vissim_default)
@@ -218,13 +225,13 @@ def extractParamFromCSV(dirname, filename):
             if '$' in line: break
             if line.startswith('#') is False and line.strip() != '': brutestring += line.replace("\t", "")
             
-        vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
+        vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
         
         parameters = {}        
         for i in xrange(len(vissimNames)):
-            parameters[i] = Variable(value_names[i], vissimNames[i], vissimMinVa[i], vissimMaxVa[i], vissimDefau[i], desiredMinV[i], desiredMaxV[i])
-        
-        parameters = verifyDesiredRanges(parameters.values())       
+            parameters[i] = Variable(vissimInclu[i], value_names[i], vissimNames[i], vissimMinVa[i], vissimMaxVa[i], vissimDefau[i], desiredMinV[i], desiredMaxV[i])
+
+        parameters = verifyDesiredRanges(parameters.values())
         
         return parameters
     else:
@@ -234,6 +241,7 @@ def extractParamFromCSV(dirname, filename):
 def extractDataFromVariablesCSV(filename): 
     '''works inside convertParameterstoString'''
     variablesInfo = csv2rec(filename)
+    vissimInclu = variablesInfo['includetoanalysis']
     vissimNames = variablesInfo['vissimname']
     vissimMinVa = variablesInfo['vissimmin']
     vissimMaxVa = variablesInfo['vissimmax']
@@ -242,7 +250,7 @@ def extractDataFromVariablesCSV(filename):
     desiredMinV = variablesInfo['desiredmin']
     desiredMaxV = variablesInfo['desiredmax']
        
-    return vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV
+    return vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV
 
 def verifyDesiredRanges(variables):
     '''checks for coherence between bounds and desired min/max values entered
