@@ -113,8 +113,11 @@ def runVissimForCalibrationAnalysis(network, inputs):
     
     values = []
     for var in variables:
-        values.append(var.point)
-    
+        if var.include is True:
+            values.append(var.point)
+        else:
+            values.append(var.default)
+            
     #Initializing and running the simulation
     simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)
  

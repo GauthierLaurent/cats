@@ -79,7 +79,7 @@ def main():
         starting_point = commands.start_point
         
         #checking for compatibility with the number of parameter specified
-        if len(starting_point) == len(variables):
+        if len(starting_point) == len([i for i in variables if i.include is True]):
             for p in xrange(len(starting_point)):
                 starting_point[p] = float(starting_point[p])            
         else:

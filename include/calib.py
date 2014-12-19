@@ -56,7 +56,8 @@ def main(argv):
     
     #add the value of the points in this new variable
     for i in xrange(len(variables)):
-        variables[i].point = nomad_points[i]
+        if variables[i].include is True:
+            variables[i].point = nomad_points[i]
         
     #verify bounds proposed by NOMADS
     chk = define.verifyDesiredPoints(variables)

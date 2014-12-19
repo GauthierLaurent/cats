@@ -106,8 +106,20 @@ def main():
         #generating the raw variables contained in the csv
         variables = define.extractParamFromCSV(InpxPath,InpxName)
 
-        #removing unwanted variables for this weidemann model
-        variables = vissim.weidemannCheck(config.wiedemann, variables)
+        #gathering the variables that need to be analysed
+        working_variables = [i for i in variables if i.include is True]
+
+        print('       WARNING - THE MODULE IS PRESENTLY NON-FUNCTIONAL - WARNING \n'
+              ' \n' 
+              'reason: working_variables contains only the desired variables for this run. \n'
+              'variables contains the whole set \n'
+              ' \n'
+              'ie: if we do not want to test for variable x, we can still aply a fixed point \n'
+              '    via the default value. this ensures that we control the other variables so  \n'
+              '    that no unexpected variations occurs outside of what we are actualy testing  \n'
+              ' \n'
+              '   this needs to be implemented. \n')
+        sys.exit()
     
         #creating default values    
         default_values =  [variables[i].vissim_default for i in xrange(len(variables))]
@@ -162,9 +174,9 @@ def main():
         #generating the raw variables contained in the csv
         variables = define.extractParamFromCSV(InpxPath,InpxName)
 
-        #removing unwanted variables for this weidemann model
-        variables = vissim.weidemannCheck(config.wiedemann, variables)
-    
+        #gathering the variables that need to be analysed
+        working_variables = [i for i in variables if i.include is True]
+
         #creating default values    
         default_values =  [variables[i].vissim_default for i in xrange(len(variables))]
         concat_variables = [variables[i].vissim_name for i in xrange(len(variables))]
@@ -205,7 +217,7 @@ def main():
 
             minChunkSize = min(4,define.countPoints(concat_variables, config.nbr_points, config.nbr_runs))
             inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
-            unpacked_outputs = define.createWorkers(variables, analysis.OAT_sensitivity, inputs, commands, minChunkSize, concat_variables)                  
+            unpacked_outputs = define.createWorkers(working_variables, analysis.OAT_sensitivity, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
@@ -213,7 +225,7 @@ def main():
 
         else:   
             inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
-            packed_outputs = analysis.OAT_sensitivity(define.intelligentChunks(len(variables), variables, concat_variables), inputs)           
+            packed_outputs = analysis.OAT_sensitivity(define.intelligentChunks(len(working_variables), working_variables, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          
             for i in packed_outputs:
@@ -245,8 +257,20 @@ def main():
         variables = define.extractParamFromCSV(InpxPath,InpxName)
         
         #removing unwanted variables for this weidemann model
-        variables = vissim.weidemannCheck(config.wiedemann, variables)
-    
+        working_variables = [i for i in variables if i.include is True]
+        
+        print('       WARNING - THE MODULE IS PRESENTLY NON-FUNCTIONAL - WARNING \n'
+              ' \n' 
+              'reason: working_variables contains only the desired variables for this run. \n'
+              'variables contains the whole set \n'
+              ' \n'
+              'ie: if we do not want to test for variable x, we can still aply a fixed point \n'
+              '    via the default value. this ensures that we control the other variables so  \n'
+              '    that no unexpected variations occurs outside of what we are actualy testing  \n'
+              ' \n'
+              '   this needs to be implemented. \n')
+        sys.exit()
+        
         #creating default values    
         default_values =  [variables[i].vissim_default for i in xrange(len(variables))]
         concat_variables = [variables[i].vissim_name for i in xrange(len(variables))]

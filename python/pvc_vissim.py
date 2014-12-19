@@ -140,7 +140,7 @@ def caracterizedParameter(param_type, parameter):
 def weidemannCheck(model, parameters):
     '''returns the parameters that are not part of the other wiedemann model than
        the one specified. If None is passed for the model type, every parameters
-       will be returned'''
+       will be returned   - Presently unused'''
        
     weidemann74 = ['W74ax','W74bxAdd', 'W74bxMult']
     weidemann99 = ['W99cc0','W99cc1','W99cc2','W99cc3','W99cc4','W99cc5','W99cc6','W99cc7','W99cc8','W99cc9']    
