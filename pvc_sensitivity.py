@@ -44,7 +44,7 @@ def main():
     ################################    
     commands = config.commands(argparse.ArgumentParser(),'Sensi')
     config   = config.Config('pvc.cfg')
-    
+
     #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
     if commands.file:
         if not commands.file.endswith('inpx'):
@@ -105,7 +105,7 @@ def main():
            
         #generating the raw variables contained in the csv
         variables = define.extractParamFromCSV(InpxPath,InpxName)
-        
+
         #removing unwanted variables for this weidemann model
         variables = vissim.weidemannCheck(config.wiedemann, variables)
     
@@ -150,7 +150,7 @@ def main():
     ###################################### 
     #        One at a time Sensitivity Analysis       
     ######################################        
-    if analysis == 'OAT':
+    if commands.analysis == 'OAT':
         TypeOfAnalysis = 'Sensitivity'
         
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)                 
@@ -161,7 +161,7 @@ def main():
         
         #generating the raw variables contained in the csv
         variables = define.extractParamFromCSV(InpxPath,InpxName)
-        
+
         #removing unwanted variables for this weidemann model
         variables = vissim.weidemannCheck(config.wiedemann, variables)
     
