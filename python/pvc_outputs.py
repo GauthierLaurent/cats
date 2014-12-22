@@ -448,7 +448,7 @@ def treatVissimOutputs(files, inputs):
     '''
                
     #Treating raw outputs to compute means
-    if old_data == []:
+    if old_data != []:
         mean_flow.addMany(raw_flow)
         mean_opportunisticLC.addMany(raw_opportunisticLC)
         mean_mandatoryLC.addMany(raw_mandatoryLC)
