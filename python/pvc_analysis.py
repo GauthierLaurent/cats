@@ -600,7 +600,7 @@ def monteCarlo_outputs(valuesVector, inputs):
 
     for value in xrange(len(valuesVector)):
         if commands.mode:
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters)
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters, rand_seed_shake = value + lowerbound)
             success = True
         else:
             if os.path.isdir(valuesVector[value][1]):
@@ -753,7 +753,11 @@ def OAT_sensitivity(values, inputs, default = False):
 
             #Starting a Vissim instance
             if commands.mode:  #this serves to bypass Vissim while testing the code
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters)
+                if default is False:
+                    rand_seed_shake = 100*points_array.index(point)+value
+                else:
+                    rand_seed_shake = 0
+                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters, rand_seed_shake)
             
             else:
                 #Vissim starting and loading network block

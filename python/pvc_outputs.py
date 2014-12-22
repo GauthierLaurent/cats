@@ -483,7 +483,7 @@ def randomGaussRange(low, high, n):
         
     return out
 
-def generateRandomOutputs(parameters):
+def generateRandomOutputs(parameters, rand_seed_shake):
     '''This fonction serves to bypass everything produced by Vissim to gain
        speed while testing the code'''
     RandSeed = parameters[1]
@@ -500,7 +500,7 @@ def generateRandomOutputs(parameters):
     raw_foward_speed = []
         
     for i in range(NumRuns):
-        random.seed(RandSeed + i)
+        random.seed(RandSeed + i + rand_seed_shake)
         raw_opportunisticLC.append(random.uniform(2,30))
         raw_mandatoryLC.append(random.uniform(2,30)) 
         raw_flow.append(random.uniform(1200,2000))
