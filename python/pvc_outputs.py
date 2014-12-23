@@ -95,7 +95,7 @@ class stats:
         '''recalculates the cumum_all distribution'''
         allvalues = []
         for dist in self.distributions:
-            allvalues += dist.raw
+            allvalues += list(dist.raw)
         self.cumul_all = sublvl(allvalues) 
         
 class singleValueStats:
@@ -352,18 +352,17 @@ def treatVissimOutputs(files, inputs):
     else:
         old_data = []
     
+    raw_opportunisticLC = []
+    raw_mandatoryLC     = [] 
+    raw_flow            = []
+    raw_forward_gaps    = []
+    raw_opp_LC_agaps    = []
+    raw_opp_LC_bgaps    = []
+    raw_man_LC_agaps    = []
+    raw_man_LC_bgaps    = []
+    raw_forward_speeds  = []
     
-    if old_data == []:
-        raw_opportunisticLC = []
-        raw_mandatoryLC     = [] 
-        raw_flow            = []
-        raw_forward_gaps    = []
-        raw_opp_LC_agaps    = []
-        raw_opp_LC_bgaps    = []
-        raw_man_LC_agaps    = []
-        raw_man_LC_bgaps    = []
-        raw_forward_speeds  = []
-    else:
+    if old_data != []:
         mean_flow            = old_data[0]
         mean_opportunisticLC = old_data[1]
         mean_mandatoryLC     = old_data[2]
