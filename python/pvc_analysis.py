@@ -704,6 +704,7 @@ def OAT_sensitivity(values, inputs, default = False):
     default_values =  [all_values[i].vissim_default for i in xrange(len(all_values))]
     concat_variables = [all_values[i].vissim_name for i in xrange(len(all_values))]
     parameters = [all_values[i] for i in xrange(len(all_values))]
+    all_names = [all_values[i].name for i in xrange(len(all_values))]
     
     #preparing the outputs    
     text = []
@@ -728,8 +729,7 @@ def OAT_sensitivity(values, inputs, default = False):
         else:
             current_range = [values[value][0].desired_min,values[value][0].desired_max]   
             value_name = values[value][0].name
-
-            position = values[value][1]
+            position = all_names.index(value_name)
         
         #defining the values needed for the current cycle
         working_values, points_array = setCalculatingValues(default_values, value_name, config.nbr_points, current_range, default)
