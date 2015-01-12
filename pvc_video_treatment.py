@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 '''
 call exemples:
-   to draw aligmeents:  -i -s -v GP060001.sqlite
-   to process sqlite:   -M 9000 -g 30 -a process
+   to draw aligments:         -i -s -v GP010001.sqlite
+   to draw many aligments:    -i -s -k
+   to process all sqlite:     -M 9000 -g 30 -a process
+   to process specified (2):  -M 9000 -g 30 -a process -v GP010001.sqlite GP020001.sqlite
 '''
 
 ##################
@@ -49,7 +51,7 @@ def traceAndclick(objects, pixelUnitRatio = None, imgPath = None):
         plt.imshow(img)
 
     for i in range(len(objects)):
-        if pixelUnitRatio is not None:
+        if pixelUnitRatio is not None:               
             objects[i].plotOnWorldImage(float(pixelUnitRatio), withOrigin = True, color = '0.75')
             
         else:
@@ -75,7 +77,7 @@ def processVideolist(config, video_names, save, loadImage, keep_align):
         
     for v in xrange(len(video_names)):
         
-        if keep_align is True or v > 0:
+        if keep_align is True and v > 0:
             pass
         else:
             objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite, video_names[v]), 'object')
@@ -130,8 +132,7 @@ def cutTrajectories(uncut_objects, time_min, time_max):
             if o.getFirstInstant() + pos >= firstInstant and o.getFirstInstant() + pos <= lastInstant:
                 positions.append(o.positions[pos])
                 velocities.append(o.velocities[pos])    
-
-        cut_objects.append(moving.MovingObject(num, moving.TimeInterval(time_interval[0], time_interval[1]), positions, velocities, geometry, userType))
+        cut_objects.append(moving.MovingObject(num, moving.TimeInterval(time_interval[0], time_interval[1]), moving.Trajectory([[row[0] for row in positions],[row[1] for row in positions]]), velocities = moving.Trajectory([[row[0] for row in velocities],[row[1] for row in velocities]]), geometry = geometry, userType = userType))
     return cut_objects
  
 def filterObjectsbyTime(unfiltered_objects, time_min, time_max):
@@ -148,11 +149,16 @@ def filterObjectsbyTime(unfiltered_objects, time_min, time_max):
 
     return cutTrajectories(filtered_objects, time_min, time_max)
     
-def turnSqliteIntoTraj(config, min_time, max_time, fps):
+def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     '''process function - saves data into traj files that can be loaded by the calibration algorithm'''
     #loading user defined information from [inpxname].csv
     VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(config.path_to_inpx, config.inpx_name)
     video_infos = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+    
+    #keeping only video_infos that are in video_list
+    for v in reversed(xrange(len(video_infos))):
+        if video_infos[v].video_name not in video_list:
+            video_infos.pop(v)
     
     #variable declaration
     opportunisticLC = 0
@@ -186,10 +192,41 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             #line = np.array(a)
             #plt.plot(line[:,0], line[:,1], 'k', linewidth = 2)
         
+        problems = []
         for o in objects:
-            o.projectCurvilinear(alignments)
-            o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
+            o.projectCurvilinear(alignments)           
+            
+            if len(o.curvilinearPositions.getXCoordinates()) > 0:
+                o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
+            else:
+                problems.append(o)
         
+        #discarding problematic objects
+        for prob in reversed(problems):
+            objects.pop(prob.getNum())
+        
+        #saving a figure with discarded objects        
+        if len(problems) > 0:
+            fig = plt.figure()
+               
+            for o in objects:
+                #object
+                plt.plot(o.getXCoordinates(), o.getYCoordinates(), color = '0.75')
+                #origine
+                plt.plot(o.getXCoordinates()[0], o.getYCoordinates()[0], 'ro', color = '0.75')
+
+            for p in problems:                
+                #object
+                plt.plot(p.getXCoordinates(), p.getYCoordinates(), color = 'b')
+                #origine
+                plt.plot(p.getXCoordinates()[0], p.getYCoordinates()[0], 'ro', color = 'b')
+                #text
+                plt.text(p.getXCoordinates()[0], p.getYCoordinates()[0], str(p.getNum()))
+
+            plt.savefig(os.path.join(config.path_to_inpx, 'Problematic alignments for video ' + str(video_infos[i].video_name.strip('.sqlite'))))
+            plt.clf()
+            plt.close(fig)
+                        
         #flow
         onevid_flow = len(objects)
         
@@ -220,8 +257,9 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
             for index,lane in enumerate(alignments):
                 if index in trafIntCorridors[c].to_eval:
                     [snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
-                    sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                              
+                    sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                      
                     raw_gaps = outputs.calculateGaps(sorted_instants)
+                    import pdb;pdb.set_trace()
                     onevid_forward_gaps += list(raw_gaps)
                     onevid_forward_speeds += list(raw_speeds)
                     graph_inst += sorted_instants[:-1]
@@ -273,6 +311,8 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps):
     values_at_p = []
     for i in [0,2.5,5]+range(10,31,10)+[50]+range(70,91,10)+[95, 97.5,100]:
         percentages.append(i)
+        import pdb;pdb.set_trace()
+        print i        
         values_at_p.append( np.percentile(forward_speeds.cumul_all.raw,i) )
         
     ##building the video_name list
@@ -337,8 +377,14 @@ def main(argv):
     print '== Starting work for the following network : ' + str(config.inpx_name) +' =='
     
     if commands.analysis == 'process':
-        print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
-        turnSqliteIntoTraj(config, min_time, max_time, fps)
+        if video_names is None:
+            print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
+            video_list = all
+        else:
+            print '== Processing specified sqlites for ' + str(config.inpx_name)  +' =='
+            video_list = video_names[:]
+            
+        turnSqliteIntoTraj(config, min_time, max_time, fps, video_list)
         
     elif commands.analysis == 'trace':
         if video_names is not None:
