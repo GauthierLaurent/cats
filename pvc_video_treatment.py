@@ -40,7 +40,7 @@ config   = pvc_config.Config('pvc.cfg')
 ################################ 
 #        Trace functions       
 ################################
-def traceAndclick(objects, pixelUnitRatio = None, imgPath = None):
+def traceAndclick(objects, pixelUnitRatio = 1, imgPath = None):
     '''Pops-up the drawing interface and converts the results to Traffic Intelligence point
        list format for futur conversion into Traffic Intelligence alignement data'''
 
@@ -51,7 +51,7 @@ def traceAndclick(objects, pixelUnitRatio = None, imgPath = None):
         plt.imshow(img)
 
     for i in range(len(objects)):
-        if pixelUnitRatio is not None:               
+        if imgPath is not None:               
             objects[i].plotOnWorldImage(float(pixelUnitRatio), withOrigin = True, color = '0.75')
             
         else:
@@ -68,7 +68,7 @@ def traceAndclick(objects, pixelUnitRatio = None, imgPath = None):
     for points in alignments:
         Points = []
         for p in points:
-            Points.append(moving.Point(p[0],p[1]))
+            Points.append(moving.Point(p[0]/pixelUnitRatio,p[1]/pixelUnitRatio))
         Alignments.append(Points)
         
     return Alignments
@@ -148,17 +148,24 @@ def filterObjectsbyTime(unfiltered_objects, time_min, time_max):
                 filtered_objects.append(o)   
 
     return cutTrajectories(filtered_objects, time_min, time_max)
+
+def compute_align_mid_point(align):
+    s_list = []
+    for a in xrange(1,len(align)):
+        s_list.append(((align[a][0]-align[a-1][0])**2 + (align[a][1]-align[a-1][1])**2)**0.5)
+    return sum(s_list)/2
     
 def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     '''process function - saves data into traj files that can be loaded by the calibration algorithm'''
     #loading user defined information from [inpxname].csv
     VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(config.path_to_inpx, config.inpx_name)
     video_infos = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
-    
+
     #keeping only video_infos that are in video_list
-    for v in reversed(xrange(len(video_infos))):
-        if video_infos[v].video_name not in video_list:
-            video_infos.pop(v)
+    if video_list != 'all':    
+        for v in reversed(xrange(len(video_infos))):
+            if video_infos[v].video_name not in video_list:
+                video_infos.pop(v)
     
     #variable declaration
     opportunisticLC = 0
@@ -188,7 +195,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
         #Assignments of alignments
         for a in alignments:
             a.computeCumulativeDistances()
-            a.plot('k', linewidth = 2, hold = True)
+            #a.plot('k', linewidth = 2, hold = True)
             #line = np.array(a)
             #plt.plot(line[:,0], line[:,1], 'k', linewidth = 2)
         
@@ -204,7 +211,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
         #discarding problematic objects
         for prob in reversed(problems):
             objects.pop(prob.getNum())
-        
+
         #saving a figure with discarded objects        
         if len(problems) > 0:
             fig = plt.figure()
@@ -222,6 +229,9 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
                 plt.plot(p.getXCoordinates()[0], p.getYCoordinates()[0], 'ro', color = 'b')
                 #text
                 plt.text(p.getXCoordinates()[0], p.getYCoordinates()[0], str(p.getNum()))
+                
+            for a in alignments:
+                plt.plot([row[0] for row in a], [row[1] for row in a], 'k', linewidth = 2)
 
             plt.savefig(os.path.join(config.path_to_inpx, 'Problematic alignments for video ' + str(video_infos[i].video_name.strip('.sqlite'))))
             plt.clf()
@@ -256,10 +266,9 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
             graph_gaps = []
             for index,lane in enumerate(alignments):
                 if index in trafIntCorridors[c].to_eval:
-                    [snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
-                    sorted_instants, raw_speeds = outputs.calculateInstants(objects, S, index)                      
+                    #[snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
+                    sorted_instants, raw_speeds = outputs.calculateInstants(objects, compute_align_mid_point(alignments[index]), index)                      
                     raw_gaps = outputs.calculateGaps(sorted_instants)
-                    import pdb;pdb.set_trace()
                     onevid_forward_gaps += list(raw_gaps)
                     onevid_forward_speeds += list(raw_speeds)
                     graph_inst += sorted_instants[:-1]
@@ -379,7 +388,7 @@ def main(argv):
     if commands.analysis == 'process':
         if video_names is None:
             print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
-            video_list = all
+            video_list = 'all'
         else:
             print '== Processing specified sqlites for ' + str(config.inpx_name)  +' =='
             video_list = video_names[:]

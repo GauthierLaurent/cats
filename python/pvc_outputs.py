@@ -138,8 +138,8 @@ def calculateInstants(objects, s, lane):
     instants = []
     speeds = []
     for o in objects:
-        t = o.curvilinearPositions.getIntersections(s, lane)
-        if t != []:
+        t = o.curvilinearPositions.getIntersections(s, lane)      
+        if t != []:            
             instants.append(o.getFirstInstant()+t[0])
             speeds.append(o.curvilinearVelocities.getXCoordinates()[int(np.floor(t[0]))])
     instants.sort()          
