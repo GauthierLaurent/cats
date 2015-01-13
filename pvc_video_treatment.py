@@ -328,8 +328,25 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
         if i == len(video_infos) -1:
             video_names += video_infos[i].video_name
         else:
+            
             video_names += video_infos[i].video_name + ', '
-       
+    
+    ##creating the report filename
+    if len(video_infos) == 1:
+        partial_filename = str(video_infos[0].video_name).strip('.sqlite')
+    elif len(video_infos) > 1:
+        partial_filename = str(video_infos[0].video_name).strip('.sqlite') + '_to_' + str(video_infos[-1].video_name).strip('.sqlite')
+        
+    name = 'Video_analysis_of_'+str(partial_filename) + '_'
+    if min_time or max_time is not None:
+        if min_time is None:
+            name += 'for_t0_to_t'+str(max_time)
+        elif max_time is None:
+            name += 'for t'+str(min_time)+'_till_end'
+        else:
+            name += 'for t'+str(min_time)+'_to_t'+str(max_time)  
+    filename = '{}/'+ name + '.csv'
+    
     ##building the other_info list to print
     other_info = [['flow:', flow],
                   ['number of opportunistic lane changes:', opportunisticLC],
@@ -344,7 +361,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
                   ['Speeds:',                       forward_speeds.cumul_all.mean,       forward_speeds.cumul_all.firstQuart,       forward_speeds.cumul_all.median,       forward_speeds.cumul_all.thirdQuart,       forward_speeds.cumul_all.std],                 
                  ]
     ##generating the output    
-    write.writeRealDataReport(config.path_to_inpx, video_names, config.inpx_name, min_time, max_time, [percentages,values_at_p], other_info)
+    write.writeRealDataReport(config.path_to_inpx, filename, video_names, config.inpx_name, min_time, max_time, [percentages,values_at_p], other_info)
     
     #dumping serialised data
     print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())
@@ -396,13 +413,14 @@ def main(argv):
         else:
             if video_names is None:
                 print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' | Concatenation = False =='
-                video_infos = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+                video_list = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+                video_list = [v.video_name for v in video_list]
             else:
                 print '== Processing specified sqlites for ' + str(config.inpx_name)  +' | Concatenation = False =='
                 video_list = video_names[:]
                 
-            for v in video_infos:
-                turnSqliteIntoTraj(config, min_time, max_time, fps, [v.video_name])
+            for v in video_list:
+                turnSqliteIntoTraj(config, min_time, max_time, fps, [v])
                 
         print ' == Processing for ' + str(config.inpx_name) + ' done <<'
         

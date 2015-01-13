@@ -444,17 +444,14 @@ def writeHeader(dirname, variables, TypeOfAnalysis, first_seed, nbr_runs, warmUp
    
     return out, subdirname
     
-def writeRealDataReport(dirname, video_name, inpxname, min_time, max_time, speed_centiles, other_info):
+def writeRealDataReport(dirname, filename, video_names, inpxname, min_time, max_time, speed_centiles, other_info):
     '''writes the report file.
        Speed_centiles MUST be of the form [list_of_name,list_of_values]
        other_info Must include directly the format to output'''
     
-    name = 'Video_analysis_of_'+str(video_name).strip('.sqlite')
-    filename = '{}/'+ name + '.csv'
-    
     #header writing
     out = open(filename.format(dirname), 'w')
-    out.write('Video analysed: ' + str(video_name) + '\n')
+    out.write('Video analysed: ' + str(video_names) + '\n')
     out.write('Associated Vissim file: ' + str(inpxname) + '\n')
     if min_time or max_time is not None:
         if min_time is None:
