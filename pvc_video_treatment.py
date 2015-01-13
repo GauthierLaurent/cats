@@ -319,9 +319,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     percentages = []
     values_at_p = []
     for i in [0,2.5,5]+range(10,31,10)+[50]+range(70,91,10)+[95, 97.5,100]:
-        percentages.append(i)
-        import pdb;pdb.set_trace()
-        print i        
+        percentages.append(i)        
         values_at_p.append( np.percentile(forward_speeds.cumul_all.raw,i) )
         
     ##building the video_name list
@@ -350,9 +348,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     
     #dumping serialised data
     print ' == Dumping to ' +str(config.inpx_name.strip('.inpx') + '.traj')+' ==  |' + str(time.clock())
-    write.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)        
- 
-    print ' == Processing of video ' + str(video_infos[i].video_name) + ' done <<'
+    write.write_traj(config.path_to_inpx, config.inpx_name.strip('.inpx'), opportunisticLC, mandatoryLC, flow, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap, mandatory_LCagap, mandatory_LCbgap, forward_speeds)
     
 ################################ 
 #        Options       
@@ -377,23 +373,39 @@ def main(argv):
     min_time = commands.min_time
     max_time = commands.max_time
     fps      = commands.fps
+    all_once = commands.video_all_once
     #trace options
     video_names = commands.video_names
     save        = commands.save
     loadImage   = commands.loadImage
     keep_align  = commands.keep_align
 
-    print '== Starting work for the following network : ' + str(config.inpx_name) +' =='
+    print '== Starting work for the following network : ' + str(config.inpx_name) +' | Concatenation = True =='
     
     if commands.analysis == 'process':
-        if video_names is None:
-            print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' =='
-            video_list = 'all'
-        else:
-            print '== Processing specified sqlites for ' + str(config.inpx_name)  +' =='
-            video_list = video_names[:]
+        if all_once is True:
+            if video_names is None:
+                print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' | Concatenation = True =='
+                video_list = 'all'
+            else:
+                print '== Processing specified sqlites for ' + str(config.inpx_name)  +' =='
+                video_list = video_names[:]
+                
+            turnSqliteIntoTraj(config, min_time, max_time, fps, video_list)
             
-        turnSqliteIntoTraj(config, min_time, max_time, fps, video_list)
+        else:
+            if video_names is None:
+                print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' | Concatenation = False =='
+                video_infos = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+            else:
+                print '== Processing specified sqlites for ' + str(config.inpx_name)  +' | Concatenation = False =='
+                video_list = video_names[:]
+                
+            for v in video_infos:
+                turnSqliteIntoTraj(config, min_time, max_time, fps, [v.video_name])
+                
+        print ' == Processing for ' + str(config.inpx_name) + ' done <<'
+        
         
     elif commands.analysis == 'trace':
         if video_names is not None:
