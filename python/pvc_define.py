@@ -460,6 +460,16 @@ def buildNetworkObjects(config):
 ##################
 # Define tools
 ##################
+def merge_vectors(a,b):
+    '''a, b must be arrays'''
+    if len(a) < len(b):
+        c = b.copy()
+        c[:len(a)] += a
+    else:
+        c = a.copy()
+        c[:len(b)] += b
+    return c
+    
 def myround(x, base=5):
     '''version of math.round that rounds to the neerest base multiple'''
     return int(base * round(float(x)/base))

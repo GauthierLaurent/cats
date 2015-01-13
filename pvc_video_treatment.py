@@ -106,7 +106,7 @@ def processVideolist(config, video_names, save, loadImage, keep_align):
             
 ################################ 
 #        Process functions       
-################################        
+################################   
 def cutTrajectories(uncut_objects, time_min, time_max):
     '''cut trajectories to keep only the positions between time_min and time_max'''
     cut_objects = []
@@ -177,7 +177,8 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     man_bgaps = []
     opp_agaps = []
     opp_bgaps = []
-
+    all_count = []
+    
     for i in xrange(len(video_infos)):
         print ' >> starting work on ' + str(video_infos[i].video_name) + ' <<'
         
@@ -238,6 +239,10 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
             plt.close(fig)
                         
         #flow
+        counts = [ 0 for c in xrange(len(alignments))]
+        for o in objects:
+            counts[o.curvilinearPositions.getLanes()[0]] += 1
+
         onevid_flow = len(objects)
         
         #lane change count by type        
@@ -299,6 +304,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
         man_bgaps += list(onevid_man_bgaps)
         opp_agaps += list(onevid_opp_agaps)
         opp_bgaps += list(onevid_opp_bgaps)
+        all_count = list(define.merge_vectors(np.asarray(all_count),np.asarray(counts)))
        
     #statistical distribution treatment
     forward_followgap = outputs.stats([forward_gaps])
@@ -349,6 +355,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     
     ##building the other_info list to print
     other_info = [['flow:', flow],
+                  ['count by lane:', all_count],
                   ['number of opportunistic lane changes:', opportunisticLC],
                   ['number of mandatory lane changes:', mandatoryLC],
                   ['variable_name','mean','25th centile','median','75th centile','standard deviation'],
