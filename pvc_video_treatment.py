@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 '''
 call exemples:
-   to draw aligments:         -i -s -v GP010001.sqlite
-   to draw many aligments:    -i -s -k
-   to process all sqlite:     -M 9000 -g 30 -a process
-   to process specified (2):  -M 9000 -g 30 -a process -v GP010001.sqlite GP020001.sqlite
+   to draw aligments:            -i -s -v GP010001.sqlite
+   to draw many aligments:       -i -s -k
+   to process all sqlite:        -M 9000 -g 30 -a process
+   to process specified (2):     -M 9000 -g 30 -a process -v GP010001.sqlite GP020001.sqlite
+   to proocess all individually: -M 9000 -g 30 -a process -o  
 '''
 
 ##################
@@ -102,7 +103,10 @@ def processVideolist(config, video_names, save, loadImage, keep_align):
             print '>> No-Saving option chosen, here are the data for manual copy-pasting:'
             print video_names[v]
             for a in xrange(len(alignments)):
-                print str(a)+';'+str(alignments[a])
+                formated = str(alignments[a][0])
+                for part in xrange(1,len(alignments[a])):
+                    formated += ',' + str(alignments[a][part])
+                print str(a)+';'+formated
             
 ################################ 
 #        Process functions       
@@ -213,30 +217,30 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
         for prob in reversed(problems):
             objects.pop(prob.getNum())
 
-        #saving a figure with discarded objects        
-        if len(problems) > 0:
-            fig = plt.figure()
-               
-            for o in objects:
-                #object
-                plt.plot(o.getXCoordinates(), o.getYCoordinates(), color = '0.75')
-                #origine
-                plt.plot(o.getXCoordinates()[0], o.getYCoordinates()[0], 'ro', color = '0.75')
+        #saving a figure for the run, highlighting discarded objects        
+        fig = plt.figure()
+           
+        for o in objects:
+            #object
+            plt.plot(o.getXCoordinates(), o.getYCoordinates(), color = '0.75')
+            #origine
+            plt.plot(o.getXCoordinates()[0], o.getYCoordinates()[0], 'ro', color = '0.75')
 
-            for p in problems:                
-                #object
-                plt.plot(p.getXCoordinates(), p.getYCoordinates(), color = 'b')
-                #origine
-                plt.plot(p.getXCoordinates()[0], p.getYCoordinates()[0], 'ro', color = 'b')
-                #text
-                plt.text(p.getXCoordinates()[0], p.getYCoordinates()[0], str(p.getNum()))
-                
-            for a in alignments:
-                plt.plot([row[0] for row in a], [row[1] for row in a], 'k', linewidth = 2)
+        for p in problems:                
+            #object
+            plt.plot(p.getXCoordinates(), p.getYCoordinates(), color = 'b')
+            #origine
+            plt.plot(p.getXCoordinates()[0], p.getYCoordinates()[0], 'ro', color = 'b')
+            #text
+            plt.text(p.getXCoordinates()[0], p.getYCoordinates()[0], str(p.getNum()))
+            
+        for a in alignments:
+            plt.plot([row[0] for row in a], [row[1] for row in a], 'k', linewidth = 2)
+            plt.text(a[0][0], a[0][1], str(alignments.index(a)))
 
-            plt.savefig(os.path.join(config.path_to_inpx, 'Problematic alignments for video ' + str(video_infos[i].video_name.strip('.sqlite'))))
-            plt.clf()
-            plt.close(fig)
+        plt.savefig(os.path.join(config.path_to_inpx, 'Visualisation of trajectories for video ' + str(video_infos[i].video_name.strip('.sqlite'))))
+        plt.clf()
+        plt.close(fig)
                         
         #flow
         counts = [ 0 for c in xrange(len(alignments))]
