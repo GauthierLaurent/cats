@@ -183,133 +183,143 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list):
     opp_bgaps = []
     all_count = []
     
-    for i in xrange(len(video_infos)):
-        print ' >> starting work on ' + str(video_infos[i].video_name) + ' <<'
-        
-        objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite,video_infos[i].video_name), 'object')
-
-        if min_time is not None or max_time is not None:        
-            objects = filterObjectsbyTime(objects, min_time, max_time)
-
-        alignments = []
-        alignNames = []
-        for a in xrange(len(video_infos[i].alignments)):
-            alignments.append(moving.Trajectory.fromPointList(video_infos[i].alignments[a].point_list))
-            alignNames.append(video_infos[i].alignments[a].name)
-            
-        #Assignments of alignments
-        for a in alignments:
-            a.computeCumulativeDistances()
-            #a.plot('k', linewidth = 2, hold = True)
-            #line = np.array(a)
-            #plt.plot(line[:,0], line[:,1], 'k', linewidth = 2)
-        
-        problems = []
-        for o in objects:
-            o.projectCurvilinear(alignments)           
-            
-            if len(o.curvilinearPositions.getXCoordinates()) > 0:
-                o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
-            else:
-                problems.append(o)
-        
-        #discarding problematic objects
-        for prob in reversed(problems):
-            objects.pop(prob.getNum())
-
-        #saving a figure for the run, highlighting discarded objects        
-        fig = plt.figure()
-           
-        for o in objects:
-            #object
-            plt.plot(o.getXCoordinates(), o.getYCoordinates(), color = '0.75')
-            #origine
-            plt.plot(o.getXCoordinates()[0], o.getYCoordinates()[0], 'ro', color = '0.75')
-
-        for p in problems:                
-            #object
-            plt.plot(p.getXCoordinates(), p.getYCoordinates(), color = 'b')
-            #origine
-            plt.plot(p.getXCoordinates()[0], p.getYCoordinates()[0], 'ro', color = 'b')
-            #text
-            plt.text(p.getXCoordinates()[0], p.getYCoordinates()[0], str(p.getNum()))
-            
-        for a in alignments:
-            plt.plot([row[0] for row in a], [row[1] for row in a], 'k', linewidth = 2)
-            plt.text(a[0][0], a[0][1], str(alignments.index(a)))
-
-        plt.savefig(os.path.join(config.path_to_inpx, 'Visualisation of trajectories for video ' + str(video_infos[i].video_name.strip('.sqlite'))))
-        plt.clf()
-        plt.close(fig)
-                        
-        #flow
-        counts = [ 0 for c in xrange(len(alignments))]
-        for o in objects:
-            counts[o.curvilinearPositions.getLanes()[0]] += 1
-
-        onevid_flow = len(objects)
-        
-        #lane change count by type        
-        oppObjDict, manObjDict, laneDict = outputs.laneChange(objects,trafIntCorridors)
-        onevid_opportunisticLC = sum([len(oppObjDict[j]) for j in oppObjDict])
-        onevid_mandatoryLC = sum([len(manObjDict[j]) for j in manObjDict])
-        print ' == Lane change compilation done ==  |' + str(time.clock())
-            
-        #Calculation of stats stuff
-        onevid_forward_gaps = []
-        onevid_forward_speeds = []
-
-        #dictionnary of corridor name per alignement number
-        align_corr_dict = {}        
-        for corridor in trafIntCorridors:
-            for align in corridor.to_eval:
-                if align not in align_corr_dict.keys():
-                    align_corr_dict[align] = corridor.name
-
-        #plot s/t graph
-        write.plot_st(objects, align_corr_dict, alignNames, fps, config.path_to_inpx, video_infos[i].video_name)
-        
-        for c in xrange(len(trafIntCorridors)):                              
-            #Forward gaps and speeds calculations        
-            graph_inst = []
-            graph_gaps = []
-            for index,lane in enumerate(alignments):
-                if index in trafIntCorridors[c].to_eval:
-                    #[snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
-                    sorted_instants, raw_speeds = outputs.calculateInstants(objects, compute_align_mid_point(alignments[index]), index)                      
-                    raw_gaps = outputs.calculateGaps(sorted_instants)
-                    onevid_forward_gaps += list(raw_gaps)
-                    onevid_forward_speeds += list(raw_speeds)
-                    graph_inst += sorted_instants[:-1]
-                    graph_gaps += list(raw_gaps)
-                    
-                    print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
-           
-            #trace graph: flow vs time during video
-            sorted_graph_inst, sorted_graph_gaps = define.sort2lists(graph_inst,graph_gaps)
-            if len(sorted_graph_inst) > 0:
-                write.plot_qt(sorted_graph_inst, sorted_graph_gaps, config.path_to_inpx, video_infos[i].video_name, trafIntCorridors[c].name, fps, min_time, max_time)
-           
-        #mandatory lane change gaps
-        onevid_man_agaps, onevid_man_bgaps = outputs.laneChangeGaps(manObjDict, laneDict, objects)
-        print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
-        
-        #opportunistic lane change gaps
-        onevid_opp_agaps, onevid_opp_bgaps = outputs.laneChangeGaps(oppObjDict, laneDict, objects)
-        print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
+    #checking for incorrect input video_names
+    valid_names = [video_infos[v].video_name for v in xrange(len(video_infos))]
+    for invid in video_list:
+        if invid not in valid_names:
+            print '\n>> No files were found for ' + str(invid) + ' <<'
     
-        #variable concatenation
-        opportunisticLC += onevid_opportunisticLC 
-        mandatoryLC += onevid_mandatoryLC
-        flow += onevid_flow
-        forward_gaps += onevid_forward_gaps
-        forward_speeds += onevid_forward_speeds
-        man_agaps += list(onevid_man_agaps)
-        man_bgaps += list(onevid_man_bgaps)
-        opp_agaps += list(onevid_opp_agaps)
-        opp_bgaps += list(onevid_opp_bgaps)
-        all_count = list(define.merge_vectors(np.asarray(all_count),np.asarray(counts)))
-       
+    if video_infos == []:
+        print '>> No valid videos to process, interrupting program <<'
+        sys.exit()
+    else:
+        for i in xrange(len(video_infos)):
+            print '\n >> starting work on ' + str(video_infos[i].video_name) + ' <<'
+            
+            objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite,video_infos[i].video_name), 'object')
+    
+            if min_time is not None or max_time is not None:        
+                objects = filterObjectsbyTime(objects, min_time, max_time)
+    
+            alignments = []
+            alignNames = []
+            for a in xrange(len(video_infos[i].alignments)):
+                alignments.append(moving.Trajectory.fromPointList(video_infos[i].alignments[a].point_list))
+                alignNames.append(video_infos[i].alignments[a].name)
+                
+            #Assignments of alignments
+            for a in alignments:
+                a.computeCumulativeDistances()
+                #a.plot('k', linewidth = 2, hold = True)
+                #line = np.array(a)
+                #plt.plot(line[:,0], line[:,1], 'k', linewidth = 2)
+            
+            problems = []
+            for o in objects:
+                o.projectCurvilinear(alignments)           
+                
+                if len(o.curvilinearPositions.getXCoordinates()) > 0:
+                    o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
+                else:
+                    problems.append(o)
+            
+            #discarding problematic objects
+            for prob in reversed(problems):
+                objects.pop(prob.getNum())
+    
+            #saving a figure for the run, highlighting discarded objects        
+            fig = plt.figure()
+               
+            for o in objects:
+                #object
+                plt.plot(o.getXCoordinates(), o.getYCoordinates(), color = '0.75')
+                #origine
+                plt.plot(o.getXCoordinates()[0], o.getYCoordinates()[0], 'ro', color = '0.75')
+    
+            for p in problems:                
+                #object
+                plt.plot(p.getXCoordinates(), p.getYCoordinates(), color = 'b')
+                #origine
+                plt.plot(p.getXCoordinates()[0], p.getYCoordinates()[0], 'ro', color = 'b')
+                #text
+                plt.text(p.getXCoordinates()[0], p.getYCoordinates()[0], str(p.getNum()))
+                
+            for a in alignments:
+                plt.plot([row[0] for row in a], [row[1] for row in a], 'k', linewidth = 2)
+                plt.text(a[0][0], a[0][1], str(alignments.index(a)))
+    
+            plt.savefig(os.path.join(config.path_to_inpx, 'Visualisation of trajectories for video ' + str(video_infos[i].video_name.strip('.sqlite'))))
+            plt.clf()
+            plt.close(fig)
+                            
+            #flow
+            counts = [ 0 for c in xrange(len(alignments))]
+            for o in objects:
+                counts[o.curvilinearPositions.getLanes()[0]] += 1
+    
+            onevid_flow = len(objects)
+            
+            #lane change count by type        
+            oppObjDict, manObjDict, laneDict = outputs.laneChange(objects,trafIntCorridors)
+            onevid_opportunisticLC = sum([len(oppObjDict[j]) for j in oppObjDict])
+            onevid_mandatoryLC = sum([len(manObjDict[j]) for j in manObjDict])
+            print ' == Lane change compilation done ==  |' + str(time.clock())
+                
+            #Calculation of stats stuff
+            onevid_forward_gaps = []
+            onevid_forward_speeds = []
+    
+            #dictionnary of corridor name per alignement number
+            align_corr_dict = {}        
+            for corridor in trafIntCorridors:
+                for align in corridor.to_eval:
+                    if align not in align_corr_dict.keys():
+                        align_corr_dict[align] = corridor.name
+    
+            #plot s/t graph
+            write.plot_st(objects, align_corr_dict, alignNames, fps, config.path_to_inpx, video_infos[i].video_name)
+            
+            for c in xrange(len(trafIntCorridors)):                              
+                #Forward gaps and speeds calculations        
+                graph_inst = []
+                graph_gaps = []
+                for index,lane in enumerate(alignments):
+                    if index in trafIntCorridors[c].to_eval:
+                        #[snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
+                        sorted_instants, raw_speeds = outputs.calculateInstants(objects, compute_align_mid_point(alignments[index]), index)                      
+                        raw_gaps = outputs.calculateGaps(sorted_instants)
+                        onevid_forward_gaps += list(raw_gaps)
+                        onevid_forward_speeds += list(raw_speeds)
+                        graph_inst += sorted_instants[:-1]
+                        graph_gaps += list(raw_gaps)
+                        
+                        print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
+               
+                #trace graph: flow vs time during video
+                sorted_graph_inst, sorted_graph_gaps = define.sort2lists(graph_inst,graph_gaps)
+                if len(sorted_graph_inst) > 0:
+                    write.plot_qt(sorted_graph_inst, sorted_graph_gaps, config.path_to_inpx, video_infos[i].video_name, trafIntCorridors[c].name, fps, min_time, max_time)
+               
+            #mandatory lane change gaps
+            onevid_man_agaps, onevid_man_bgaps = outputs.laneChangeGaps(manObjDict, laneDict, objects)
+            print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
+            
+            #opportunistic lane change gaps
+            onevid_opp_agaps, onevid_opp_bgaps = outputs.laneChangeGaps(oppObjDict, laneDict, objects)
+            print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
+        
+            #variable concatenation
+            opportunisticLC += onevid_opportunisticLC 
+            mandatoryLC += onevid_mandatoryLC
+            flow += onevid_flow
+            forward_gaps += onevid_forward_gaps
+            forward_speeds += onevid_forward_speeds
+            man_agaps += list(onevid_man_agaps)
+            man_bgaps += list(onevid_man_bgaps)
+            opp_agaps += list(onevid_opp_agaps)
+            opp_bgaps += list(onevid_opp_bgaps)
+            all_count = list(define.merge_vectors(np.asarray(all_count),np.asarray(counts)))
+           
     #statistical distribution treatment
     forward_followgap = outputs.stats([forward_gaps])
     opportunistic_LCagap = outputs.stats([opp_agaps])
