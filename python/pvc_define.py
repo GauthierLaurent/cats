@@ -79,7 +79,7 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
         brute = []
         for line in f:
             if '$' in line.strip(): break
-            if line.startswith('#') is False and line.strip() != '': brute.append(line.strip())
+            if line.startswith('#') is False and line.strip() != '': brute.append(line.strip().split('#')[0])
              
         vissimCorridors = {}
         trafIntCorridors = {}    
@@ -128,12 +128,12 @@ def extractAlignmentsfromCSV(dirname, inpxname):
                 sublvl = [] 
             if '$' in line.strip():
                 break
-            if line.strip().endswith('.sqlite'):
-                video_names.append(line.strip())
+            if 'sqlite' in line:
+                video_names.append(line.replace('\t','').strip().split('#')[0])
                 if sublvl != []: brute.append(sublvl)
                 sublvl = []
-            if line.strip().endswith('.sqlite') is False and line.strip() != '':
-                sublvl.append(line.strip())
+            if 'sqlite' not in line and line.strip() != '':
+                sublvl.append(line.strip().split('#')[0])
         if sublvl != []: brute.append(sublvl)
         
         videos = {}
@@ -251,7 +251,7 @@ def extractParamFromCSV(dirname, filename):
         brutestring = ''
         for line in f:
             if '$' in line: break
-            if line.startswith('#') is False and line.strip() != '': brutestring += line.replace("\t", "")
+            if line.startswith('#') is False and line.strip() != '': brutestring += line.replace('\t', '').split('#')[0]
             
         vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
         
