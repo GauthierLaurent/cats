@@ -477,6 +477,36 @@ def writeRealDataReport(dirname, filename, video_names, inpxname, min_time, max_
     out.close()
    
     return
+
+def writeDisgnosedReport(dirname, filename, video_names, inpxname, min_time, max_time, maxSpeed, excess_speed, invert_speed, fps):
+    '''writes the disgnosis file.'''
+    
+    #header writing
+    out = open(filename.format(dirname), 'w')
+    out.write('Video analysed: ' + str(video_names) + '\n')
+    out.write('Associated Vissim file: ' + str(inpxname) + '\n')
+    if min_time or max_time is not None:
+        if min_time is None:
+            out.write('Video analysed from time 0 to '+str(max_time)+' (frames)\n')
+        elif max_time is None:
+            out.write('Video analysed from time '+str(min_time)+' (frames) till end\n')
+        else:
+            out.write('Video analysed from time '+str(min_time)+' to '+str(max_time)+' (frames)\n') 
+    out.write('Date: ' + str(time.localtime().tm_year) + '/' + str(time.localtime().tm_mon).zfill(2) + '/'  + str(time.localtime().tm_mday).zfill(2) + '\n')
+    out.write('\n')
+
+    #excess speed
+    out.write('Speed threshold used: '+str(maxSpeed*3.6*fps)+'\n')
+    out.write('List of objects with speed greater than threshold: (#obj, mean speed)\n')
+    for exc in excess_speed:
+        writeInFile(out, [exc.getNum(), np.mean(np.asarray(exc.curvilinearVelocities)*fps*3.6)] )
+    for inv in invert_speed:
+        writeInFile(out, [inv.getNum(), np.mean(np.asarray(inv.curvilinearVelocities))] )
+          
+    out.close()
+   
+    return
+
     
 def writeListToCSV(lists, name):
     '''writes a CSV file which will contain one line per element in lists'''
