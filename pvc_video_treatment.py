@@ -244,7 +244,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
                     o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
                     
                     if diagnosis is True:
-                        if np.mean(np.asarray(o.curvilinearVelocities)) > maxSpeed:
+                        if np.mean(np.asarray(o.curvilinearVelocities)[:,0]) > maxSpeed:
                             excess_speed.append(o)
                         if np.mean(np.asarray(o.curvilinearVelocities)) < 0:
                             invert_speed.append(o)
