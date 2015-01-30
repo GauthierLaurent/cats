@@ -120,6 +120,7 @@ def extractAlignmentsfromCSV(dirname, inpxname):
             if '$Video_alignments' in line.strip(): break
         
         video_names = []
+        ignore = []
         sublvl = []
         brute = []
         for line in f:
@@ -132,13 +133,27 @@ def extractAlignmentsfromCSV(dirname, inpxname):
                 video_names.append(line.replace('\t','').strip().split('#')[0])
                 if sublvl != []: brute.append(sublvl)
                 sublvl = []
-            if 'sqlite' not in line and line.strip() != '':
+            if 'ignore' in line.lower():
+                if len(ignore) < len(video_names) -1:
+                    for add in xrange(len(video_names) -1 -len(ignore)):
+                        ignore.append('')
+                
+                objects_to_ignore = []
+                text_list = line.lower().strip().split('#')[0].strip().strip('ignore').strip(':').replace(';','-').replace(',','-').split('-')
+                for text in text_list:
+                    objects_to_ignore.append(int(text))
+                ignore.append(objects_to_ignore)                
+                
+            if 'sqlite' not in line and 'ignore' not in line.lower() and line.strip() != '':
                 sublvl.append(line.strip().split('#')[0])
+                
         if sublvl != []: brute.append(sublvl)
-        
+        if len(ignore) < len(video_names):
+            for add in xrange(len(video_names) -len(ignore)):
+                ignore.append('')
+                
         videos = {}
-        for vid in xrange(len(brute)):
-            vid_name = video_names[vid]
+        for vid in xrange(len(brute)): 
             align_list = {}
             for b in xrange(len(brute[vid])):
                 name = brute[vid][b].split(';')[0]
@@ -151,15 +166,15 @@ def extractAlignmentsfromCSV(dirname, inpxname):
                     point.append(moving.Point(float(inter[0]),float(inter[1])))
                     inter = inter[2:]           
                 align_list[b] = [name, point]
-            videos[vid] = Videos([vid_name, align_list.values()])
+            videos[vid] = Videos(video_names[vid], align_list.values(), ignore[vid])
                 
         return videos.values()
     else:
         print 'No vissim file named ' + str(inpxname) + ', closing program '
         sys.exit()
 
-def extractObjectsToIgnore(dirname, inpxname):
-    '''Reads a list of objects number to ignore.
+def extractNumberList(dirname, inpxname):
+    '''Reads a list of intergers for a csv.
        The list may be written on multiple lines and can be separated by
        either ';' ',' or '-'
     '''
