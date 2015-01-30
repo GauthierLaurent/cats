@@ -106,11 +106,10 @@ class Alignments:
         self.point_list = data[1]
         
 def extractAlignmentsfromCSV(dirname, inpxname):
-    '''Reads corridor information for a csv named like the inpx
+    '''Reads alignment information for a csv named like the inpx
        CSV file must be build as:
        Video_name
        Alignment_name;point_list with point_list as: (x1,y1),(x2,y2),etc
-       both list must be separated by "-"
     '''
     if inpxname in dirname: dirname = dirname.strip(inpxname)
     if os.path.exists(os.path.join(dirname, inpxname)):
@@ -159,6 +158,35 @@ def extractAlignmentsfromCSV(dirname, inpxname):
         print 'No vissim file named ' + str(inpxname) + ', closing program '
         sys.exit()
 
+def extractObjectsToIgnore(dirname, inpxname):
+    '''Reads a list of objects number to ignore.
+       The list may be written on multiple lines and can be separated by
+       either ';' ',' or '-'
+    '''
+    if inpxname in dirname: dirname = dirname.strip(inpxname)
+    if os.path.exists(os.path.join(dirname, inpxname)):
+
+        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+        f = open(os.path.join(dirname,filename[0]))
+        for line in f:
+            if '$Ignore-Objects' in line.strip(): break
+        
+        objects_to_ignore = []
+        for line in f:
+            if '$' in line.strip():
+                break
+            elif line.strip() == '' or line.startswith('#'):
+                pass
+            else:
+                text_list = line.strip().split('#')[0].strip().replace(';','-').replace(',','-').split('-')
+                for text in text_list:
+                    objects_to_ignore.append(int(text))
+        objects_to_ignore.sort()       
+        return objects_to_ignore
+    else:
+        print 'No vissim file named ' + str(inpxname) + ', closing program '
+        sys.exit()
+        
 #parameter information        
 def floatOrNone(stringvalue):
     try:
