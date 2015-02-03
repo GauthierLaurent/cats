@@ -68,7 +68,7 @@ def main():
             for p in xrange(len(starting_point)):
                 starting_point[p] = float(starting_point[p])            
         else:
-            print ('Lenght of startign point does not match the number of variables to be be processed...\n'
+            print ('Lenght of starting point does not match the number of variables to be be processed...\n'
                    'Aborting current evaluation\n'
                    'Please correct starting point vector')
             return

@@ -44,6 +44,9 @@ def main(argv):
     #load informations from pvcdata.calib
     parameters, variables, networks = write.load_calib()
 
+    #gathering the variables that need to be analysed
+    to_include_list = [i for i in variables if i.include is True]
+
     #load NOMAD points to try
     nomad_points = write.NOMAD.read_from_NOMAD(argv)
         
@@ -55,10 +58,12 @@ def main(argv):
     last_num = write.History.read_history('calib_history.txt') - 1
     
     #add the value of the points in this new variable
-    for i in xrange(len(variables)):
+    for i in xrange(len(to_include_list)):
         if variables[i].include is True:
-            variables[i].point = nomad_points[i]
-        
+            variables[i].point = nomad_points[to_include_list.index(variables[i])]
+        else:
+            variables[i].point = variables[i].desired_value
+            
     #verify bounds proposed by NOMADS
     chk = define.verifyDesiredPoints(variables)
     
