@@ -497,11 +497,15 @@ def writeDisgnosedReport(dirname, filename, video_names, inpxname, min_time, max
 
     #excess speed
     out.write('Speed threshold used: '+str(maxSpeed*3.6*fps)+'\n')
-    out.write('List of objects with speed greater than threshold: (#obj, mean speed)\n')
+    out.write('List of objects with speed greater than threshold: (#obj, #first_frame, mean speed)\n')
     for exc in excess_speed:
-        writeInFile(out, [exc.getNum(), np.mean(np.asarray(exc.curvilinearVelocities)[:,0])*fps*3.6] )
+        writeInFile(out, [exc.getNum(), exc.getFirstInstant(), np.mean(np.asarray(exc.curvilinearVelocities)[:,0])*fps*3.6] )
+
+    #wrong way speed
+    out.write('Speed threshold used: '+str(maxSpeed*3.6*fps)+'\n')
+    out.write('List of objects with speed greater lower than 0 (possible wrong way): (#obj, #first_frame, mean speed)\n')
     for inv in invert_speed:
-        writeInFile(out, [inv.getNum(), np.mean(np.asarray(inv.curvilinearVelocities))] )
+        writeInFile(out, [inv.getNum(), inv.getFirstInstant(), np.mean(np.asarray(inv.curvilinearVelocities))] )
           
     out.close()
    

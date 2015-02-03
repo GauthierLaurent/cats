@@ -252,9 +252,6 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
                     problems.append(o)
             
             #discarding problematic objects
-            print 'problems:', len(problems)
-            print 'excess', len(excess_speed)
-            print 'invert', len(invert_speed)
             for prob in reversed(problems):
                 objects.pop(prob.getNum())
                 

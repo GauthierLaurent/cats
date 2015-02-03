@@ -94,11 +94,12 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
 
 #alignement information
 class Videos:
-    def __init__(self,data):
-        self.video_name = data[0]
+    def __init__(self,name, aligns, ignore):
+        self.video_name = name
         self.alignments = []
-        for i in data[1]:
+        for i in aligns:
             self.alignments.append(Alignments(i))
+        self.to_ignore = ignore
         
 class Alignments:
     def __init__(self,data):
