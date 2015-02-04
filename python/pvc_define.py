@@ -214,16 +214,22 @@ def floatOrBool(stringvalue):
     try:
         return float(stringvalue)
     except: 
-        if stringvalue.lower() == 'false':
-            return False
-        elif stringvalue.lower() == 'true':
-            return True
-
+        if stringvalue != None:
+            if stringvalue.lower() == 'false':
+                return False
+            elif stringvalue.lower() == 'true':
+                return True
+        else:
+            return None
+        
 def YesorTrue(stringvalue):
-    if stringvalue.lower() == 'yes' or stringvalue.lower() == 'true':
-        return True
-    if stringvalue.lower() == 'no' or stringvalue.lower() == 'flase':
-        return False
+    if stringvalue != None:
+        if stringvalue.lower() == 'yes' or stringvalue.lower() == 'true':
+            return True
+        if stringvalue.lower() == 'no' or stringvalue.lower() == 'flase':
+            return False
+    else:
+        return None
             
 class Variable:
     def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, desired_value = None, point = None):
@@ -318,6 +324,7 @@ def verifyDesiredPoints(variables):
        variable'''
     chk = True
     for i in xrange(len(variables)):
+        #print variables[i].name, variables[i].point, '|', variables[i].vissim_min, variables[i].vissim_max
         if variables[i].vissim_min is not None:
             if variables[i].point < variables[i].vissim_min:
                 chk = False
