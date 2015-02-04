@@ -33,7 +33,7 @@ class FalseCommands:
 #        Main       
 ################################
 def main(argv):
-    
+
     #Internal
     import pvc_write    as write 
     import pvc_define   as define
@@ -56,14 +56,14 @@ def main(argv):
     #load last_num from history file
     #NB: because of the header line, we must substract one from the standard output of the read_history function
     last_num = write.History.read_history('calib_history.txt') - 1
-    
+
     #add the value of the points in this new variable
-    for i in xrange(len(to_include_list)):
+    for i in xrange(len(variables)):
         if variables[i].include is True:
             variables[i].point = nomad_points[to_include_list.index(variables[i])]
         else:
             variables[i].point = variables[i].desired_value
-            
+    
     #verify bounds proposed by NOMADS
     chk = define.verifyDesiredPoints(variables)
     
@@ -72,7 +72,7 @@ def main(argv):
 
 	#adding fail info to the networks
 	for net in networks:
-	    for traj in net.traj_path:
+	    for traj in net.traj_paths:
 		net.addVideoComparison(['BoundingError'])
 
         #history
@@ -98,7 +98,7 @@ def main(argv):
     #pass data to vissim and simulate
     if len(networks) == 1:
         ##run the analysis
-        parameters[5] = multiprocessing.cpu_count() - 1
+        parameters[4] = multiprocessing.cpu_count() - 1
         inputs = [config, variables, parameters, point_folderpath, False]
         packed_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
 

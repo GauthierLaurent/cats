@@ -42,33 +42,36 @@ def count_mat(matrix, treshold):
         count_list.append(np.count_nonzero(line < treshold))
     return count_list
 
+def treat_stats_list(stats_list):
+    '''used to transform a stat list into a list of lists'''
+    raw_list = []
+    for i in xrange(len(stats_list.distributions)):
+        raw_list.append(stats_list.distributions[i].raw)
+    return raw_list
+
 def filter_dist_with_ks(dist_list, treshold):
     '''filter a list of distribution with the Komolgorov-Smirnov test to
        keep only the distributions with the d value lower than threshold.
        
        returns a concatenated distribution and the list of indexes of the
        rejected distributions
+       
+       IMPORTANT: does not support stat list as input
     '''
-    
+
     matrix = np.asarray(ks_matrix(dist_list))
     count_list = count_mat(matrix, treshold)
     index = count_list.index(max(count_list))
 
-    concat = []
+    concat = [index]
     rejected = []
     for i in range(len(dist_list)):
-        if i != index and (matrix[index] < treshold )[i]:
+        if i != index and (matrix[index] <= treshold )[i]:
             concat.append(i)
         elif not (matrix[index] < treshold )[i]:
             rejected.append(i)
+
     return concat, rejected
-
-def treat_stats_list(stats_list):
-
-    raw_list = []
-    for i in xrange(len(stats_list.distributions)):
-        raw_list.append(stats_list.distributions[i].raw)
-    return raw_list
     
 def checkCorrespondanceOfOutputs(video_value, calculated_value):
     '''Test a range of values with the kolmolgorov-Smirnov test'''
@@ -113,11 +116,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
     
     values = []
     for var in variables:
-        if var.include is True:
-            values.append(var.point)
-        else:
-            values.append(var.default)
-            
+        values.append(var.point)
+           
     #Initializing and running the simulation
     simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)
  
@@ -134,14 +134,14 @@ def runVissimForCalibrationAnalysis(network, inputs):
         inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds = outputs.treatVissimOutputs(file_list, inputs)
-
+       
         #verifying the validity of the distributions
-        if config.output_forward_gaps:
-            concat, rejected = treat_stats_list(forFMgap)
+        if config.output_forward_gaps and len(forFMgap.distributions) > 1:
+            concat, rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
 
-        if config.output_lane_change:
-            concat, rejected = treat_stats_list(oppLCbgap)    #using before lane change gaps
-
+        if config.output_lane_change and len(oppLCbgap.distributions) > 1:
+            concat, rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+        
         #adjustment
         flow.popList(rejected) 
         oppLCcount.popList(rejected) 
@@ -180,11 +180,11 @@ def runVissimForCalibrationAnalysis(network, inputs):
         
                 #verifying the validity of the distributions
                 if config.output_forward_gaps:
-                    concat, rejected = treat_stats_list(forFMgap)
-        
+                    concat, rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+                    
                 if config.output_lane_change:
-                    concat, rejected = treat_stats_list(oppLCbgap)    #using before lane change gaps
-        
+                    concat, rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+
                 #adjustment
                 flow.addMany([new_flow[i].mean for i in xrange(len(new_flow))  if i in concat])
                 oppLCcount.addMany([new_oppLCcount[i].mean for i in xrange(len(new_oppLCcount))  if i in concat])
@@ -226,16 +226,16 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #for the first 3 variables, which are intergers, we use:
                 #                       PE = (M-V)/V
                 #       with:    V = number from video
-                #                M = number from modelisation
+                #                M = mean from modelisation
                 # of course this would fail is V = 0, in which case we must turn to
                 #                       AE = M-V...   with V = 0: AE = M
                 #to which we will add a " * "
                 secondary_values = []                
                 for d in xrange(len(non_dist_data)):
                     if video_data_list[d] != 0:
-                        secondary_values.append((non_dist_data[d]-video_data_list[d])/video_data_list[d])
+                        secondary_values.append((non_dist_data[d].mean-video_data_list[d])/video_data_list[d])
                     else:
-                        secondary_values.append(str(non_dist_data[d])+'*')
+                        secondary_values.append(str(non_dist_data[d].mean)+'*')
                         
                 #comparing video_values with output values
                 video_dist_data = video_data_list[3:]

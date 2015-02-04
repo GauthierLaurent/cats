@@ -57,18 +57,20 @@ def main():
     networks = define.buildNetworkObjects(config)      
         
     #generating the raw variables contained in the csv
-    variables = define.extractParamFromCSV(config.path_to_calib_csv, 'calib.csv')
+    variables = define.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
 
     ##looking for an input starting point
     if commands.start_point is not None:    
         starting_point = commands.start_point
-        
+
         #checking for compatibility with the number of parameter specified
         if len(starting_point) == len([i for i in variables if i.include is True]):
             for p in xrange(len(starting_point)):
                 starting_point[p] = float(starting_point[p])            
         else:
             print ('Lenght of starting point does not match the number of variables to be be processed...\n'
+                   'Number of variables to process: ' + str(len([i for i in variables if i.include is True])) + '\n'
+                   'Lenght of starting point given: ' + str(len(starting_point)) + '\n'
                    'Aborting current evaluation\n'
                    'Please correct starting point vector')
             return
@@ -102,13 +104,13 @@ def main():
                         
         #moving required inpx file to the calibration location
         shutil.copy(net.inpx_path, os.path.join(working_path, net.inpx_path.split(os.sep)[-1]))
-        
+ 
     #moving calib.py and calib.cfg
-    shutil.copy('.\include\calib.py', os.path.join(working_path, 'calib.py'))
-    shutil.copy('.\calib.cfg', os.path.join(working_path, 'calib.cfg'))
+    shutil.copy(os.path.join(os.path.curdir, 'include', 'calib.py'), os.path.join(working_path, 'calib.py'))
+    shutil.copy(os.path.join(os.path.curdir,'calib.cfg'), os.path.join(working_path, 'calib.cfg'))
     
     #making sure the param file exists and is well suited to the present task
-    write.NOMAD.verify_params(config.path_to_NOMAD_param, variables, starting_point)    
+    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], starting_point)    
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
     
     #moving NOMAD and param.txt
@@ -137,11 +139,11 @@ def main():
         return
 
     #delete copied files ... NOMAD, NOMAD_param, inpx, calib.py   
-    os.remove(os.path.join(working_path,'nomad.exe'))                                       #NOMAD
-    os.remove(os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))      #NOMAD param.txt
-    os.remove(os.path.join(working_path,'pvcdata.calib'))                                   #Serialized data
-    os.remove(os.path.join(working_path,'calib.py'))                                        #calib.py
-    os.remove(os.path.join(working_path,'calib.cfg'))                                       #calib config file
+    #os.remove(os.path.join(working_path,'nomad.exe'))                                       #NOMAD
+    #os.remove(os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))      #NOMAD param.txt
+    #os.remove(os.path.join(working_path,'pvcdata.calib'))                                   #Serialized data
+    #os.remove(os.path.join(working_path,'calib.py'))                                        #calib.py
+    #os.remove(os.path.join(working_path,'calib.cfg'))                                       #calib config file
     for net in networks:    
         os.remove(os.path.join(working_path,net.inpx_path.split(os.sep)[-1]))               #main inpx
     
