@@ -144,7 +144,7 @@ class Config:
         self.config = ConfigParser.ConfigParser(allow_no_value=True)        
         self.config.read(config_name)
         
-        self.section = 'Sensitivity'
+        self.section = 'General'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
         self.inpx_name                = self.parse('inpx_name',            '',        c_type='string')
         self.path_to_trafint          = self.parse('path_to_trafint',      '',        c_type='string')                 
@@ -162,6 +162,8 @@ class Config:
         self.nbr_runs                 = self.parse('nbr_runs',             '10',      c_type='int')      #May eventually build up something to test this
         self.simulation_time          = self.parse('simulation_time',      '900',     c_type='int')
         self.warm_up_time             = self.parse('warm_up_time',         '120',     c_type='int')
+        
+        self.section = 'Sensitivity'
         self.nbr_points               = self.parse('nbr_points',           '5',       c_type='int')
         
         self.section = 'Statistical precision'
@@ -171,6 +173,7 @@ class Config:
         self.output_forward_gaps      = self.parse('output_forward_gaps',      'True',   c_type='bool')
         self.output_lane_change       = self.parse('output_lane_change',       'False',  c_type='bool')
         self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',  '',       c_type='string')
+        self.ks_threshold             = self.parse('ks_threshold',             '0.3',    c_type='float')    #may want to check out that treshold
         
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       
@@ -179,8 +182,7 @@ class Config:
         self.active_network_4         = self.parse('active_network_4',     'False',  c_type='bool')  
 
         self.section = 'Calibration paths (fullpath = complete paths)'
-        self.path_to_calib_csv        = self.parse('fullpath_to_calib_csv',     '',       c_type='string')
-        self.path_to_NOMAD	           = self.parse('fullpath_to_NOMAD',         '',       c_type='string')
+        self.path_to_NOMAD	         = self.parse('fullpath_to_NOMAD',         '',       c_type='string')
         self.path_to_NOMAD_param      = self.parse('fullpath_to_NOMAD_param',   '',       c_type='string')
         self.path_to_output_folder    = self.parse('path_of_output_folder',     '',       c_type='string')
         self.path_to_inpx_file_1      = self.parse('fullpath_to_inpx_file_1',   '',       c_type='string')
@@ -300,7 +302,7 @@ def commands(parser, script_type):
         parser.add_argument('-t', '--test',           action='store_true',          dest='mode',           default=False,  help='Put the code into test mode, bypassing Vissim and generating random outputs')
 
     if script_type == 'Cali':
-        parser.add_argument('-p','--point',          type=float, nargs='*',         dest = 'start_point',   default = [],    help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
+        parser.add_argument('-p','--point',          type=float, nargs='*',         dest = 'start_point',   default = None,    help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
     
     if script_type == 'Video':
         parser.add_argument('-a', '--analysis',      choices=['trace','process','diagnose'],   dest='analysis',        default='trace', help='Chosse between trace, diagnose, and process. To draw alignements onto a visualisation of the data, select trace. To identify vehicule trajectories with aberrant speeds or global wrong way trajectories, select diagnose. To assign vehicule trajectories to predefined alignements select process')
