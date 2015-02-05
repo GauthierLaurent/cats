@@ -71,7 +71,7 @@ def filter_dist_with_ks(dist_list, treshold):
         elif not (matrix[index] < treshold )[i]:
             rejected.append(i)
 
-    return concat, rejected
+    return rejected
     
 def checkCorrespondanceOfOutputs(video_value, calculated_value):
     '''Test a range of values with the kolmolgorov-Smirnov test'''
@@ -137,10 +137,10 @@ def runVissimForCalibrationAnalysis(network, inputs):
        
         #verifying the validity of the distributions
         if config.output_forward_gaps and len(forFMgap.distributions) > 1:
-            concat, rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+            rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
 
         if config.output_lane_change and len(oppLCbgap.distributions) > 1:
-            concat, rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+            rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
         
         #adjustment
         flow.popList(rejected) 
@@ -176,26 +176,26 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #treating the outputs
                 inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
                 file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-                new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try], inputs)
+                new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
         
                 #verifying the validity of the distributions
                 if config.output_forward_gaps:
-                    concat, rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
-                    
-                if config.output_lane_change:
-                    concat, rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                    rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(forFMgap,new_forwFMgap)), config.ks_threshold)
 
+                if config.output_lane_change:
+                    rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(oppLCbgap,new_oppLCbgap)), config.ks_threshold)    #using before lane change gaps
+                    
                 #adjustment
-                flow.addMany([new_flow[i].mean for i in xrange(len(new_flow))  if i in concat])
-                oppLCcount.addMany([new_oppLCcount[i].mean for i in xrange(len(new_oppLCcount))  if i in concat])
-                manLCcount.addMany([new_manLCcount[i].mean for i in xrange(len(new_manLCcount))  if i in concat])
-                forFMgap.add_many_dist_list( [new_forwFMgap.distributions[i].raw for i in xrange(len(new_forwFMgap.distributions)) if i in concat])   
-                oppLCagap.add_many_dist_list([new_oppLCagap.distributions[i].raw for i in xrange(len(new_oppLCagap.distributions)) if i in concat])
-                oppLCbgap.add_many_dist_list([new_oppLCbgap.distributions[i].raw for i in xrange(len(new_oppLCbgap.distributions)) if i in concat])
-                manLCagap.add_many_dist_list([new_manLCagap.distributions[i].raw for i in xrange(len(new_manLCagap.distributions)) if i in concat])
-                manLCbgap.add_many_dist_list([new_manLCbgap.distributions[i].raw for i in xrange(len(new_manLCbgap.distributions)) if i in concat])
-                forSpeeds.add_many_dist_list([new_forSpeeds.distributions[i].raw for i in xrange(len(new_forSpeeds.distributions)) if i in concat])
-        
+                flow.popList(rejected) 
+                oppLCcount.popList(rejected) 
+                manLCcount.popList(rejected) 
+                forFMgap.pop_dist_list(rejected)        
+                oppLCagap.pop_dist_list(rejected)
+                oppLCbgap.pop_dist_list(rejected)
+                manLCagap.pop_dist_list(rejected)
+                manLCbgap.pop_dist_list(rejected)
+                forSpeeds.pop_dist_list(rejected)
+                
                 #memorizing bad files
                 for r in rejected:
                     rejected_files.append(file_list[-nbr_run_this_try:][r]) 
