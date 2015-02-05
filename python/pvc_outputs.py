@@ -17,7 +17,7 @@ import random, time
 ##################
 #disabling outputs
 import nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
-import storage as TraffIntStorage
+import storage
 sys.stdout = oldstdout #Re-enable output
 
 ##################
@@ -354,6 +354,118 @@ def laneChange(objects, corridors):
     
     return oppObjDict, manObjDict, laneDict
 
+def check_fzp_content(dirname,filename):
+    '''classifies a fzp file according to the column headers
+    
+       case 1: everything is in place where traffic intelligence expects it
+       case 2: every needed information is provided, but not in the right order
+       case 3: the poslat information is missing, it will be assumed to be 0.5 everywhere
+       case 4: some important non-spoofable information is missing, raising a warning and exiting
+    '''
+    #finding the header
+    with open(os.path.join(dirname,filename)) as fzp:
+        for i in xrange(1):
+            fzp.readline()
+        
+        for line in fzp:
+            if '$' not in line:
+                pass
+            else:
+                header_line = line.strip().strip('$').lower().split(';')
+                break
+    
+    #classifying with available columns
+    if 'vehicle:simsec' in header_line[0] and 'no' in header_line[1] and 'lane\\link\\no' in header_line[2] and 'lane\\index' in header_line[3] and 'pos'in header_line[4] and 'poslat' in header_line[5]:
+        case = 1
+    elif 'vehicle:simsec' in header_line and 'no' in header_line and 'lane\\link\\no' in header_line and 'lane\\index' in header_line and 'pos'in header_line:       
+        if 'poslat' in header_line:
+            case = 2
+        else:
+            case = 3
+    else:
+        print ('Missing information columns in the fzp files\n'
+               '\n'
+               'Make sure that all the following attributes are activated...\n'
+               'Interface name [.fzp name]:\n'
+               '     Simulation second [VEHICLE:SIMSEC],\n'
+               '     Number [NO]\n'
+               '     Lane\Link\Number [LANE\LINK\NO]\n'
+               '     Lane\Index [LANE\INDEX]\n'
+               '     Position [POS]\n'
+               '     Position (lateral) [POSLAT]\n'
+               '\n'
+               'To activate:\n'
+               '  Evaluation > Configuration > Tab: Direct Output >\n'
+               '  Row: Vehicle > Record > Click to More... > Click to Attributes\n'
+               )
+        sys.exit()
+
+    return case
+    
+def false_fzp(case,dirname,filename):
+    '''Reorders Case 2 and Case 3 fzp files with required information by the
+       traffic intelligence function
+       
+       Returns the name of the temporary file created
+    
+       information on .fzp files can be found in section 10.8.2.1 of the manual'''
+    
+    false_fzp = ''
+    with open(os.path.join(dirname,filename),'r') as fzp:
+        #skip header        
+        for i in xrange(1):
+            false_fzp += fzp.readline()
+
+        for line in fzp:
+            #print line.strip()
+            if '$' not in line:
+                false_fzp += line
+            else:
+                false_fzp += line
+                break
+        
+        #reorder the file
+        order = line.strip().strip('$').lower().split(';')
+        for line in fzp:
+            if line.strip() != '':
+                line_build = ''
+                line_infos = line.strip().split(';')
+                line_build += line_infos[order.index('vehicle:simsec')] + ';'
+                line_build += line_infos[order.index('no')] + ';'
+                line_build += line_infos[order.index('lane\\link\\no')] + ';'
+                line_build += line_infos[order.index('lane\\index')] + ';'
+                line_build += line_infos[order.index('pos')] + ';'
+                
+                if case == 2:
+                    line_build += line_infos[order.index('poslat')]
+                elif case == 3:
+                    line_build += '0.5'
+                
+                line_build += '\n'
+                
+                false_fzp += line_build
+                
+    with open(os.path.join(dirname,'temp_reordered_'+filename),'w') as temp_fzp:
+        for line in false_fzp:
+            temp_fzp.write(line)
+                
+    return 'temp_reordered_'+filename
+
+def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUptime):
+    '''first checks for the compatibility of the given fzp, then process it'''
+    case = check_fzp_content(dirname,filename)
+    
+    if case == 1:        
+        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit)
+
+    elif case ==2 or case == 3:
+        temp_fzp = false_fzp(case,dirname,filename)
+        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, temp_fzp), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit)
+        
+        os.remove(os.path.join(dirname,temp_fzp))
+
+    return objects
+
 def treatVissimOutputs(files, inputs):
     '''Treat outputs in the given folder 
        If Old_data exists, it must be transfered as the raw list'''
@@ -393,7 +505,7 @@ def treatVissimOutputs(files, inputs):
     for filename in files:
         if verbose:
             print ' === Starting calculations for ' + filename + ' ===  |'    
-        objects = TraffIntStorage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUpTime * simulationStepsPerTimeUnit)
+        objects = readTrajectoryFromFZP(folderpath, filename, simulationStepsPerTimeUnit,  warmUpTime)
         raw_flow.append(len(objects))
         
         #lane building block
