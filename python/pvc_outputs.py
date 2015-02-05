@@ -97,6 +97,15 @@ class stats:
         for dist in self.distributions:
             allvalues += list(dist.raw)
         self.cumul_all = sublvl(allvalues) 
+
+    @classmethod
+    def concat(cls, stats1, *stats):
+        '''concanate all the distributions of the stats class variables into the first one'''
+        new_raw = []
+        for stat in stats:
+            for dist in stat.distributions:
+                new_raw.append(dist.raw)
+        stats1.add_many_dist_list(new_raw)
         
 class singleValueStats:
     def __init__(self,raw):
@@ -131,6 +140,14 @@ class singleValueStats:
             self.std = 0
             self.count = len(self.raw)         
 
+    @classmethod
+    def concat(cls, stats1, *stats):
+        '''concanate all the distributions of the stats class variables into the first one'''
+        new_raw = []
+        for stat in stats:
+            new_raw.append(stat.raw)
+        stats1.add_many(new_raw)
+        
 ##################
 # Output treatment tools
 ##################
