@@ -134,82 +134,83 @@ def runVissimForCalibrationAnalysis(network, inputs):
         inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds = outputs.treatVissimOutputs(file_list, inputs)
-       
-        #verifying the validity of the distributions
-        if config.output_forward_gaps and len(forFMgap.distributions) > 1:
-            rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
-
-        if config.output_lane_change and len(oppLCbgap.distributions) > 1:
-            rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
         
-        #adjustment
-        flow.popList(rejected) 
-        oppLCcount.popList(rejected) 
-        manLCcount.popList(rejected) 
-        forFMgap.pop_dist_list(rejected)        
-        oppLCagap.pop_dist_list(rejected)
-        oppLCbgap.pop_dist_list(rejected)
-        manLCagap.pop_dist_list(rejected)
-        manLCbgap.pop_dist_list(rejected)
-        forSpeeds.pop_dist_list(rejected)
-
-        #memorizing bad files
-        for r in rejected:
-            rejected_files.append(file_list[r]) 
-
-        #running new data
-        goal = parameters[2]
-        total_retries = 5 ###this could be moved to the cfg file
-        retry = 0
-        seed = parameters[1] + goal + 1
-        
-        while len(forFMgap.distributions) < goal and retry <= total_retries:
-            #fixing vissim parameters            
-            nbr_run_this_try = len(rejected)
-            parameters[2] = nbr_run_this_try  #number of rerun
-            parameters[1] = seed
-        
-            #Initializing and running the simulation
-            simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)        
-        
-            if simulated is True:
-                #treating the outputs
-                inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
-                file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-                new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
-        
-                #verifying the validity of the distributions
-                if config.output_forward_gaps:
-                    rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(forFMgap,new_forwFMgap)), config.ks_threshold)
-
-                if config.output_lane_change:
-                    rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(oppLCbgap,new_oppLCbgap)), config.ks_threshold)    #using before lane change gaps
+        if config.ks_switch:
+            #verifying the validity of the distributions
+            if config.output_forward_gaps and len(forFMgap.distributions) > 1:
+                rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+    
+            if config.output_lane_change and len(oppLCbgap.distributions) > 1:
+                rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+            
+            #adjustment
+            flow.popList(rejected) 
+            oppLCcount.popList(rejected) 
+            manLCcount.popList(rejected) 
+            forFMgap.pop_dist_list(rejected)        
+            oppLCagap.pop_dist_list(rejected)
+            oppLCbgap.pop_dist_list(rejected)
+            manLCagap.pop_dist_list(rejected)
+            manLCbgap.pop_dist_list(rejected)
+            forSpeeds.pop_dist_list(rejected)
+    
+            #memorizing bad files
+            for r in rejected:
+                rejected_files.append(file_list[r]) 
+    
+            #running new data
+            goal = parameters[2]
+            total_retries = 5 ###this could be moved to the cfg file
+            retry = 0
+            seed = parameters[1] + goal + 1
+            
+            while len(forFMgap.distributions) < goal and retry <= total_retries:
+                #fixing vissim parameters            
+                nbr_run_this_try = len(rejected)
+                parameters[2] = nbr_run_this_try  #number of rerun
+                parameters[1] = seed
+            
+                #Initializing and running the simulation
+                simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)        
+            
+                if simulated is True:
+                    #treating the outputs
+                    inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
+                    file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
+                    new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
+            
+                    #verifying the validity of the distributions
+                    if config.output_forward_gaps:
+                        rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(forFMgap,new_forwFMgap)), config.ks_threshold)
+    
+                    if config.output_lane_change:
+                        rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(oppLCbgap,new_oppLCbgap)), config.ks_threshold)    #using before lane change gaps
+                        
+                    #adjustment
+                    flow.popList(rejected) 
+                    oppLCcount.popList(rejected) 
+                    manLCcount.popList(rejected) 
+                    forFMgap.pop_dist_list(rejected)        
+                    oppLCagap.pop_dist_list(rejected)
+                    oppLCbgap.pop_dist_list(rejected)
+                    manLCagap.pop_dist_list(rejected)
+                    manLCbgap.pop_dist_list(rejected)
+                    forSpeeds.pop_dist_list(rejected)
                     
-                #adjustment
-                flow.popList(rejected) 
-                oppLCcount.popList(rejected) 
-                manLCcount.popList(rejected) 
-                forFMgap.pop_dist_list(rejected)        
-                oppLCagap.pop_dist_list(rejected)
-                oppLCbgap.pop_dist_list(rejected)
-                manLCagap.pop_dist_list(rejected)
-                manLCbgap.pop_dist_list(rejected)
-                forSpeeds.pop_dist_list(rejected)
-                
-                #memorizing bad files
-                for r in rejected:
-                    rejected_files.append(file_list[-nbr_run_this_try:][r]) 
-                
-            #fixing while loop info
-            seed += nbr_run_this_try
-            retry += 1
-
-        #moving unwanted file        
-        if len(rejected_files) > 0:
-            if not os.path.exists(os.path.join(final_inpx_path, 'rejected_tests')):
-                os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
-            for rejected_file in rejected_files:
-                shutil.copy(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
+                    #memorizing bad files
+                    for r in rejected:
+                        rejected_files.append(file_list[-nbr_run_this_try:][r]) 
+                    
+                #fixing while loop info
+                seed += nbr_run_this_try
+                retry += 1
+    
+            #moving unwanted file        
+            if len(rejected_files) > 0:
+                if not os.path.exists(os.path.join(final_inpx_path, 'rejected_tests')):
+                    os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
+                for rejected_file in rejected_files:
+                    shutil.copy(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
         
         non_dist_data = [flow, oppLCcount, manLCcount]
         dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds]

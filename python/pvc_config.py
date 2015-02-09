@@ -174,6 +174,7 @@ class Config:
         self.output_lane_change       = self.parse('output_lane_change',       'False',  c_type='bool')
         self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',  '',       c_type='string')
         self.ks_threshold             = self.parse('ks_threshold',             '0.3',    c_type='float')    #may want to check out that treshold
+        self.ks_switch                = self.parse('reject_vissim_dist',       'False',  c_type='bool')
         
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       
