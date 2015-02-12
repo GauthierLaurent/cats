@@ -127,25 +127,26 @@ def main():
     #launching NOMADS
     try:
         os.chdir(working_path)
-        out = open('this_file.txt','w')
+        out = open('error_file.txt','w')
         subprocess.check_call('nomad.exe' + ' ' + param_file, stderr = out, shell = True) 
         
     except subprocess.CalledProcessError:
         out.close()
-        err = open('this_file.txt','r')
+        err = open('error_file.txt','r')
         for l in err:
             print l.strip()
         err.close()
         return
 
     #delete copied files ... NOMAD, NOMAD_param, inpx, calib.py   
+    
     #os.remove(os.path.join(working_path,'nomad.exe'))                                       #NOMAD
     #os.remove(os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))      #NOMAD param.txt
     #os.remove(os.path.join(working_path,'pvcdata.calib'))                                   #Serialized data
     #os.remove(os.path.join(working_path,'calib.py'))                                        #calib.py
     #os.remove(os.path.join(working_path,'calib.cfg'))                                       #calib config file
-    for net in networks:    
-        os.remove(os.path.join(working_path,net.inpx_path.split(os.sep)[-1]))               #main inpx
+    #for net in networks:    
+    ##    os.remove(os.path.join(working_path,net.inpx_path.split(os.sep)[-1]))               #main inpx
     
     return
 

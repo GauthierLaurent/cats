@@ -20,15 +20,7 @@ print would give NOMAD an erronous result of the called point
 ################################
 import os, sys, multiprocessing, shutil
 
-################################ 
-#        Misc tools     
-################################
-class FalseCommands:
-    '''this serves only to spoof the worker function'''
-    def __init__(self):
-        self.verbose    = False
-        self.multi_test = False
-        
+       
 ################################ 
 #        Main       
 ################################
@@ -100,28 +92,28 @@ def main(argv):
         ##run the analysis
         parameters[4] = multiprocessing.cpu_count() - 1
         inputs = [config, variables, parameters, point_folderpath, False]
-        packed_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
-
-        if packed_outputs[0] is False:
+        unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
+        
+        if define.isbool(list(unpacked_outputs)):
             write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
-            fout = max(packed_outputs[0])
-            networks = [packed_outputs[1]]
+            fout = max(unpacked_outputs[0])
+            networks = [unpacked_outputs[1]]
 
     else:
         ##run the analysis through workers -- separate with networks
-        commands = FalseCommands()
+        commands = define.FalseCommands()
         inputs = [config, variables, parameters, point_folderpath, True]
         for net in networks:            
-            unpacked_outputs = define.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
+            packed_outputs = define.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
         
         d_stat = []
         networks = []
 
-        for packed in unpacked_outputs:
-            d_stat += packed[0]
-            networks.append(packed[1])
+        for unpacked in packed_outputs:
+            d_stat += unpacked[0]
+            networks.append(unpacked[1])
 
         if define.isbool(d_stat):
             write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 

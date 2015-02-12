@@ -82,10 +82,12 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value):
     for i in range(len(calculated_value)):
         if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
             D_statistic, p_value = ks_twosamp(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
-            D_statistic_list.append(D_statistic)
+            D_statistic_list.append(calculated_value[i].cumul_all.mean)     #value (mean)
+            D_statistic_list.append(D_statistic)                            #value (delta)
             p_value_list.append(p_value)
         else:
-            D_statistic_list.append('DNE')
+            D_statistic_list.append('0.00') #value (mean)
+            D_statistic_list.append('DNE')  #value (delta)
     
     return D_statistic_list
 
@@ -124,7 +126,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
     if simulated is not True:
         for traj in network[0].traj_paths:
             network[0].addVideoComparison(['SimulationError'])
-        return False
+        return False, network[0]
              
     else:
         d_stat = []
@@ -133,7 +135,25 @@ def runVissimForCalibrationAnalysis(network, inputs):
         #treating the outputs
         inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds = outputs.treatVissimOutputs(file_list, inputs)
+        if len(file_list) > 1:
+            commands = define.FalseCommands()
+            packedStatsLists = define.createWorkers(file_list, outputs.treatVissimOutputs, inputs, commands, defineNbrProcess = 2)
+            #define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands)
+
+            flow = packedStatsLists[0][0]; oppLCcount = packedStatsLists[0][1]; manLCcount = packedStatsLists[0][2]; forFMgap = packedStatsLists[0][3]; oppLCagap = packedStatsLists[0][4]; oppLCbgap = packedStatsLists[0][5]; manLCagap = packedStatsLists[0][6]; manLCbgap = packedStatsLists[0][7]; forSpeeds = packedStatsLists[0][8]
+
+            for stat in xrange(1,len(packedStatsLists)):
+                outputs.singleValueStats.concat(flow, packedStatsLists[stat][0])
+                outputs.singleValueStats.concat(oppLCcount, packedStatsLists[stat][1])
+                outputs.singleValueStats.concat(manLCcount, packedStatsLists[stat][2])
+                outputs.stats.concat(forFMgap, packedStatsLists[stat][3])
+                outputs.stats.concat(oppLCagap, packedStatsLists[stat][4])
+                outputs.stats.concat(oppLCbgap, packedStatsLists[stat][5])
+                outputs.stats.concat(manLCagap, packedStatsLists[stat][6])
+                outputs.stats.concat(manLCbgap, packedStatsLists[stat][7])
+                outputs.stats.concat(forSpeeds, packedStatsLists[stat][8])
+        else:
+            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds = outputs.treatVissimOutputs(file_list, inputs)
         
         if config.ks_switch:
             #verifying the validity of the distributions
@@ -178,13 +198,23 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
                     file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
                     new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
-            
+                    
+                    outputs.singleValueStats.concat(flow, new_flow)
+                    outputs.singleValueStats.concat(oppLCcount, new_oppLCcount)
+                    outputs.singleValueStats.concat(manLCcount, new_manLCcount)
+                    outputs.stats.concat(forFMgap, new_forwFMgap)
+                    outputs.stats.concat(oppLCagap, new_oppLCagap)
+                    outputs.stats.concat(oppLCbgap, new_oppLCbgap)
+                    outputs.stats.concat(manLCagap, new_manLCagap)
+                    outputs.stats.concat(manLCbgap, new_manLCbgap)
+                    outputs.stats.concat(forSpeeds, new_forSpeeds)                   
+                    
                     #verifying the validity of the distributions
                     if config.output_forward_gaps:
-                        rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(forFMgap,new_forwFMgap)), config.ks_threshold)
+                        rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
     
                     if config.output_lane_change:
-                        rejected = filter_dist_with_ks(treat_stats_list(outputs.stats.concat(oppLCbgap,new_oppLCbgap)), config.ks_threshold)    #using before lane change gaps
+                        rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
                         
                     #adjustment
                     flow.popList(rejected) 
@@ -212,7 +242,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 for rejected_file in rejected_files:
                     shutil.copy(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
         
-        non_dist_data = [flow, oppLCcount, manLCcount]
+        non_dist_data = [oppLCcount, manLCcount, flow]
         dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds]
         
         #setting video values
@@ -231,13 +261,16 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 # of course this would fail is V = 0, in which case we must turn to
                 #                       AE = M-V...   with V = 0: AE = M
                 #to which we will add a " * "
-                secondary_values = []                
+                secondary_values = []
                 for d in xrange(len(non_dist_data)):
                     if video_data_list[d] != 0:
-                        secondary_values.append((non_dist_data[d].mean-video_data_list[d])/video_data_list[d])
+                        secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-video_data_list[d])/video_data_list[d]])
                     else:
-                        secondary_values.append(str(non_dist_data[d].mean)+'*')
-                        
+                        if non_dist_data[d].mean is not None and non_dist_data[d].mean != 0:                            
+                            secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])                           
+                        else:
+                            secondary_values.append(['0.00', '0.00*'])
+       
                 #comparing video_values with output values
                 video_dist_data = video_data_list[3:]
                 secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data)

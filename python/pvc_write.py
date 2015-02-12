@@ -67,8 +67,11 @@ def defineName(dirname, TypeOfAnalysis):
         for f in past_analysis:
             striped = f.strip('.csv')
             if TypeOfAnalysis in f:
-                num = int(striped.split('_')[-1])
-                if num > last_num: last_num = num
+                try:
+                    num = int(striped.split('_')[-1])
+                    if num > last_num: last_num = num
+                except:
+                    pass
     
     last_num += 1  
     filename = TypeOfAnalysis + '_Analysis_' + str(last_num)
@@ -112,7 +115,18 @@ class History:
             hist.write('Itt\t|\tpoint\t|\t')
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
-                    hist.write('Network_'+str(net)+'Video_'+str(comp)+'|\t')
+                    hist.write('Network_'+str(net)+'_Video_'+str(comp)+': ')
+                    hist.write('oppLCcount (mean)\t oppLCcount (delta)\t')
+                    hist.write('manLCcount (mean)\t manLCcount (delta)\t')
+                    hist.write('flow (mean)\t flow (delta)\t')  
+                    hist.write('-\t')                    
+                    hist.write('forFMgap (mean)\t forFMgap (ks_d_stat)\t')
+                    hist.write('oppLCagap (mean)\t oppLCagap (ks_d_stata)\t')
+                    hist.write('oppLCbgap (mean)\t oppLCbgap (ks_d_stat)\t')
+                    hist.write('manLCagap (mean)\t manLCagap (ks_d_stat)\t')
+                    hist.write('manLCbgap (mean)\t manLCbgap (ks_d_stat)\t')
+                    hist.write('forSpeeds (mean)\t forSpeeds (ks_d_stat)\t')
+                    hist.write('|\t')
     		
             hist.write('fout\n')
             
@@ -133,7 +147,7 @@ class History:
                     variables = writeToOneList(list(comp))
                     for v in xrange(len(variables)):
                         if v == 4:
-                            hist.write('*\t')
+                            hist.write('-\t')
                         hist.write(str(variables[v]) +'\t')
                     hist.write("|\t")
     

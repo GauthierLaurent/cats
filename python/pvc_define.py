@@ -560,7 +560,16 @@ def isallbool(lists):
         if isinstance(element,bool) is False:
             return False
     return True
-    
+
+################################ 
+#        Misc tools     
+################################
+class FalseCommands:
+    '''this serves only to spoof the worker function'''
+    def __init__(self):
+        self.verbose    = False
+        self.multi_test = False
+        
 ##################
 # Multiprocessing tools
 ##################
@@ -618,7 +627,7 @@ def intelligentChunks(n, iterable, value_names):
     
     return intelligent_chunk
 
-def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSize = (multiprocessing.cpu_count() - 1), variables_names = []):
+def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSize = (multiprocessing.cpu_count() - 1), variables_names = [], defineNbrProcess = False, defineChunkSize = False):
   
     '''Spawns workers to process the given function(values,inputs). The values 
        list wil be broken down into a number of chunks appropriate for the
@@ -632,22 +641,36 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
        To get the number of cores: multiprocessing.cpu_count() '''
     #getting the number of cores:
     num_cores = multiprocessing.cpu_count() - 1  
-    
+
     #starting the workers
     pool = multiprocessing.Pool(processes = num_cores)
     
     #calculating the number of tasks
     ##number of processes
-    nbr_pro = len(multiprocessing.active_children()) #redondant with num_cores, but left there to rmember the function later on
+    if defineNbrProcess is False and defineChunkSize is False:
+        nbr_pro = len(multiprocessing.active_children()) #redondant with num_cores, but left there to rmember the function later on
+
+        ##calculating the number of chunks needed to have one chunk per process, but with a max number of simulations per chunk
+        one_chunk_per_process = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro))) 
     
-    ##calculating the number of chunks needed to have one chunk per process, but with a max number of simulations per chunk
-    one_chunk_per_process = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))    
+        ##blocking the number of variables to 4 per Chunks   
+        len_chunks = min(one_chunk_per_process, minChunkSize)
 
-    ##blocking the number of variables to 4 per Chunks   
-    len_chunks = min(one_chunk_per_process, minChunkSize)  
+    elif not isinstance(defineNbrProcess, bool) and isinstance(defineChunkSize, bool):
+        nbr_pro = defineNbrProcess
+        
+        len_chunks = int(math.ceil(len(total_number_of_tasks)/float(nbr_pro)))
 
+    elif isinstance(defineNbrProcess, bool) and not isinstance(defineChunkSize, bool):
+        len_chunks = defineChunkSize
+
+        nbr_pro = np.ceil(float(len_chunks)/len(total_number_of_tasks))
+        
+    else:
+        nbr_pro = max(defineNbrProcess, np.ceil(float(defineChunkSize)/len(total_number_of_tasks)))
+    
     ##breaking into chunks without 'None' values
-    if not variables_names:
+    if variables_names == []:
         processed_chunks = cleanChunks(len_chunks, total_number_of_tasks)
     ##breaking into chunks keeping linked variables together        
     else:
@@ -778,6 +801,7 @@ def boolTable(n):
     
 def genLHCsample(variables,n):
     '''generates a Latin Hypercube sample of n points per non boolean dimension
+       
        variables can be either boolean or real number values
        
        returns all combinations of real values (nxn matrix) for the True and False
@@ -813,7 +837,7 @@ def genLHCsample(variables,n):
     for m in xrange(n):
         point = []
         for k in xrange(len(real_dim)):
-            point.append(random.uniform(cut_ranges[k][mat[k][m]][0],cut_ranges[k][mat[k][m]][1]))
+            point.append(random.uniform(cut_ranges[k][mat[m][k]][0],cut_ranges[k][mat[m][k]][1]))
         real_mat.append(point)   
 
     #bool values combinations enumeration

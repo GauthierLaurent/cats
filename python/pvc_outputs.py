@@ -114,11 +114,13 @@ class singleValueStats:
         
     def addOne(self,number):
         self.raw.append(number)
+        self.raw.sort()
         self.recalculate()
         
     def addMany(self,mylist):
         for i in mylist:
             self.raw.append(i)
+        self.raw.sort()
         self.recalculate()
         
     def popList(self,mylist):
@@ -145,8 +147,8 @@ class singleValueStats:
         '''concanate all the distributions of the stats class variables into the first one'''
         new_raw = []
         for stat in stats:
-            new_raw.append(stat.raw)
-        stats1.add_many(new_raw)
+            new_raw += stat.raw
+        stats1.addMany(new_raw)
         
 ##################
 # Output treatment tools
@@ -163,15 +165,17 @@ def calculateInstants(objects, s, lane):
     return instants, speeds
 
 def calculateGaps(sorted_instants):
-    x = np.asarray(sorted_instants)    
-    return x[1:]-x[:-1]
+    x = np.asarray(sorted_instants)
+    return list(x[1:]-x[:-1])
     
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
     
     instants, speeds = calculateInstants(objects, s, lane)
     gaps = calculateGaps(instants)
-    
+    for g in reversed(xrange(len(gaps))):
+        if gaps[g] >= 30:
+            gaps.pop(g)
     return gaps, speeds
 
 def laneChangeGaps(listDict, laneDict, objects):
