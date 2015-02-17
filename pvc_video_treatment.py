@@ -161,12 +161,6 @@ def filterObjectsbyTime(unfiltered_objects, time_min, time_max):
 
     return cutTrajectories(filtered_objects, time_min, time_max)
 
-def compute_align_mid_point(align):
-    s_list = []
-    for a in xrange(1,len(align)):
-        s_list.append(((align[a][0]-align[a-1][0])**2 + (align[a][1]-align[a-1][1])**2)**0.5)
-    return sum(s_list)/2
-
 def defName(partial_filename, ana_type, min_time, max_time):            
     name = 'Video_'+str(ana_type)+'_of_'+str(partial_filename) + '_'
     if min_time or max_time is not None:
@@ -345,14 +339,14 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
                     for index,lane in enumerate(alignments):
                         if index in trafIntCorridors[c].to_eval:
                             #[snappedSpline, snappedSplineLeadingPoint, snappedPoint, subsegmentDistance, S, Y] = moving.getSYfromXY(moving.Point.midPoint(lane[0], lane[1]), alignments, 0.5)
-                            sorted_instants, raw_speeds = outputs.calculateInstants(objects, compute_align_mid_point(alignments[index]), index)                      
+                            sorted_instants, raw_speeds = outputs.calculateInstants(objects, 0.9*alignments[index].getCumulativeDistance(-1), index)                      
                             raw_gaps = outputs.calculateGaps(sorted_instants)
                             onevid_forward_gaps += list(raw_gaps)
                             onevid_forward_speeds += list(raw_speeds)
                             graph_inst += sorted_instants[:-1]
                             graph_gaps += list(raw_gaps)
                             
-                            print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())
+                            print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())# + ' | ' + str(len(raw_gaps))
                    
                     #trace graph: flow vs time during video
                     sorted_graph_inst, sorted_graph_gaps = define.sort2lists(graph_inst,graph_gaps)

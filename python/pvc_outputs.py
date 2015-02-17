@@ -173,9 +173,9 @@ def forwardGaps(objects, s, lane):
     
     instants, speeds = calculateInstants(objects, s, lane)
     gaps = calculateGaps(instants)
-    for g in reversed(xrange(len(gaps))):
-        if gaps[g] >= 30:
-            gaps.pop(g)
+    #for g in reversed(xrange(len(gaps))):
+    #    if gaps[g] >= 30:
+    #        gaps.pop(g)
     return gaps, speeds
 
 def laneChangeGaps(listDict, laneDict, objects):
@@ -545,12 +545,13 @@ def treatVissimOutputs(files, inputs):
         temp_raw_forward_gaps = []
         temp_raw_speeds = []
         for index,lane in enumerate(lanes):  
-            s = (lanes[str(lane)][0]+lanes[str(lane)][1])/2
+            s = (0.9*lanes[str(lane)][0]-0.1*lanes[str(lane)][1])
             raw_gaps, raw_speeds = forwardGaps(objects, s, lane)
             if raw_gaps != []: temp_raw_forward_gaps += list(raw_gaps)
             if raw_speeds != []: temp_raw_speeds += list(raw_speeds)    
             if verbose:
-                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock())
+                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock())# + ' | ' + str(len(temp_raw_forward_gaps))
+
         if temp_raw_forward_gaps != []:
             raw_forward_gaps.append(temp_raw_forward_gaps)
             raw_forward_speeds.append(temp_raw_speeds)
