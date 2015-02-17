@@ -230,9 +230,19 @@ def YesorTrue(stringvalue):
             return False
     else:
         return None
-            
+
+def defVarTypes(stringvalue):
+    if stringvalue.lower() == 'r' or stringvalue.lower() == 'real':
+        return 'R'
+    if stringvalue.lower() == 'i' or stringvalue.lower() == 'int' or stringvalue.lower() == 'interger':
+        return 'I'
+    if stringvalue.lower() == 'bo' or stringvalue.lower() == 'bool' or stringvalue.lower() == 'boolean':
+        return 'reject'
+    if stringvalue.lower() == 'bi' or stringvalue.lower() == 'bin' or stringvalue.lower() == 'binary':
+        return 'B'
+        
 class Variable:
-    def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, desired_value = None, point = None):
+    def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, desired_value = None, value_type = 'R', point = None):
         self.include        = YesorTrue(include)     
         self.name           = name
         self.vissim_name    = vissim_name
@@ -242,6 +252,7 @@ class Variable:
         self.desired_value  = floatOrBool(desired_value)
         self.vissim_min     = floatOrNone(vissim_min)
         self.vissim_max     = floatOrNone(vissim_max)
+        self.type           = defVarTypes(value_type)
         self.point          = floatOrNone(point)
 
 def extractParamFromCSV(dirname, filename):
@@ -276,11 +287,11 @@ def extractParamFromCSV(dirname, filename):
             if '$' in line: break
             if line.startswith('#') is False and line.strip() != '': brutestring += line.replace('\t', '').split('#')[0]
             
-        vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV, desiredV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
+        vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, value_type, desiredMinV, desiredMaxV, desiredV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
         
         parameters = {}        
         for i in xrange(len(vissimNames)):
-            parameters[i] = Variable(vissimInclu[i], value_names[i], vissimNames[i], vissimMinVa[i], vissimMaxVa[i], vissimDefau[i], desiredMinV[i], desiredMaxV[i], desiredV[i])
+            parameters[i] = Variable(vissimInclu[i], value_names[i], vissimNames[i], vissimMinVa[i], vissimMaxVa[i], vissimDefau[i], desiredMinV[i], desiredMaxV[i], desiredV[i], value_type[i])
 
         parameters = verifyDesiredRanges(parameters.values())
         
@@ -298,11 +309,12 @@ def extractDataFromVariablesCSV(filename):
     vissimMaxVa = variablesInfo['vissimmax']
     vissimDefau = variablesInfo['vissimdefault']
     value_names = variablesInfo['varname']
+    value_type  = variablesInfo['valuetype']
     desiredMinV = variablesInfo['desiredmin']
     desiredMaxV = variablesInfo['desiredmax']
     desiredV    = variablesInfo['desiredvalue']
        
-    return vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, desiredMinV, desiredMaxV, desiredV
+    return vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, value_type, desiredMinV, desiredMaxV, desiredV
 
 def verifyDesiredRanges(variables):
     '''checks for coherence between bounds and desired min/max values entered
