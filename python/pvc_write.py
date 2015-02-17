@@ -178,25 +178,34 @@ class NOMAD:
         X0 = ' '
         LB = ' '
         UB = ' '
+        IT = ' '
         if starting_point != []:
             for p in starting_point:
                 X0 += str(p) + ' '
         for var in variables:
-            if starting_point == []:
-                X0 += str(var.vissim_default) + ' '
-            if var.vissim_min is not None:
-                LB += str(var.vissim_min) + ' '
-            else:
-                LB += '- '
-            if var.vissim_max is not None:
-                UB += str(var.vissim_max) + ' '
-            else:
-                UB += '- '
-                
+            if var.type != 'reject':
+                if starting_point == []:
+                    X0 += str(var.desired_value) + ' '
+                if var.vissim_min is not None:
+                    LB += str(var.desired_min) + ' '
+                else:
+                    LB += '- '
+                if var.vissim_max is not None:
+                    UB += str(var.desired_max) + ' '
+                else:
+                    UB += '- '
+                if var.type == 'R':
+                    IT += 'R '
+                elif var.type == 'I':
+                    IT += 'I '
+                else:
+                    IT += 'B '
+                        
         with open(filepath,'w') as param:
             param.write('DIMENSION      '+num_dim+'					                  # number of variables\n'
                         '\n'
-                        'BB_EXE        \'$python calib.py\'                      # blackbox program\n')
+                        'BB_EXE        \'$python calib.py\'                      # blackbox program\n'
+                        'BB_INPUT)TYPE  (' + IT + ')\n')
             if biobj is False:
                 param.write('BB_OUTPUT_TYPE OBJ \n')
             else:
@@ -247,21 +256,30 @@ class NOMAD:
                 X0 = ' '
                 LB = ' '
                 UB = ' '
+                IT = ' '
                 if starting_point != []:
                     for p in starting_point:
                         X0 += str(p) + ' '
                 for var in variables:
-                    if starting_point == []:
-                        X0 += str(var.vissim_default) + ' ' 
-                    if var.vissim_min is not None:
-                        LB += str(var.vissim_min) + ' '
-                    else:
-                        LB += '- '
-                    if var.vissim_max is not None:
-                        UB += str(var.vissim_max) + ' '
-                    else:
-                        UB += '- '  
-                        
+                    if var.type != 'reject':                        #automatic rejection of boolean values.  
+                        if starting_point == []:                    #please run a calibration for each state
+                            X0 += str(var.desired_value) + ' '      #(true/false) of the variable
+                        if var.desired_min is not None:
+                            LB += str(var.desired_min) + ' '
+                        else:
+                            LB += '- '
+                        if var.desired_max is not None:
+                            UB += str(var.desired_max) + ' '
+                        else:
+                            UB += '- '
+                        if var.type == 'R':
+                            IT += 'R '
+                        elif var.type == 'I':
+                            IT += 'I '
+                        else:
+                            IT += 'B '
+            
+            chk_IT = False
             for l in xrange(len(current_lines)):
                 if 'X0' in current_lines[l]:
                     current_lines[l] = 'X0             (' + X0 + ')\n'
@@ -269,7 +287,18 @@ class NOMAD:
                     current_lines[l] = 'LOWER_BOUND    (' + LB + ')\n'
                 elif 'UPPER_BOUND' in current_lines[l]:
                     current_lines[l] = 'UPPER_BOUND    (' + UB + ')\n'
-        
+                elif 'BB_INPUT_TYPE' in current_lines[l]:
+                    current_lines[l] = 'BB_INPUT_TYPE  (' + IT + ')\n'
+                    chk_IT = True
+            
+            if chk_IT is False:
+                  for l in xrange(len(current_lines)):
+                      if 'BB_EXE' in current_lines[l]:
+                          Start = current_lines[0:l]
+                          Mid   = 'BB_INPUT_TYPE  (' + IT + ')\n'
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+                
             with open(filepath,'w') as new:
                 for line in current_lines:
                     new.write(line)
@@ -552,12 +581,22 @@ def writeToOneList(*args):
             out.append(arg)
     return out
     
-def writeInFile(out, *args):
+def writeInFile(out, *args, **kwargs):
     '''Writes any number of arguments into the file given in out'''    
     variables = writeToOneList(list(args))
+
+    rounding = 4
+    if kwargs is not None:
+        for key, value in kwargs.items():
+            if key == 'rounding':
+                rounding = value
+    
     for var in variables:
-        if isinstance(var,float) is True:
-                out.write(str(round(var,4)) + ";")
+        if isinstance(var,float) is True:            
+            if rounding is False:
+                out.write(str(var) + ";")
+            else:
+                out.write(str(round(var,rounding)) + ";")
         else:
             out.write(str(var) +";")
     out.write("\n")
