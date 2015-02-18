@@ -545,12 +545,12 @@ def treatVissimOutputs(files, inputs):
         temp_raw_forward_gaps = []
         temp_raw_speeds = []
         for index,lane in enumerate(lanes):  
-            s = (0.9*lanes[str(lane)][0]-0.1*lanes[str(lane)][1])
+            s = (0.5*lanes[str(lane)][1]-0.5*lanes[str(lane)][0])
             raw_gaps, raw_speeds = forwardGaps(objects, s, lane)
             if raw_gaps != []: temp_raw_forward_gaps += list(raw_gaps)
             if raw_speeds != []: temp_raw_speeds += list(raw_speeds)    
             if verbose:
-                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock())# + ' | ' + str(len(temp_raw_forward_gaps))
+                print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock()) + ' | ' + str(len(temp_raw_forward_gaps))
 
         if temp_raw_forward_gaps != []:
             raw_forward_gaps.append(temp_raw_forward_gaps)
