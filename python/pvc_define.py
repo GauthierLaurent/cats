@@ -547,16 +547,22 @@ def myfloor(x, base=5):
     '''version of math.floor that floors to the neerest base multiple'''  
     return int(base * math.floor((float(x)/base)))
     
-def sort2lists(list1,list2):
+def sort2lists(list1,list2,ascending_order=True):
     '''Sorts list2 according to the sorting of the content of list1
        list1 must contain values that can be sorted while
        list2 may contain any kind of data'''
        
     indexes = range(len(list1))
     indexes.sort(key=list1.__getitem__)
-    sorted_list1 = map(list1.__getitem__, indexes)
-    sorted_list2 = map(list2.__getitem__, indexes)
-    
+
+    if ascending_order is True:  
+        sorted_list1 = map(list1.__getitem__, indexes)
+        sorted_list2 = map(list2.__getitem__, indexes)
+        
+    if ascending_order is False:  
+        sorted_list1 = map(list1.__getitem__, reversed(indexes))
+        sorted_list2 = map(list2.__getitem__, reversed(indexes))
+        
     return sorted_list1, sorted_list2
 
 def isbool(lists):
