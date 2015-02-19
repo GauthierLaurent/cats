@@ -73,7 +73,7 @@ def filter_dist_with_ks(dist_list, treshold):
 
     return rejected
     
-def checkCorrespondanceOfOutputs(video_value, calculated_value):
+def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsPerTimeUnit,fps):
     '''Test a range of values with the kolmolgorov-Smirnov test'''
 
     D_statistic_list = []
@@ -81,7 +81,7 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value):
 
     for i in range(len(calculated_value)):
         if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
-            D_statistic, p_value = ks_twosamp(video_value[i].cumul_all.raw, calculated_value[i].cumul_all.raw)
+            D_statistic, p_value = ks_twosamp([p/float(simulationStepsPerTimeUnit) for p in video_value[i].cumul_all.raw], [p/float(fps) for p in calculated_value[i].cumul_all.raw])
             D_statistic_list.append(calculated_value[i].cumul_all.mean)     #value (mean)
             D_statistic_list.append(D_statistic)                            #value (delta)
             p_value_list.append(p_value)
@@ -273,7 +273,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
        
                 #comparing video_values with output values
                 video_dist_data = video_data_list[3:]
-                secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data)
+                secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data, parameters[0], config.fps)
 
                 #adding video comparison data to the network                   
                 network[0].addVideoComparison(secondary_values)
