@@ -159,7 +159,9 @@ class Config:
                                                                                         
         self.section = 'Simulation'                                                              
         self.sim_steps                = self.parse('steps_per_sec',        '10',      c_type='int')      #10 recommended
-        self.first_seed               = self.parse('first_seed',           '42',      c_type='int')  
+        self.random_seed              = self.parse('random_increment',     'False',   c_type='bool')        
+        self.first_seed               = self.parse('first_seed',           '42',      c_type='int')
+        self.increments               = self.parse('increments',           '1',       c_type='int')        
         self.nbr_runs                 = self.parse('nbr_runs',             '10',      c_type='int')      #May eventually build up something to test this
         self.simulation_time          = self.parse('simulation_time',      '900',     c_type='int')
         self.warm_up_time             = self.parse('warm_up_time',         '120',     c_type='int')

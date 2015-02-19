@@ -86,7 +86,7 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
         Simulation.SetAttValue("SimRes", sim_parameters[0])         #ODOT p.45 (56 in the pdf)
         Simulation.SetAttValue("useMaxSimSpeed", True)
         Simulation.SetAttValue("RandSeed", sim_parameters[1])       #Hitchhiker's Guide to the Galaxy!
-        Simulation.SetAttValue("RandSeedIncr", 1)
+        Simulation.SetAttValue("RandSeedIncr", sim_parameters[5])
         Simulation.SetAttValue("NumRuns", sim_parameters[2])        #To be verified
         Simulation.SetAttValue("SimPeriod",sim_parameters[3])
         
@@ -156,4 +156,40 @@ def weidemannCheck(model, parameters):
                 pass
             else:
                 output.append(parameters[i])
-    return output    
+    return output
+    
+#######   Under developpement  ############
+class vissimParameters:
+    def __init__(self,vissim_name,vissim_min, vissim_max, vissim_default, param_type):
+        self.vissim_name    = vissim_name
+        self.vissim_min     = vissim_min
+        self.vissim_max     = vissim_max
+        self.vissim_default = vissim_default
+        self.param_type     = param_type
+        
+def vissimDictionnary():
+    values = {}
+    
+    #Wiedemann 74
+    values.append(vissimParameters('W74ax',      0.0,   None,    2.0,   'DrivingBehaviors'))
+    values.append(vissimParameters('W74bxAdd',   0.0,   None,    2.0,   'DrivingBehaviors'))
+    values.append(vissimParameters('W74bxMult',  0.0,   None,    3.0,   'DrivingBehaviors'))
+    
+    #Wiedemann 99
+    values.append(vissimParameters('W99cc0',     0.0,   None,    1.5,   'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc1',    None,   None,    0.9,   'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc2',     0.0,   None,    4.0,   'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc3',    None,   None,   -8.0,   'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc4',    None,   None,   -0.35,  'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc5',    None,   None,    0.35,  'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc6',    None,   None,   11.44,  'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc7',    None,   None,    0.25,  'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc8',    None,   None,    3.5 ,  'DrivingBehaviors'))
+    values.append(vissimParameters('W99cc9',    None,   None,    1.5 ,  'DrivingBehaviors'))
+    
+    #general following behavior
+    
+    #general lane change
+    
+    
+    

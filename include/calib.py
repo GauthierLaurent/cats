@@ -18,7 +18,7 @@ print would give NOMAD an erronous result of the called point
 ################################ 
 #        Native dependencies      
 ################################
-import os, sys, multiprocessing, shutil
+import os, sys, multiprocessing, shutil, random
 
        
 ################################ 
@@ -29,13 +29,21 @@ def main(argv):
     #Internal
     import pvc_write    as write 
     import pvc_define   as define
-    import pvc_config   as pconfig
+    import pvc_config
     import pvc_analysis as analysis
     import pvc_vissim   as vissim
+
+    config = pvc_config.Config('calib.cfg')
 
     #load informations from pvcdata.calib
     parameters, variables, networks = write.load_calib()
 
+    if config.random_seed is True:
+        parameters[1] = random.randint(1,1000)
+        parameters[5] = random.randint(1,1000)
+        
+        seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
+        
     #gathering the variables that need to be analysed
     to_include_list = [i for i in variables if i.include is True]
 
@@ -57,7 +65,7 @@ def main(argv):
             variables[i].point = variables[i].desired_value
     
     #verify bounds proposed by NOMADS
-    chk = define.verifyDesiredPoints(variables)
+    chk = define.verifyDesiredPoints(variables)    
     
     if not chk:
         fout = 'inf'
@@ -68,7 +76,7 @@ def main(argv):
 		net.addVideoComparison(['BoundingError'])
 
         #history
-        write.History.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
+        write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
         
         #output
         print fout                 
@@ -81,8 +89,7 @@ def main(argv):
     #move all inpx files to the point folder
     for net in networks:
         shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
-
-    config = pconfig.Config('calib.cfg')  
+  
     #assing vissim instances to each network
     for net in networks:
         net.addVissim(vissim.startVissim())
@@ -95,7 +102,7 @@ def main(argv):
         unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
         
         if define.isbool(list(unpacked_outputs)):
-            write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
+            write.History.write_history(last_num, seeds, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = max(unpacked_outputs[0])
@@ -116,13 +123,13 @@ def main(argv):
             networks.append(unpacked[1])
 
         if define.isbool(d_stat):
-            write.History.write_history(last_num, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
+            write.History.write_history(last_num, seeds, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = max(d_stat)
 
     #write to history
-    write.History.write_history(last_num, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
+    write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
     
     #output for NOMAD
     print fout 

@@ -20,7 +20,7 @@ def main():
     ################################ 
     
     #Native dependencies
-    import os, sys, time, argparse
+    import os, sys, time, argparse, random
     
     #Internal
     import pvc_vissim   as vissim
@@ -77,7 +77,13 @@ def main():
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
     sim_cores = 1
-    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, Sim_lenght, sim_cores]
+    if config.random_seed is False:
+        first_seed = config.first_seed
+        increments = config.increments
+    else:
+        first_seed = random.randint(1,1000)
+        increments = random.randint(1,10)
+    parameters = [config.sim_steps, first_seed, config.nbr_runs, Sim_lenght, sim_cores, increments]
     VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(InpxPath, InpxName)
                 
     ###################################### 

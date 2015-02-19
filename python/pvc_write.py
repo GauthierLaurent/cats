@@ -110,9 +110,11 @@ class History:
         return last_num + 1
         
     @staticmethod
-    def create_history(dirname, filename, networks):
+    def create_history(dirname, filename, nbr_seeds, networks):
         with open(os.path.join(dirname, filename), 'w') as hist:
-            hist.write('Itt\t|\tpoint\t|\t')
+            for seed in xrange(nbr_seeds):
+                hist.write('Seed_'+str(seed)+'\t')
+            hist.write('|\tItt\t|\tpoint\t|\t')   
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
                     hist.write('Network_'+str(net)+'_Video_'+str(comp)+': ')
@@ -131,10 +133,15 @@ class History:
             hist.write('fout\n')
             
     @staticmethod
-    def write_history(last_num, points, networks, fout,  dirname, filename):   
+    def write_history(last_num, seeds, points, networks, fout,  dirname, filename):   
         with open(os.path.join(dirname, filename), 'a') as hist:
             hist.write(str(last_num)+'\t')
             hist.write("|\t")
+
+            #seeds
+            for seed in seeds:
+                hist.write(str(seed)+'\t')
+            hist.write('|\t')
     
             #tried point
             for p in points:

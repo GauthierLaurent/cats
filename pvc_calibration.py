@@ -16,7 +16,7 @@ def main():
     ################################ 
     
     #Native dependencies
-    import os, sys, shutil, argparse, subprocess
+    import os, sys, shutil, argparse, subprocess, random
     
     #Internal
     import pvc_write  as write
@@ -51,7 +51,13 @@ def main():
     ##Vissim simulation parameters
     Sim_lenght = config.simulation_time + config.warm_up_time
     sim_cores = 1
-    parameters = [config.sim_steps, config.first_seed, config.nbr_runs, Sim_lenght, sim_cores]
+    if config.random_seed is False:
+        first_seed = config.first_seed
+        increments = config.increments
+    else:
+        first_seed = random.randint(1,1000)
+        increments = random.randint(1,10)
+    parameters = [config.sim_steps, first_seed, config.nbr_runs, Sim_lenght, sim_cores, increments]
     
     #determining vissim, video, and corridor lists
     networks = define.buildNetworkObjects(config)      
@@ -122,7 +128,7 @@ def main():
     write.write_calib(working_path, parameters, variables, networks)
 		
     #creating an history file for calib.py
-    write.History.create_history(working_path, 'calib_history.txt', networks)    
+    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, networks)    
     
     #launching NOMADS
     try:
