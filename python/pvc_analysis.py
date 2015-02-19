@@ -122,7 +122,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
            
     #Initializing and running the simulation
     simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)
- 
+    
     if simulated is not True:
         for traj in network[0].traj_paths:
             network[0].addVideoComparison(['SimulationError'])
@@ -284,12 +284,15 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         d_stat.append('inf')
                     else:
                         d_stat.append(secondary_values[4])
+                    write.plot_dists(point_folderpath, video_data_list[4], dist_data[0], parameters[0], config.fps)
+                    
                 if config.output_lane_change:
                     if secondary_values[6] == 'DNE':        #using the before gap to calibrate
                         d_stat.append('inf')
                     else:
                         d_stat.append(secondary_values[6])
-    
+                    write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], parameters[0], config.fps)
+        
         return d_stat, network[0]
 
 ################################ 

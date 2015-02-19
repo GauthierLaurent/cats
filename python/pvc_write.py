@@ -804,6 +804,22 @@ def plot_qt(time_serie, gaps_serie, dirname, video_name, corridor, fps, min_time
     plt.clf()
     plt.close(fig)    
     return
+
+def plot_dists(dirname, video_data, vissim_data, simulationStepsPerTimeUnit, fps, normalized=True):
+    fig, ax = plt.subplots(2, 1, squeeze=True)
+    ax[0].hist([i/fps for i in video_data.cumul_all.raw if i/fps < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'b', alpha=0.6, label='video data')
+    ax[0].hist([i/simulationStepsPerTimeUnit for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
+    ax[0].legend(loc='best', frameon=False)
+
+    ax[1].hist([i/simulationStepsPerTimeUnit for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')    
+    for j in xrange(len(vissim_data.distributions)):    
+        ax[1].hist([i/simulationStepsPerTimeUnit for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(j))
+    ax[1].legend(loc='best', frameon=False)
+
+    plt.savefig(os.path.join(dirname, 'Video and Vissim distributions'))
+    plt.clf()
+    plt.close(fig)    
+    
     
 ##################
 # Drawing tools

@@ -155,6 +155,7 @@ class Config:
         self.path_to_image            = self.parse('path_to_image',        '',        c_type='string')
         self.image_name               = self.parse('image_name',           '',        c_type='string')
         self.pixel_to_unit_ratio      = self.parse('pixel_to_unit_ratio',  '',        c_type='string')
+        self.fps                      = self.parse('fps',                  '30',      c_type='int')
                                                                                         
         self.section = 'Simulation'                                                              
         self.sim_steps                = self.parse('steps_per_sec',        '10',      c_type='int')      #10 recommended
