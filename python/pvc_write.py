@@ -122,7 +122,10 @@ class Content:
         self.manLCagaps = mean_delta(manLCagaps)
         self.manLCbgaps = mean_delta(manLCbgaps)
         self.forSpeeds  = mean_delta(forSpeeds)
-        self.fout       = float(fout)
+        try:
+            self.fout   = float(fout)
+        except:
+            self.fout   = fout
 
 class History:
     '''stores all history related functions for easy access'''
@@ -138,23 +141,27 @@ class History:
 
     @staticmethod
     def read_history(filename):
-        '''finds the number of the last recorded evaluation and returns the number of the new evaluation'''
+        '''reads the history '''
         history = {}
         with open(os.path.join(os.getcwd(),filename), 'r') as hist:
             for l in hist:
                 if l.strip() != '' and l.startswith('#') is False:
                     if l.strip().split('\t|\t')[0] != 'Itt':
                         types = l.strip().split('\t|\t')
-                        stats_data = types[3].strip('*').split('\t')
-                        history[types[0]] = Content(types[0].strip('\t'),types[1].split('\t'),types[2].split('\t'),[stats_data[0], stats_data[1]],[stats_data[2], stats_data[3]],[stats_data[4], stats_data[5]],[stats_data[7], stats_data[8]],[stats_data[9], stats_data[10]],[stats_data[11], stats_data[12]],[stats_data[13], stats_data[14]],[stats_data[15], stats_data[16]],[stats_data[17], stats_data[18]], types[4].strip('\t'))                    
+                        if types[-1] == 'crashed':
+                            stats_data = ['nan' for i in xrange(19)]
+                        else:
+                            stats_data = types[3].strip('*').split('\t')
+                        history[types[0]] = Content(types[0].strip('\t'),types[1].split('\t'),types[2].split('\t'),[stats_data[0], stats_data[1]],[stats_data[2], stats_data[3]],[stats_data[4], stats_data[5]],[stats_data[7], stats_data[8]],[stats_data[9], stats_data[10]],[stats_data[11], stats_data[12]],[stats_data[13], stats_data[14]],[stats_data[15], stats_data[16]],[stats_data[17], stats_data[18]], types[4].strip('\t'))
         return history.values()
         
     @staticmethod
     def create_history(dirname, filename, nbr_seeds, networks):
         with open(os.path.join(dirname, filename), 'w') as hist:
+            hist.write('Itt\t|\t')            
             for seed in xrange(nbr_seeds):
                 hist.write('Seed_'+str(seed)+'\t')
-            hist.write('|\tItt\t|\tpoint\t|\t')   
+            hist.write('|\tpoint\t|\t')   
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
                     hist.write('Network_'+str(net)+'_Video_'+str(comp)+': ')
