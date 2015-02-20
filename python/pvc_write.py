@@ -97,10 +97,37 @@ def findCalibName(dirname):
 ################################ 
 #        Calibration history functions       
 ################################
+class mean_delta:
+    def __init__(self,lists):
+        try:
+            self.mean = float(lists[0])
+        except:
+            self.mean = 'nan'
+        try:    
+            self.delta = float(lists[1])
+        except:
+            self.mean = 'nan'
+        
+class Content:
+    def __init__(self,num,seeds,point,oppLCcount,manLCcount,flow,forFMgaps,oppLCagaps,oppLCbgaps,manLCagaps,manLCbgaps,forSpeeds,fout):
+        self.num        = int(num)
+        self.seeds      = [int(i) for i in seeds]
+        self.point      = [float(i) for i in point]
+        self.oppLCcount = mean_delta(oppLCcount)
+        self.manLCcount = mean_delta(manLCcount)
+        self.flow       = mean_delta(flow)
+        self.forFMgaps  = mean_delta(forFMgaps)
+        self.oppLCagaps = mean_delta(oppLCagaps)
+        self.oppLCbgaps = mean_delta(oppLCbgaps)
+        self.manLCagaps = mean_delta(manLCagaps)
+        self.manLCbgaps = mean_delta(manLCbgaps)
+        self.forSpeeds  = mean_delta(forSpeeds)
+        self.fout       = float(fout)
+
 class History:
     '''stores all history related functions for easy access'''
     @staticmethod
-    def read_history(filename):
+    def find_last_number(filename):
         '''finds the number of the last recorded evaluation and returns the number of the new evaluation'''
         last_num = 0
         with open(os.path.join(os.getcwd(),filename), 'r') as hist:
@@ -108,6 +135,19 @@ class History:
                 if l.strip() != '' and l.startswith('#') is False:
                     last_num += 1
         return last_num + 1
+
+    @staticmethod
+    def read_history(filename):
+        '''finds the number of the last recorded evaluation and returns the number of the new evaluation'''
+        history = {}
+        with open(os.path.join(os.getcwd(),filename), 'r') as hist:
+            for l in hist:
+                if l.strip() != '' and l.startswith('#') is False:
+                    if l.strip().split('\t|\t')[0] != 'Itt':
+                        types = l.strip().split('\t|\t')
+                        stats_data = types[3].strip('*').split('\t')
+                        history[types[0]] = Content(types[0].strip('\t'),types[1].split('\t'),types[2].split('\t'),[stats_data[0], stats_data[1]],[stats_data[2], stats_data[3]],[stats_data[4], stats_data[5]],[stats_data[7], stats_data[8]],[stats_data[9], stats_data[10]],[stats_data[11], stats_data[12]],[stats_data[13], stats_data[14]],[stats_data[15], stats_data[16]],[stats_data[17], stats_data[18]], types[4].strip('\t'))                    
+        return history.values()
         
     @staticmethod
     def create_history(dirname, filename, nbr_seeds, networks):
@@ -820,7 +860,7 @@ def plot_dists(dirname, video_data, vissim_data, simulationStepsPerTimeUnit, fps
 
     ax[1].hist([i/simulationStepsPerTimeUnit for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')    
     for j in xrange(len(vissim_data.distributions)):    
-        ax[1].hist([i/float(simulationStepsPerTimeUnit) for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(j))
+        ax[1].hist([i/float(simulationStepsPerTimeUnit) for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(j+1))
     ax[1].legend(loc='best', frameon=False)
 
     plt.savefig(os.path.join(dirname, 'Video and Vissim distributions'))
