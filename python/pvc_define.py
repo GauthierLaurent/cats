@@ -284,8 +284,8 @@ def extractParamFromCSV(dirname, filename):
             
         brutestring = ''
         for line in f:
-            if '$' in line: break
-            if line.startswith('#') is False and line.strip() != '': brutestring += line.replace('\t', '').split('#')[0]
+            if '$' in line.split('#')[0]: break
+            if line.startswith('#') is False and line.strip() != '': brutestring += line.replace('\t', '').strip('\n').split('#')[0]+'\n'
             
         vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, value_type, desiredMinV, desiredMaxV, desiredV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
         
@@ -300,7 +300,7 @@ def extractParamFromCSV(dirname, filename):
         print 'No vissim file named ' + str(filename) + ', closing program '
         sys.exit()
         
-def extractDataFromVariablesCSV(filename): 
+def extractDataFromVariablesCSV(filename):
     '''works inside convertParameterstoString'''
     variablesInfo = csv2rec(filename)
     vissimInclu = variablesInfo['includetoanalysis']
