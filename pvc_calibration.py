@@ -115,6 +115,9 @@ def main():
     shutil.copy(os.path.join(os.path.curdir, 'include', 'calib.py'), os.path.join(working_path, 'calib.py'))
     shutil.copy(os.path.join(os.path.curdir,'calib.cfg'), os.path.join(working_path, 'calib.cfg'))
     
+    #moving a copy of the csv file (needed for visualization tools)
+    shutil.copy(os.path.join(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv'), os.path.join(working_path, config.inpx_name.strip('inpx') + 'csv'))
+    
     #making sure the param file exists and is well suited to the present task
     write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], starting_point)    
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
@@ -145,7 +148,6 @@ def main():
         return
 
     #delete copied files ... NOMAD, NOMAD_param, inpx, calib.py   
-    
     #os.remove(os.path.join(working_path,'nomad.exe'))                                       #NOMAD
     #os.remove(os.path.join(working_path,config.path_to_NOMAD_param.split(os.sep)[-1]))      #NOMAD param.txt
     #os.remove(os.path.join(working_path,'pvcdata.calib'))                                   #Serialized data

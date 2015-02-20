@@ -275,7 +275,7 @@ def extractParamFromCSV(dirname, filename):
     '''
 
     if filename in dirname: dirname = dirname.strip(filename)
-    if os.path.exists(os.path.join(dirname, filename)):
+    if os.path.exists(os.path.join(dirname, filename)) or os.path.exists(os.path.join(dirname,os.path.splitext(filename)[0] + '.csv')):
 
         files  = [f for f in os.listdir(dirname) if f == (os.path.splitext(filename)[0] + '.csv')]      #extension can be obtained as os.path.splitext(filename)[1]
         f = open(os.path.join(dirname,files[0]))
@@ -297,7 +297,7 @@ def extractParamFromCSV(dirname, filename):
         
         return parameters
     else:
-        print 'No vissim file named ' + str(filename) + ', closing program '
+        print 'No vissim file or csv file named ' + str(filename) + 'were found, closing program '
         sys.exit()
         
 def extractDataFromVariablesCSV(filename):
