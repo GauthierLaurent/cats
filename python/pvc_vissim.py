@@ -106,7 +106,10 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
                 for variable in xrange(len(parameters)):
                     if caracterizedParameter('DrivingBehaviors', parameters[variable]):
                         Vissim.Net.DrivingBehaviors[i].SetAttValue(parameters[variable].vissim_name,values[variable])
-                 
+        
+        #Saving variable changes
+        Vissim.SaveNet()
+        
         #Starting the simulation            
         Simulation.RunContinuous()
         
