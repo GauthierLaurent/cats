@@ -273,7 +273,8 @@ class NOMAD:
                         '\n'
                         'MAX_BB_EVAL    1000             				# the algorithm terminates when\n'
                         '                              				# 100 black-box evaluations have\n'
-                        '                              				# been made\n')
+                        '                              				# been made\n'
+                        'HISTORY_FILE	NOMAD_history.txt')
     
     @staticmethod                    
     def verify_params(filepath, variables, starting_point = [], biobj = False):
@@ -859,17 +860,27 @@ def plot_qt(time_serie, gaps_serie, dirname, video_name, corridor, fps, min_time
     plt.close(fig)    
     return
 
-def plot_dists(dirname, video_data, vissim_data, simulationStepsPerTimeUnit, fps, normalized=True):
+def plot_dists(dirname, video_data, vissim_data, fout, simulationStepsPerTimeUnit, fps, normalized=True):
     fig, ax = plt.subplots(2, 1, squeeze=True)
-    ax[0].hist([i/float(fps) for i in video_data.cumul_all.raw if i/fps < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'b', alpha=0.6, label='video data')
-    ax[0].hist([i/float(simulationStepsPerTimeUnit) for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
+    video_p_list  = [i/float(fps) for i in video_data.cumul_all.raw if i/fps < 60]
+    vissim_p_list = [i/float(simulationStepsPerTimeUnit) for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 60]
+    if len(video_p_list) > 0:
+        ax[0].hist(video_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'b', alpha=0.6, label='video data')
+    if len(video_p_list) > 0:
+        ax[0].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
     ax[0].legend(loc='best', frameon=False)
+    ax[0].set_title('Comparison of Vissim data and Video data\n'+r'$f_{out}$'+' = ' + str(round(fout,4)))
 
-    ax[1].hist([i/simulationStepsPerTimeUnit for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')    
-    for j in xrange(len(vissim_data.distributions)):    
-        ax[1].hist([i/float(simulationStepsPerTimeUnit) for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 30], normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(j+1))
+    if len(video_p_list) > 0:
+        ax[1].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')    
+    for j in xrange(len(vissim_data.distributions)):
+        dist_p_list = [i/float(simulationStepsPerTimeUnit) for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 60]
+        if len(dist_p_list) > 0:
+            ax[1].hist(dist_p_list, normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(j+1))
     ax[1].legend(loc='best', frameon=False)
+    ax[1].set_title('Comparison of all Vissim data')
 
+    plt.subplots_adjust(hspace=0.3)
     plt.savefig(os.path.join(dirname, 'Video and Vissim distributions'))
     plt.clf()
     plt.close(fig)    
