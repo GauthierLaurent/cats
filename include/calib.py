@@ -37,10 +37,22 @@ def main(argv):
 
     #load informations from pvcdata.calib
     parameters, variables, networks = write.load_calib()
+       
+    #define NOMAD output name
+    #output_name = argv.replace('input','output')
+
+    #create subfolder for this point's evaluation
+    filename = write.findCalibName(os.getcwd())
+    point_folderpath = write.createSubFolder(os.path.join(os.getcwd(), filename), filename)
+        
+    #load last_num from history file
+    #NB: because of the header line, we must substract one from the standard output of the find_last_number function
+    #last_num = write.History.find_last_number('calib_history.txt') - 1
+    last_num = filename.split('_')[-1]
 
     if config.random_seed is True:
         parameters[1] = random.randint(1,1000)
-        parameters[5] = random.randint(1,1000)
+        parameters[5] = random.randint(1,100)
         
         seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
         
@@ -49,13 +61,6 @@ def main(argv):
 
     #load NOMAD points to try
     nomad_points = write.NOMAD.read_from_NOMAD(argv)
-        
-    #define NOMAD output name
-    #output_name = argv.replace('input','output')
-        
-    #load last_num from history file
-    #NB: because of the header line, we must substract one from the standard output of the find_last_number function
-    last_num = write.History.find_last_number('calib_history.txt') - 1
 
     #add the value of the points in this new variable
     for i in xrange(len(variables)):
@@ -81,10 +86,6 @@ def main(argv):
         #output
         print fout                 
         return 0
-
-    #create subfolder for this point's evaluation
-    filename = write.findCalibName(os.getcwd())
-    point_folderpath = write.createSubFolder(os.path.join(os.getcwd(), filename), filename)
 
     #move all inpx files to the point folder
     for net in networks:

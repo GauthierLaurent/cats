@@ -157,12 +157,18 @@ def runVissimForCalibrationAnalysis(network, inputs):
         
         if config.ks_switch:
             #verifying the validity of the distributions
-            if config.output_forward_gaps and len(forFMgap.distributions) > 1:
-                rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
-    
-            if config.output_lane_change and len(oppLCbgap.distributions) > 1:
-                rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
-            
+            if config.output_forward_gaps:
+                if len(forFMgap.distributions) > 1:
+                    rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+                else:
+                    rejected = []
+                    
+            if config.output_lane_change:
+                if len(oppLCbgap.distributions) > 1:
+                    rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                else:
+                    rejected = []
+                    
             #adjustment
             flow.popList(rejected) 
             oppLCcount.popList(rejected) 
@@ -211,11 +217,17 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     
                     #verifying the validity of the distributions
                     if config.output_forward_gaps:
-                        rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
-    
+                        if len(forFMgap.distributions) > 1:
+                            rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+                        else:
+                            rejected = []
+                            
                     if config.output_lane_change:
-                        rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
-                        
+                        if len(oppLCbgap.distributions) > 1:
+                            rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                        else:
+                            rejected = []
+                            
                     #adjustment
                     flow.popList(rejected) 
                     oppLCcount.popList(rejected) 
@@ -284,14 +296,14 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         d_stat.append('inf')
                     else:
                         d_stat.append(secondary_values[4])
-                    write.plot_dists(point_folderpath, video_data_list[4], dist_data[0], parameters[0], config.fps)
+                    write.plot_dists(point_folderpath, video_data_list[4], dist_data[0], secondary_values[4], parameters[0], config.fps)
                     
                 if config.output_lane_change:
                     if secondary_values[6] == 'DNE':        #using the before gap to calibrate
                         d_stat.append('inf')
                     else:
                         d_stat.append(secondary_values[6])
-                    write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], parameters[0], config.fps)
+                    write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
         
         return d_stat, network[0]
 

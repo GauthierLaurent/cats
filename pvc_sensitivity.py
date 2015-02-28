@@ -82,7 +82,7 @@ def main():
         increments = config.increments
     else:
         first_seed = random.randint(1,1000)
-        increments = random.randint(1,10)
+        increments = random.randint(1,100)
     parameters = [config.sim_steps, first_seed, config.nbr_runs, Sim_lenght, sim_cores, increments]
     VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(InpxPath, InpxName)
                 

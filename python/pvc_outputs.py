@@ -87,16 +87,19 @@ class stats:
         
     def pop_dist_list(self, mylist):
         '''mylist must refer to the indexes of the list of distributions to pop'''
-        for i in reversed(sorted(mylist)):
-            self.distributions.pop(i)
-        self.regen_cumul_all()
+        if len(mylist) > 0:
+            for i in reversed(sorted(mylist)):
+                if len(self.raw) >= i:
+                    self.distributions.pop(i)
+            self.regen_cumul_all()
         
     def regen_cumul_all(self):
         '''recalculates the cumum_all distribution'''
         allvalues = []
         for dist in self.distributions:
             allvalues += list(dist.raw)
-        self.cumul_all = sublvl(allvalues) 
+        self.cumul_all = sublvl(allvalues)
+        self.cumul_all.raw.sort()
 
     @classmethod
     def concat(cls, stats1, *stats):
@@ -125,9 +128,11 @@ class singleValueStats:
         
     def popList(self,mylist):
         '''mylist must refer to the indexes of the numbers to pop'''
-        for i in reversed(sorted(mylist)):
-            self.raw.pop(i)
-        self.recalculate()
+        if len(mylist) > 0:
+            for i in reversed(sorted(mylist)):
+                if len(self.raw) >= i:
+                    self.raw.pop(i)
+            self.recalculate()
         
     def recalculate(self):
         '''calculates usfull data'''
@@ -140,7 +145,8 @@ class singleValueStats:
             self.mean = 0
             self.var = 0
             self.std = 0
-            self.count = len(self.raw)         
+            self.count = len(self.raw)
+            self.raw.sort()
 
     @classmethod
     def concat(cls, stats1, *stats):
