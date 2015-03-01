@@ -259,11 +259,11 @@ class NOMAD:
             param.write('DIMENSION      '+num_dim+'					                  # number of variables\n'
                         '\n'
                         'BB_EXE        \'$python calib.py\'                      # blackbox program\n'
-                        'BB_INPUT)TYPE  (' + IT + ')\n')
+                        'BB_INPUT_TYPE  (' + IT + ')\n')
             if biobj is False:
-                param.write('BB_OUTPUT_TYPE OBJ \n')
+                param.write('BB_OUTPUT_TYPE OBJ EB EB EB\n')
             else:
-                param.write('BB_OUTPUT_TYPE OBJ OBJ \n')
+                param.write('BB_OUTPUT_TYPE OBJ OBJ EB EB EB\n')
             param.write('\n'
                         'X0             (' + X0 + ')    # starting point\n'
                         '\n'
@@ -274,16 +274,38 @@ class NOMAD:
                         'MAX_BB_EVAL    1000             				# the algorithm terminates when\n'
                         '                              				# 100 black-box evaluations have\n'
                         '                              				# been made\n'
-                        'HISTORY_FILE	NOMAD_history.txt')
+                        'STATS_FILE	NOMAD_history.txt')
     
-    @staticmethod                    
+    @staticmethod
+    def add_new_line(current_lines, l):
+        try:
+            if current_lines[l+1].strip() == '':
+                return ''
+            else:
+                return '\n'
+        except:
+            return '\n'
+            
+    @staticmethod         
     def verify_params(filepath, variables, starting_point = [], biobj = False):
         '''verifies the param file for Dimensions, X0, LB, and UB lenght
            Sets X0 as default parameters unless a point is specified as a list
            in starting_point'''
         
+        #note: Flag = [ 0    0 = DIMENSION       value   is correct, 1 = DIMENSION       value   needs to be corrected
+        #               1    0 = BB_OUTPUT_TYPE  value   is correct, 1 = BB_OUTPUT_TYPE  value   needs to be corrected
+        #               2    0 = DIMENSION       line    is present, 1 = STATS_FILE      line    has to be added
+        #               3    0 = BB_INPUT_TYPE   line    is present, 1 = STATS_FILE      line    has to be added
+        #               4    0 = BB_OUTPUT_TYPE  line    is present, 1 = STATS_FILE      line    has to be added
+        #               5    0 = X0              line    is present, 1 = STATS_FILE      line    has to be added
+        #               6    0 = LOWER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
+        #               7    0 = UPPER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
+        #               8    0 = MAX_BB_EVAL     line    is present, 1 = MAX_BB_EVAL     line    has to be added
+        #               9    0 = STATS_FILE      line    is present, 1 = STATS_FILE      line    has to be added        
+        #                 ]
+        
         if os.path.isfile(filepath):
-            flag = [0,0]    
+            flag = [0,0,1,1,1,1,1,1,1,1]    
             current_lines = []    
             with open(filepath,'r') as current:
                 for l in current:
@@ -293,19 +315,118 @@ class NOMAD:
             
             for l in xrange(len(current_lines)):
                 if 'DIMENSION' in current_lines[l]:
+                    flag[2] = 0
                     if int(re.sub('[a-z,A-Z,\t,\s,#,$,]', ' ', current_lines[l].strip())) != num_dim:
                         flag[0] = 1
                         current_lines[l] = 'DIMENSION      '+num_dim+'					                  # number of variables\n'
                 
                 elif 'BB_OUTPUT_TYPE' in current_lines[l]:
+                    flag[4] = 0
                     objcount = current_lines[l].count('OBJ')
-                    if biobj is False and objcount != 1:
+                    EBcount = current_lines[l].count('EB')
+                    if biobj is False and (objcount != 1 or EBcount != 3):
                         flag[1] = 1
-                        current_lines[l] = 'BB_OUTPUT_TYPE OBJ \n'
-                    if biobj is True and objcount != 2:
+                        
+                    if biobj is True and (objcount != 2 or EBcount != 3):
                         flag[1] = 1
-                        current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ\n'                
-        
+                                                                      
+                elif 'BB_INPUT_TYPE' in current_lines[l]:
+                    flag[3] = 0
+                    
+                elif 'X0' in current_lines[l]:
+                    flag[5] = 0
+
+                elif 'LOWER_BOUND' in current_lines[l]:
+                    flag[6] = 0
+                    
+                elif 'UPPER_BOUND' in current_lines[l]:
+                    flag[7] = 0
+                    
+                elif 'MAX_BB_EVAL' in current_lines[l]:
+                    flag[8] = 0
+                    
+                elif 'STATS_FILE' in current_lines[l]:
+                    flag[9] = 0
+
+            #Adding missing lines
+            if flag[2] == 1:
+                add = NOMAD.add_new_line(current_lines, l)
+                current_lines = ['DIMENSION      '+num_dim+add] + current_lines
+                flag[0] = 1
+                
+            if flag[3] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'DIMENSION' in current_lines[l]: 
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['BB_INPUT_TYPE']
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+
+            if flag[4] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'BB_INPUT_TYPE' in current_lines[l]: 
+                          add = NOMAD.add_new_line(current_lines, l)
+                          Start = current_lines[0:l+1]
+                          Mid   = ['BB_OUTPUT_TYPE'+add]
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+                          flag[1] = 1
+
+            if flag[5] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'BB_OUTPUT_TYPE' in current_lines[l]:
+                          add = NOMAD.add_new_line(current_lines, l)                              
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['\nX0'+add]
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+                          flag[0] = 1
+
+            if flag[6] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'X0' in current_lines[l]:                               
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['\nLOWER_BOUND']
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+                          flag[0] = 1
+
+            if flag[7] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'LOWER_BOUND' in current_lines[l]:
+                          add = NOMAD.add_new_line(current_lines, l)
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\nUPPER_BOUND'+add]
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+                          flag[0] = 1
+                          
+            if flag[8] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'UPPER_BOUND' in current_lines[l]:
+                          add = NOMAD.add_new_line(current_lines, l)
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['\nMAX_BB_EVAL    1000'+add]
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+            
+            if flag[9] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'MAX_BB_EVAL' in current_lines[l]:
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['\nSTATS_FILE   NOMAD_history.txt BBE OBJ EB EB EB ( SOL )']
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+
+            #correcting outputs
+            if flag[1] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'BB_OUTPUT_TYPE' in current_lines[l]:
+                        if biobj is False:
+                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ EB EB EB\n'
+                        if biobj is True:
+                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ EB EB EB\n'
+                    
             #correcting x0, lower_bounds and upper_bounds lines  
             if flag[0] == 1:
                 X0 = ' '
@@ -334,26 +455,16 @@ class NOMAD:
                         else:
                             IT += 'B '
             
-            chk_IT = False
-            for l in xrange(len(current_lines)):
-                if 'X0' in current_lines[l]:
-                    current_lines[l] = 'X0             (' + X0 + ')\n'
-                elif 'LOWER_BOUND' in current_lines[l]:
-                    current_lines[l] = 'LOWER_BOUND    (' + LB + ')\n'
-                elif 'UPPER_BOUND' in current_lines[l]:
-                    current_lines[l] = 'UPPER_BOUND    (' + UB + ')\n'
-                elif 'BB_INPUT_TYPE' in current_lines[l]:
-                    current_lines[l] = 'BB_INPUT_TYPE  (' + IT + ')\n'
-                    chk_IT = True
-            
-            if chk_IT is False:
-                  for l in xrange(len(current_lines)):
-                      if 'BB_EXE' in current_lines[l]:
-                          Start = current_lines[0:l]
-                          Mid   = 'BB_INPUT_TYPE  (' + IT + ')\n'
-                          End   = current_lines[l+1:]
-                          current_lines = Start + Mid + End
-                
+                for l in xrange(len(current_lines)):
+                    if 'X0' in current_lines[l]:
+                        current_lines[l] = 'X0             (' + X0 + ')\n'
+                    elif 'LOWER_BOUND' in current_lines[l]:
+                        current_lines[l] = 'LOWER_BOUND    (' + LB + ')\n'
+                    elif 'UPPER_BOUND' in current_lines[l]:
+                        current_lines[l] = 'UPPER_BOUND    (' + UB + ')\n'
+                    elif 'BB_INPUT_TYPE' in current_lines[l]:
+                        current_lines[l] = 'BB_INPUT_TYPE  (' + IT + ')\n'
+    
             with open(filepath,'w') as new:
                 for line in current_lines:
                     new.write(line)
