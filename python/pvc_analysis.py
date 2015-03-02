@@ -92,7 +92,11 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsP
     return D_statistic_list
 
 def runVissimForCalibrationAnalysis(network, inputs):
-    '''Note: Vissim is passed in the Network class variable "network" '''
+    '''Note: Vissim is passed in the Network class variable "network" 
+       
+       One instance of runVissimForCalibrationAnalysis is started for each studied
+       Network
+    '''
     
     #unpacking inputs
     config           = inputs[0]
@@ -290,19 +294,23 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #adding video comparison data to the network                   
                 network[0].addVideoComparison(secondary_values)
 
+                #verifying the constraints
+                num, dp, a0 = outputs.search_folder_for_error_files(final_inpx_path)
+                c0, c1, c2 = outputs.convert_errors_to_constraints(config, num, dp, a0)
+
                 #determining main p_value
                 if config.output_forward_gaps:
                     if secondary_values[4] == 'DNE':
-                        d_stat.append('inf')
+                        d_stat.append(['inf', c0, c1, c2])
                     else:
-                        d_stat.append(secondary_values[4])
+                        d_stat.append([secondary_values[4], c0, c1, c2])
                     write.plot_dists(point_folderpath, video_data_list[4], dist_data[0], secondary_values[4], parameters[0], config.fps)
                     
                 if config.output_lane_change:
                     if secondary_values[6] == 'DNE':        #using the before gap to calibrate
-                        d_stat.append('inf')
+                        d_stat.append(['inf', c0, c1, c2])
                     else:
-                        d_stat.append(secondary_values[6])
+                        d_stat.append([secondary_values[6], c0, c1, c2])
                     write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
         
         return d_stat, network[0]

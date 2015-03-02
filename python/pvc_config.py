@@ -178,6 +178,9 @@ class Config:
         self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',  '',       c_type='string')
         self.ks_threshold             = self.parse('ks_threshold',             '0.3',    c_type='float')    #may want to check out that treshold
         self.ks_switch                = self.parse('reject_vissim_dist',       'False',  c_type='bool')
+        self.num_const_thresh         = self.parse('Vehic_gen_err_constraint', '10',     c_type='float')
+        self.dp_const_thresh          = self.parse('Decel_gen_err_constraint', '0',      c_type='float')
+        self.a0_const_thresh          = self.parse('Accel_gen_err_constraint', '0',      c_type='float')
         
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       

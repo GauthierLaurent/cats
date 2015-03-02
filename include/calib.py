@@ -32,6 +32,7 @@ def main(argv):
     import pvc_config
     import pvc_analysis as analysis
     import pvc_vissim   as vissim
+    import pvc_outputs  as outputs
 
     config = pvc_config.Config('calib.cfg')
 
@@ -101,12 +102,12 @@ def main(argv):
         parameters[4] = multiprocessing.cpu_count() - 1
         inputs = [config, variables, parameters, point_folderpath, False]
         unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
-        
+
         if define.isbool(list(unpacked_outputs)):
             write.History.write_history(last_num, seeds, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
-            fout = max(unpacked_outputs[0])
+            fout = outputs.sort_fout_and_const(unpacked_outputs[0])
             networks = [unpacked_outputs[1]]
 
     else:
@@ -120,20 +121,20 @@ def main(argv):
         networks = []
 
         for unpacked in packed_outputs:
-            d_stat += unpacked[0]
+            d_stat.append(unpacked[0])
             networks.append(unpacked[1])
 
         if define.isbool(d_stat):
             write.History.write_history(last_num, seeds, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
             return 1
         else:
-            fout = max(d_stat)
+            fout = outputs.sort_fout_and_const(d_stat)
 
     #write to history
     write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
     
     #output for NOMAD
-    print fout 
+    print '{} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3]) 
     return 0
 
 ###################

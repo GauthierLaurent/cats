@@ -364,6 +364,92 @@ def laneChange(objects, corridors):
     
     return oppObjDict, manObjDict, laneDict
 
+def read_error_file(dirname,filename):
+    '''reads an error file and returns the number of
+            deceleration is positive errors
+            accelaration is zero errors
+            the total number of vehicules that could not be generated
+    '''
+    case_dp = 0     #deceleration is positive
+    case_a0 = 0     #acceleration is zero
+    num = 0         #number of vehicles to generate
+    with open(os.path.join(dirname,filename),'r') as err:
+        for line in err:
+            
+            if 'The expected trajectory of vehicle' in line and 'cannot be determined' in line:
+                if 'expected deceleration is positive' in line:
+                    case_dp += 1
+                if 'expected acceleration is zero' in line:
+                    case_a0 += 1
+                    
+            if 'Vehicle input' in line and 'could not be finished completely' in line:
+                num += float(line.strip().split('remain: ')[-1].split(' ')[0])
+                
+    return num, case_dp, case_a0
+
+def search_folder_for_error_files(dirname):
+    '''search a directory and returns the mean value, for every fzp files, of
+            deceleration is positive errors
+            accelaration is zero errors
+            the total number of vehicules that could not be generated
+    '''
+    filenames = [f for f in os.listdir(dirname) if f.endswith('err')]
+    fzp_files = [f for f in os.listdir(dirname) if f.endswith('fzp')]
+    
+    if len(fzp_files) > 0:
+        num_list = []; dp_list = []; a0_list = []
+        for filename in filenames:       
+            num, dp, a0 = read_error_file(dirname,filename)
+            num_list.append(num); dp_list.append(dp); a0_list.append(a0)
+        
+        if len(filenames) < len(fzp_files):
+            for i in xrange(len(fzp_files)-len(filenames)):
+                num_list.append(0); dp_list.append(0); a0_list.append(0)
+        
+        return np.mean(num_list), np.mean(dp_list), np.mean(a0_list)
+    else:
+        return float('nan'), float('nan'), float('nan')
+
+def convert_errors_to_constraints(config, num, dp, a0):
+    '''converts num, dp and a0 errors into EB constraint values'''
+    C_0 = 0
+    C_1 = 0
+    C_2 = 0
+
+    if num > config.num_const_thresh:
+        C_0 = 1
+    if dp > config.dp_const_thresh:
+        C_1 = 1
+    if a0 > config.a0_const_thresh:
+        C_2 = 1
+        
+    return C_0, C_1, C_2
+
+def sort_fout_and_const(fout_lists):
+    '''sort many outputs f1, f2, f3, etc. to keep the worst one
+       if all fi respect the constraints, then fi are sorted to give worst fout
+       if not all fi respect constraint, the first one to not respect it is returned
+    '''
+
+    valids = []    
+    #check constraints:
+    for l in fout_lists:
+        if l[1] == 0 and l[2] == 0 and l[3] == 0:
+            valids.append(fout_lists.index(l))
+
+    #sort valids
+    if len(valids) == len(fout_lists):
+        to_conserve = fout_lists[valids[0]]
+        for i in valids:
+            if fout_lists[i][0] > to_conserve[0]:
+                to_conserve = fout_lists[i]
+
+        return to_conserve
+    else:
+        for i in xrange(len(fout_lists)):
+            if i not in valids:
+                return fout_lists[i]
+    
 def check_fzp_content(dirname,filename):
     '''classifies a fzp file according to the column headers
     

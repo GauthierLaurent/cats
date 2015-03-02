@@ -123,10 +123,16 @@ class Content:
         self.manLCbgaps = mean_delta(manLCbgaps)
         self.forSpeeds  = mean_delta(forSpeeds)
         try:
-            self.fout   = float(fout)
+            self.fout   = float(fout[0])
+            self.C_0    = float(fout[1])
+            self.C_1    = float(fout[2])
+            self.C_2    = float(fout[3])
         except:
-            self.fout   = fout
-
+            self.fout   = fout[0]
+            self.C_0    = 'nan'
+            self.C_1    = 'nan'
+            self.C_2    = 'nan'
+            
 class History:
     '''stores all history related functions for easy access'''
     @staticmethod
@@ -177,13 +183,13 @@ class History:
                     hist.write('forSpeeds (mean)\t forSpeeds (ks_d_stat)\t')
                     hist.write('|\t')
     		
-            hist.write('fout\n')
+            hist.write('fout\tC0\tC1\tC2\n')
             
     @staticmethod
     def write_history(last_num, seeds, points, networks, fout,  dirname, filename):   
         with open(os.path.join(dirname, filename), 'a') as hist:
             hist.write(str(last_num)+'\t')
-            hist.write("|\t")
+            hist.write('|\t')
 
             #seeds
             for seed in seeds:
@@ -193,7 +199,7 @@ class History:
             #tried point
             for p in points:
                 hist.write(str(p)+'\t')
-            hist.write("|\t")
+            hist.write('|\t')
     
             #secondary comparaison
             for net in xrange(len(networks)):
@@ -203,11 +209,13 @@ class History:
                         if v == 4:
                             hist.write('-\t')
                         hist.write(str(variables[v]) +'\t')
-                    hist.write("|\t")
+                    hist.write('|\t')
     
             #fout
-            hist.write(str(fout)+'\n')
-
+            for f in fout:
+                hist.write(str(f)+'\t')
+            hist.write('\n')
+            
 ################################ 
 #        NOMAD handling functions       
 ################################                     
@@ -274,7 +282,7 @@ class NOMAD:
                         'MAX_BB_EVAL    1000             				# the algorithm terminates when\n'
                         '                              				# 100 black-box evaluations have\n'
                         '                              				# been made\n'
-                        'STATS_FILE	NOMAD_history.txt')
+                        'STATS_FILE	NOMAD_history.txt BBE OBJ ( SOL )')
     
     @staticmethod
     def add_new_line(current_lines, l):
@@ -295,17 +303,18 @@ class NOMAD:
         #note: Flag = [ 0    0 = DIMENSION       value   is correct, 1 = DIMENSION       value   needs to be corrected
         #               1    0 = BB_OUTPUT_TYPE  value   is correct, 1 = BB_OUTPUT_TYPE  value   needs to be corrected
         #               2    0 = DIMENSION       line    is present, 1 = STATS_FILE      line    has to be added
-        #               3    0 = BB_INPUT_TYPE   line    is present, 1 = STATS_FILE      line    has to be added
-        #               4    0 = BB_OUTPUT_TYPE  line    is present, 1 = STATS_FILE      line    has to be added
-        #               5    0 = X0              line    is present, 1 = STATS_FILE      line    has to be added
-        #               6    0 = LOWER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
-        #               7    0 = UPPER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
-        #               8    0 = MAX_BB_EVAL     line    is present, 1 = MAX_BB_EVAL     line    has to be added
-        #               9    0 = STATS_FILE      line    is present, 1 = STATS_FILE      line    has to be added        
+        #               3    0 = BB_EXE          line    is present, 1 = BB_EXE          lien    has to be added  
+        #               4    0 = BB_INPUT_TYPE   line    is present, 1 = STATS_FILE      line    has to be added
+        #               5    0 = BB_OUTPUT_TYPE  line    is present, 1 = STATS_FILE      line    has to be added
+        #               6    0 = X0              line    is present, 1 = STATS_FILE      line    has to be added
+        #               7    0 = LOWER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
+        #               8    0 = UPPER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
+        #               9    0 = MAX_BB_EVAL     line    is present, 1 = MAX_BB_EVAL     line    has to be added
+        #              10    0 = STATS_FILE      line    is present, 1 = STATS_FILE      line    has to be added        
         #                 ]
         
         if os.path.isfile(filepath):
-            flag = [0,0,1,1,1,1,1,1,1,1]    
+            flag = [0,0,1,1,1,1,1,1,1,1,1]    
             current_lines = []    
             with open(filepath,'r') as current:
                 for l in current:
@@ -321,7 +330,7 @@ class NOMAD:
                         current_lines[l] = 'DIMENSION      '+num_dim+'					                  # number of variables\n'
                 
                 elif 'BB_OUTPUT_TYPE' in current_lines[l]:
-                    flag[4] = 0
+                    flag[5] = 0
                     objcount = current_lines[l].count('OBJ')
                     EBcount = current_lines[l].count('EB')
                     if biobj is False and (objcount != 1 or EBcount != 3):
@@ -329,24 +338,27 @@ class NOMAD:
                         
                     if biobj is True and (objcount != 2 or EBcount != 3):
                         flag[1] = 1
-                                                                      
-                elif 'BB_INPUT_TYPE' in current_lines[l]:
+                
+                elif 'BB_EXE' in current_lines[l]:
                     flag[3] = 0
+                                                      
+                elif 'BB_INPUT_TYPE' in current_lines[l]:
+                    flag[4] = 0
                     
                 elif 'X0' in current_lines[l]:
-                    flag[5] = 0
+                    flag[6] = 0
 
                 elif 'LOWER_BOUND' in current_lines[l]:
-                    flag[6] = 0
-                    
-                elif 'UPPER_BOUND' in current_lines[l]:
                     flag[7] = 0
                     
-                elif 'MAX_BB_EVAL' in current_lines[l]:
+                elif 'UPPER_BOUND' in current_lines[l]:
                     flag[8] = 0
                     
-                elif 'STATS_FILE' in current_lines[l]:
+                elif 'MAX_BB_EVAL' in current_lines[l]:
                     flag[9] = 0
+                    
+                elif 'STATS_FILE' in current_lines[l]:
+                    flag[10] = 0
 
             #Adding missing lines
             if flag[2] == 1:
@@ -358,11 +370,20 @@ class NOMAD:
                 for l in xrange(len(current_lines)):
                     if 'DIMENSION' in current_lines[l]: 
                           Start = current_lines[0:l+1]
-                          Mid   = ['\n']+['BB_INPUT_TYPE']
+                          Mid   = ['\n']+['BB_EXE        \'$python calib.py\'']
                           End   = current_lines[l+1:]
                           current_lines = Start + Mid + End
 
             if flag[4] == 1:
+                for l in xrange(len(current_lines)):
+                    if 'BB_EXE' in current_lines[l]:
+                          add = NOMAD.add_new_line(current_lines, l)
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['BB_INPUT_TYPE'+add]
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+                          
+            if flag[5] == 1:
                 for l in xrange(len(current_lines)):
                     if 'BB_INPUT_TYPE' in current_lines[l]: 
                           add = NOMAD.add_new_line(current_lines, l)
@@ -372,7 +393,7 @@ class NOMAD:
                           current_lines = Start + Mid + End
                           flag[1] = 1
 
-            if flag[5] == 1:
+            if flag[6] == 1:
                 for l in xrange(len(current_lines)):
                     if 'BB_OUTPUT_TYPE' in current_lines[l]:
                           add = NOMAD.add_new_line(current_lines, l)                              
@@ -382,7 +403,7 @@ class NOMAD:
                           current_lines = Start + Mid + End
                           flag[0] = 1
 
-            if flag[6] == 1:
+            if flag[7] == 1:
                 for l in xrange(len(current_lines)):
                     if 'X0' in current_lines[l]:                               
                           Start = current_lines[0:l+1]
@@ -391,7 +412,7 @@ class NOMAD:
                           current_lines = Start + Mid + End
                           flag[0] = 1
 
-            if flag[7] == 1:
+            if flag[8] == 1:
                 for l in xrange(len(current_lines)):
                     if 'LOWER_BOUND' in current_lines[l]:
                           add = NOMAD.add_new_line(current_lines, l)
@@ -401,7 +422,7 @@ class NOMAD:
                           current_lines = Start + Mid + End
                           flag[0] = 1
                           
-            if flag[8] == 1:
+            if flag[9] == 1:
                 for l in xrange(len(current_lines)):
                     if 'UPPER_BOUND' in current_lines[l]:
                           add = NOMAD.add_new_line(current_lines, l)
@@ -410,11 +431,11 @@ class NOMAD:
                           End   = current_lines[l+1:]
                           current_lines = Start + Mid + End
             
-            if flag[9] == 1:
+            if flag[10] == 1:
                 for l in xrange(len(current_lines)):
                     if 'MAX_BB_EVAL' in current_lines[l]:
                           Start = current_lines[0:l+1]
-                          Mid   = ['\n']+['\nSTATS_FILE   NOMAD_history.txt BBE OBJ EB EB EB ( SOL )']
+                          Mid   = ['\n']+['\nSTATS_FILE   NOMAD_history.txt BBE OBJ ( SOL )']
                           End   = current_lines[l+1:]
                           current_lines = Start + Mid + End
 
