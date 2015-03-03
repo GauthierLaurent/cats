@@ -21,7 +21,7 @@ def Commands(parser):
 commands = Commands(argparse.ArgumentParser())
 
 ###################################################################################
-dirname = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Calibration_Analysis_20\point_'
+dirname = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Calibration_Analysis_28\point_'
 commands.chosen = 'Forward_Gaps'
 
 simulationStepsPerTimeUnit = 10
@@ -34,7 +34,7 @@ inpxname = 'calib_gp06001_0to9000.inpx'
 
 fullpath = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Autoroute13.traj'
 
-for dire in xrange(1,2):
+for dire in xrange(648,649):
     commands.dirname = dirname + str(dire)
     
     print '>>>>>>>>>> Start on '+str(commands.dirname)    +' <<<<<<<<<<<<<<<<<<'

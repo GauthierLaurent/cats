@@ -149,7 +149,7 @@ class History:
     def read_history(filename):
         '''reads the history '''
         history = {}
-        with open(os.path.join(os.getcwd(),filename), 'r') as hist:
+        with open(os.path.join(os.getcwd(),filename), 'r') as hist:           
             for l in hist:
                 if l.strip() != '' and l.startswith('#') is False:
                     if l.strip().split('\t|\t')[0] != 'Itt':
@@ -158,7 +158,7 @@ class History:
                             stats_data = ['nan' for i in xrange(19)]
                         else:
                             stats_data = types[3].strip('*').split('\t')
-                        history[types[0]] = Content(types[0].strip('\t'),types[1].split('\t'),types[2].split('\t'),[stats_data[0], stats_data[1]],[stats_data[2], stats_data[3]],[stats_data[4], stats_data[5]],[stats_data[7], stats_data[8]],[stats_data[9], stats_data[10]],[stats_data[11], stats_data[12]],[stats_data[13], stats_data[14]],[stats_data[15], stats_data[16]],[stats_data[17], stats_data[18]], types[4].strip('\t'))
+                        history[types[0]] = Content(types[0].strip('\t'),types[1].split('\t'),types[2].split('\t'),[stats_data[0], stats_data[1]],[stats_data[2], stats_data[3]],[stats_data[4], stats_data[5]],[stats_data[7], stats_data[8]],[stats_data[9], stats_data[10]],[stats_data[11], stats_data[12]],[stats_data[13], stats_data[14]],[stats_data[15], stats_data[16]],[stats_data[17], stats_data[18]], types[4].split('\t'))
         return history.values()
         
     @staticmethod
