@@ -52,7 +52,7 @@ def main(argv):
     last_num = filename.split('_')[-1]
 
     if config.random_seed is True:
-        parameters[1] = random.randint(1,1000)
+        parameters[1] = random.randint(1,700)
         parameters[5] = random.randint(1,100)
         
         seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
@@ -74,7 +74,7 @@ def main(argv):
     chk = define.verifyDesiredPoints(variables)    
     
     if not chk:
-        fout = 'inf'
+        fout = ['inf', 1, 1, 1]
 
 	#adding fail info to the networks
 	for net in networks:
@@ -85,7 +85,7 @@ def main(argv):
         write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
         
         #output
-        print fout                 
+        print  '{} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3])    
         return 0
 
     #move all inpx files to the point folder
@@ -104,7 +104,7 @@ def main(argv):
         unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
 
         if define.isbool(list(unpacked_outputs)):
-            write.History.write_history(last_num, seeds, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
+            write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = outputs.sort_fout_and_const(unpacked_outputs[0])
@@ -125,7 +125,7 @@ def main(argv):
             networks.append(unpacked[1])
 
         if define.isbool(d_stat):
-            write.History.write_history(last_num, seeds, nomad_points, networks, 'crashed', os.getcwd(), 'calib_history.txt') 
+            write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = outputs.sort_fout_and_const(d_stat)

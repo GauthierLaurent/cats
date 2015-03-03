@@ -121,7 +121,7 @@ def main():
     #making sure the param file exists and is well suited to the present task
     write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], starting_point)    
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
-    
+
     #moving NOMAD and param.txt
     param_file = config.path_to_NOMAD_param.split(os.sep)[-1]        
     shutil.copy(config.path_to_NOMAD, os.path.join(working_path,'nomad.exe'))
