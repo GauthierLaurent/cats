@@ -1,5 +1,6 @@
 import os, argparse
-import pvc_define as define
+import pvc_csvParse   as csvParse
+import pvc_calibTools as calibTools
 
 
 def commands(parser):
@@ -10,9 +11,9 @@ def commands(parser):
     
 Commands = commands(argparse.ArgumentParser())
 
-variables  = define.extractParamFromCSV(Commands.dir, Commands.file)
+variables  = csvParse.extractParamFromCSV(Commands.dir, Commands.file)
 corrected_variables = [var for var in variables if var.include is True]
-points = define.genLHCsample(corrected_variables, Commands.nbr)
+points = calibTools.genLHCsample(corrected_variables, Commands.nbr)
 
 for i in xrange(len(corrected_variables)):
     
