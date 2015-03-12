@@ -19,22 +19,23 @@ print would give NOMAD an erronous result of the called point
 #        Native dependencies      
 ################################
 import os, sys, multiprocessing, shutil, random
-
        
 ################################ 
 #        Main       
 ################################
 def main(argv):
 
-    #Internal
-    import pvc_write    as write 
-    import pvc_define   as define
-    import pvc_config
-    import pvc_analysis as analysis
-    import pvc_vissim   as vissim
-    import pvc_outputs  as outputs
+    #Internal 
 
-    config = pvc_config.Config('calib.cfg')
+    import pvc_write     as write 
+    import pvc_workers   as workers
+    import pvc_mathTools as mathTools
+    import pvc_configure as configure
+    import pvc_csvParse  as csvParse
+    import pvc_analysis  as analysis
+    import pvc_outputs   as outputs
+
+    config = configure.Config('calib.cfg')
 
     #load informations from pvcdata.calib
     parameters, variables, networks = write.load_calib()
@@ -71,7 +72,7 @@ def main(argv):
             variables[i].point = variables[i].desired_value
     
     #verify bounds proposed by NOMADS
-    chk = define.verifyDesiredPoints(variables)    
+    chk = csvParse.verifyDesiredPoints(variables)    
     
     if not chk:
         fout = ['inf', 1, 1, 1]
@@ -91,10 +92,6 @@ def main(argv):
     #move all inpx files to the point folder
     for net in networks:
         shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
-  
-    #assing vissim instances to each network
-    for net in networks:
-        net.addVissim(vissim.startVissim())
         
     #pass data to vissim and simulate
     if len(networks) == 1:
@@ -103,7 +100,7 @@ def main(argv):
         inputs = [config, variables, parameters, point_folderpath, False]
         unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
 
-        if define.isbool(list(unpacked_outputs)):
+        if mathTools.isbool(list(unpacked_outputs)):
             write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:
@@ -112,10 +109,10 @@ def main(argv):
 
     else:
         ##run the analysis through workers -- separate with networks
-        commands = define.FalseCommands()
+        commands = workers.FalseCommands()
         inputs = [config, variables, parameters, point_folderpath, True]
         for net in networks:            
-            packed_outputs = define.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
+            packed_outputs = workers.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
         
         d_stat = []
         networks = []
@@ -124,7 +121,7 @@ def main(argv):
             d_stat.append(unpacked[0])
             networks.append(unpacked[1])
 
-        if define.isbool(d_stat):
+        if mathTools.isbool(d_stat):
             write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:

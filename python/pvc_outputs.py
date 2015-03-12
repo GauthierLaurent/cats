@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Native Libraries
 ##################
 
-import scipy, os, sys
+import os, sys
 import numpy as np
 import random, time
 
@@ -39,7 +39,7 @@ def dist(x):
     var = np.var(xx)      
     return cumul,nlist,mean,firstQuart,median,thirdQuart,var
     
-class sublvl:
+class Sublvl:
     def __init__(self, raw):
         if raw != []:
             cumul,nlist,mean,firstQuart,median,thirdQuart,var  = dist(raw)
@@ -62,34 +62,37 @@ class sublvl:
             self.thirdQuart = None
             self.var        = None
             self.std        = None
+
+    def addFileName(self,filename):
+        self.filename = filename
             
-class stats:
+class Stats:
     def __init__(self, raw):
         self.distributions  = []
 
         if raw != []:
             for l in raw:
-                self.distributions.append(sublvl(l))
+                self.distributions.append(Sublvl(l))
             self.regen_cumul_all()                                
         else:
-            self.cumul_all = sublvl(raw)
+            self.cumul_all = Sublvl(raw)
     
     def add_one_dist_list(self, raw):
         '''adds a raw data list to the distributions'''
-        self.distributions.append(sublvl(raw))
+        self.distributions.append(Sublvl(raw))
         self.regen_cumul_all()
         
     def add_many_dist_list(self, raw_list):
         '''needs a list of raw data list'''
         for raw in raw_list:
-            self.distributions.append(sublvl(raw))
+            self.distributions.append(Sublvl(raw))
         self.regen_cumul_all()
         
     def pop_dist_list(self, mylist):
         '''mylist must refer to the indexes of the list of distributions to pop'''
         if len(mylist) > 0:
             for i in reversed(sorted(mylist)):
-                if len(self.raw) >= i:
+                if len(self.distributions) >= i:
                     self.distributions.pop(i)
             self.regen_cumul_all()
         
@@ -98,7 +101,7 @@ class stats:
         allvalues = []
         for dist in self.distributions:
             allvalues += list(dist.raw)
-        self.cumul_all = sublvl(allvalues)
+        self.cumul_all = Sublvl(allvalues)
         self.cumul_all.raw.sort()
 
     @classmethod
@@ -110,7 +113,7 @@ class stats:
                 new_raw.append(dist.raw)
         stats1.add_many_dist_list(new_raw)
         
-class singleValueStats:
+class SingleValueStats:
     def __init__(self,raw):
         self.raw = raw
         self.recalculate()
@@ -155,6 +158,34 @@ class singleValueStats:
         for stat in stats:
             new_raw += stat.raw
         stats1.addMany(new_raw)
+
+class Outputs:
+    def __init__(self, flow=None, oppLCcount=None, manLCcount=None, forFMgap=None, oppLCagap=None, oppLCbgap=None, manLCagap=None, manLCbgap=None, forSpeeds=None):
+        self.flow       = flow
+        self.oppLCcount = oppLCcount
+        self.manLCcount = manLCcount
+        self.forFMgap   = forFMgap
+        self.oppLCagap  = oppLCagap
+        self.oppLCbgap  = oppLCbgap
+        self.manLCagap  = manLCagap
+        self.manLCbgap  = manLCbgap
+        self.forSpeeds  = forSpeeds
+        
+    def add_one_count(self, flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds):
+        pass
+    ##TODO: ajouter une instance de chaque entrée
+        
+    def GetFilenames():
+        pass
+    ##TODO: passe à travers forFMgap.distributions[i].filename pour les retourner
+
+##TODO:
+    #1 - conceptualiser le calcul des outputs pour les générer un fichier à la fois
+    #2 - finir la classe Outputs afin d'ajouter les outputs un à la fois
+    #3 - refaire les calculs des outputs pour les générer un fichier à la fois
+    #4 - refaire les calculs des randoms outputs pour les générer un à la fois
+    #5 - ajouter une fonction de pop et popList à la classe Outputs
+    #6 - permettre de disable certains outputs
         
 ##################
 # Output treatment tools
@@ -411,17 +442,21 @@ def search_folder_for_error_files(dirname):
         return float('nan'), float('nan'), float('nan')
 
 def convert_errors_to_constraints(config, num, dp, a0):
-    '''converts num, dp and a0 errors into EB constraint values'''
+    '''converts num, dp and a0 errors into constraint values
+       
+       values are reduced by the tolerance threshold, allowing the use of
+       EB, PB or PEB constraint handling strategies
+    '''
     C_0 = 0
     C_1 = 0
     C_2 = 0
 
     if num > config.num_const_thresh:
-        C_0 = 1
+        C_0 = num - config.num_const_thresh
     if dp > config.dp_const_thresh:
-        C_1 = 1
+        C_1 = dp - config.dp_const_thresh
     if a0 > config.a0_const_thresh:
-        C_2 = 1
+        C_2 = a0 - config.a0_const_thresh
         
     return C_0, C_1, C_2
 
@@ -449,6 +484,17 @@ def sort_fout_and_const(fout_lists):
         for i in xrange(len(fout_lists)):
             if i not in valids:
                 return fout_lists[i]
+
+def extract_num_from_fzp_name(filename):
+    '''returns the numerical component of a vissim fzp file'''
+    return int(os.path.splitext(filename)[0].split('_')[-1])
+
+def extract_num_from_fzp_list(filenames):
+    '''returns the numerical component of a list of vissim fzp files'''
+    num_list = []
+    for filename in filenames:
+        num_list.append(extract_num_from_fzp_name(filename))
+    return num_list
     
 def check_fzp_content(dirname,filename):
     '''classifies a fzp file according to the column headers
@@ -563,8 +609,7 @@ def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUpt
     return objects
 
 def treatVissimOutputs(files, inputs):
-    '''Treat outputs in the given folder 
-       If Old_data exists, it must be transfered as the raw list'''
+    '''Treat outputs in the given folder '''
     
     folderpath                 = inputs[0]
     simulationStepsPerTimeUnit = inputs[1]
@@ -663,14 +708,6 @@ def treatVissimOutputs(files, inputs):
             print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
              
             print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
-
-    '''
-    write.writeListToCSV(raw_forward_gaps, './raw_forward_gaps.csv')
-    write.writeListToCSV(raw_opp_LC_agaps, './raw_opp_LC_agaps.csv')
-    write.writeListToCSV(raw_opp_LC_agaps, './raw_opp_LC_bgaps.csv')
-    write.writeListToCSV(raw_man_LC_agaps, './raw_man_LC_agaps.csv')
-    write.writeListToCSV(raw_man_LC_bgaps, './raw_man_LC_bgaps.csv')
-    '''
                
     #Treating raw outputs to compute means
     if old_data != []:
@@ -685,15 +722,15 @@ def treatVissimOutputs(files, inputs):
         forward_speeds.add_many_dist_list(raw_forward_speeds)    
     
     else:
-        mean_flow            = singleValueStats(raw_flow)
-        mean_opportunisticLC = singleValueStats(raw_opportunisticLC)
-        mean_mandatoryLC     = singleValueStats(raw_mandatoryLC)    
-        forward_followgap    = stats(raw_forward_gaps)
-        opportunistic_LCagap = stats(raw_opp_LC_agaps)
-        opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
-        mandatory_LCagap     = stats(raw_man_LC_agaps)
-        mandatory_LCbgap     = stats(raw_man_LC_bgaps)
-        forward_speeds       = stats(raw_forward_speeds)
+        mean_flow            = SingleValueStats(raw_flow)
+        mean_opportunisticLC = SingleValueStats(raw_opportunisticLC)
+        mean_mandatoryLC     = SingleValueStats(raw_mandatoryLC)    
+        forward_followgap    = Stats(raw_forward_gaps)
+        opportunistic_LCagap = Stats(raw_opp_LC_agaps)
+        opportunistic_LCbgap = Stats(raw_opp_LC_bgaps)
+        mandatory_LCagap     = Stats(raw_man_LC_agaps)
+        mandatory_LCbgap     = Stats(raw_man_LC_bgaps)
+        forward_speeds       = Stats(raw_forward_speeds)        
     
     return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap, forward_speeds
 
@@ -736,14 +773,14 @@ def generateRandomOutputs(parameters, rand_seed_shake):
         raw_man_LC_bgaps.append(randomGaussRange(7,10,100))
         raw_foward_speed.append(randomGaussRange(7,10,100))
     
-    mean_opportunisticLC = singleValueStats(raw_opportunisticLC)
-    mean_mandatoryLC     = singleValueStats(raw_mandatoryLC)  
-    mean_flow            = singleValueStats(raw_flow)    
-    forward_followgap    = stats(raw_forward_gaps)
-    opportunistic_LCagap = stats(raw_opp_LC_agaps)
-    opportunistic_LCbgap = stats(raw_opp_LC_bgaps)
-    mandatory_LCagap     = stats(raw_man_LC_agaps)
-    mandatory_LCbgap     = stats(raw_man_LC_bgaps)
-    forward_speeds       = stats(raw_foward_speed)
+    mean_opportunisticLC = SingleValueStats(raw_opportunisticLC)
+    mean_mandatoryLC     = SingleValueStats(raw_mandatoryLC)  
+    mean_flow            = SingleValueStats(raw_flow)    
+    forward_followgap    = Stats(raw_forward_gaps)
+    opportunistic_LCagap = Stats(raw_opp_LC_agaps)
+    opportunistic_LCbgap = Stats(raw_opp_LC_bgaps)
+    mandatory_LCagap     = Stats(raw_man_LC_agaps)
+    mandatory_LCbgap     = Stats(raw_man_LC_bgaps)
+    forward_speeds       = Stats(raw_foward_speed)
     
     return mean_flow, mean_opportunisticLC, mean_mandatoryLC, forward_followgap, opportunistic_LCagap, opportunistic_LCbgap,  mandatory_LCagap,  mandatory_LCbgap, forward_speeds

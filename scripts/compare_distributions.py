@@ -6,12 +6,12 @@ Created on Fri Feb 13 14:49:46 2015
 """
 import os, argparse, copy
 from scipy import stats
-import matplotlib.pyplot as plt
 
-import pvc_write as write
-import pvc_outputs as outputs
-import pvc_analysis as analysis
-import pvc_define as define
+import pvc_write      as write
+import pvc_outputs    as outputs
+import pvc_calibTools as calibTools
+import pvc_csvParse   as csvParse
+import pvc_mathTools  as mathTools
 
 def Commands(parser):
     parser.add_argument('-c', '--choose',  choices=['Forward_Gaps','Lane_Change_Gaps','Speeds'],  dest='chosen',  default='Forward_Gaps',          help='Variable to analyse') 
@@ -21,7 +21,7 @@ def Commands(parser):
 commands = Commands(argparse.ArgumentParser())
 
 ###################################################################################
-dirname = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Calibration_Analysis_28\point_'
+dirname = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Calibration_Analysis_64\point_'
 commands.chosen = 'Forward_Gaps'
 
 simulationStepsPerTimeUnit = 10
@@ -32,9 +32,9 @@ fps = 30
 path_to_csv = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000'
 inpxname = 'calib_gp06001_0to9000.inpx'
 
-fullpath = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Autoroute13.traj'
+fullpath = r'C:\Users\Laurent\Desktop\vissim files\A13\Calib_GP06001_0to9000\Calib_GP06001_0to9000.traj'
 
-for dire in xrange(648,649):
+for dire in xrange(1,2):
     commands.dirname = dirname + str(dire)
     
     print '>>>>>>>>>> Start on '+str(commands.dirname)    +' <<<<<<<<<<<<<<<<<<'
@@ -45,7 +45,7 @@ for dire in xrange(648,649):
         
         
         #extracting corridors information for vissim file calculations
-        VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(path_to_csv, inpxname)
+        VissimCorridors, trafIntCorridors = csvParse.extractVissimCorridorsFromCSV(path_to_csv, inpxname)
         
         #treat the .fzp files
         inputs = [commands.dirname, simulationStepsPerTimeUnit, warmUpTime, True, VissimCorridors]
@@ -81,12 +81,12 @@ for dire in xrange(648,649):
           
         #compare data
         stat_list = [chosen_video_stat.cumul_all.raw]
-        unpack_dists = analysis.treat_stats_list(chosen_stat)
+        unpack_dists = calibTools.treat_stats_list(chosen_stat)
         for i in unpack_dists:
             stat_list.append(i)
         stat_list.append(chosen_stat.cumul_all.raw)
         
-        raw_mat = analysis.ks_matrix(stat_list)
+        raw_mat = calibTools.ks_matrix(stat_list)
         
         legend = 'legend:\n f0: video data\n f1 to f'+str(len(chosen_stat.distributions))+': vissim file distributions\n f'+str(len(chosen_stat.distributions)+1)+': vissim concat data\n \n'
         main.write(legend)
@@ -196,9 +196,9 @@ for dire in xrange(648,649):
                     
             translate += 0.1
         
-        sorted_video_best_found_p, sorted_video_best_found_loc = define.sort2lists(video_best_found[0], video_best_found[1], ascending_order=False)
-        sorted_vissim_dists_best_found_p, sorted_vissim_dists_best_found_loc = define.sort2lists(vissim_dists_best_found[0], vissim_dists_best_found[1], ascending_order=False)
-        sorted_vissim_cumul_best_found_p, sorted_vissim_cumul_best_found_loc = define.sort2lists(vissim_cumul_best_found[0], vissim_cumul_best_found[1], ascending_order=False)
+        sorted_video_best_found_p, sorted_video_best_found_loc = mathTools.sort2lists(video_best_found[0], video_best_found[1], ascending_order=False)
+        sorted_vissim_dists_best_found_p, sorted_vissim_dists_best_found_loc = mathTools.sort2lists(vissim_dists_best_found[0], vissim_dists_best_found[1], ascending_order=False)
+        sorted_vissim_cumul_best_found_p, sorted_vissim_cumul_best_found_loc = mathTools.sort2lists(vissim_cumul_best_found[0], vissim_cumul_best_found[1], ascending_order=False)
         main.write('best matches [d: distribtion #, l: lambda value, t: translation value]\n')
         write.writeInFile(main,['video best','','','vissim dist best','','','vissim cumul best','','',])
         write.writeInFile(main,['p','loc','','p','loc','','p','loc',''])
@@ -294,9 +294,9 @@ for dire in xrange(648,649):
                     
             translate += 0.1
         
-        sorted_video_best_found_p, sorted_video_best_found_loc = define.sort2lists(video_best_found[0], video_best_found[1], ascending_order=False)
-        sorted_vissim_dists_best_found_p, sorted_vissim_dists_best_found_loc = define.sort2lists(vissim_dists_best_found[0], vissim_dists_best_found[1], ascending_order=False)
-        sorted_vissim_cumul_best_found_p, sorted_vissim_cumul_best_found_loc = define.sort2lists(vissim_cumul_best_found[0], vissim_cumul_best_found[1], ascending_order=False)
+        sorted_video_best_found_p, sorted_video_best_found_loc = mathTools.sort2lists(video_best_found[0], video_best_found[1], ascending_order=False)
+        sorted_vissim_dists_best_found_p, sorted_vissim_dists_best_found_loc = mathTools.sort2lists(vissim_dists_best_found[0], vissim_dists_best_found[1], ascending_order=False)
+        sorted_vissim_cumul_best_found_p, sorted_vissim_cumul_best_found_loc = mathTools.sort2lists(vissim_cumul_best_found[0], vissim_cumul_best_found[1], ascending_order=False)
         main.write('best matches [d: distribtion #, l: lambda value, t: translation value]\n')
         write.writeInFile(main,['video best','','','vissim dist best','','','vissim cumul best','','',])
         write.writeInFile(main,['p','loc','','p','loc','','p','loc',''])
@@ -396,9 +396,9 @@ for dire in xrange(648,649):
                 translate += 0.1
             a_tests += 0.1
         
-        sorted_video_best_found_p, sorted_video_best_found_loc = define.sort2lists(video_best_found[0], video_best_found[1], ascending_order=False)
-        sorted_vissim_dists_best_found_p, sorted_vissim_dists_best_found_loc = define.sort2lists(vissim_dists_best_found[0], vissim_dists_best_found[1], ascending_order=False)
-        sorted_vissim_cumul_best_found_p, sorted_vissim_cumul_best_found_loc = define.sort2lists(vissim_cumul_best_found[0], vissim_cumul_best_found[1], ascending_order=False)
+        sorted_video_best_found_p, sorted_video_best_found_loc = mathTools.sort2lists(video_best_found[0], video_best_found[1], ascending_order=False)
+        sorted_vissim_dists_best_found_p, sorted_vissim_dists_best_found_loc = mathTools.sort2lists(vissim_dists_best_found[0], vissim_dists_best_found[1], ascending_order=False)
+        sorted_vissim_cumul_best_found_p, sorted_vissim_cumul_best_found_loc = mathTools.sort2lists(vissim_cumul_best_found[0], vissim_cumul_best_found[1], ascending_order=False)
         main.write('best matches [a: gamma shape parameter, d: distribtion #, l: lambda value, t: translation value]\n')
         write.writeInFile(main,['video best','','','vissim dist best','','','vissim cumul best','','',])
         write.writeInFile(main,['p','loc','','p','loc','','p','loc',''])

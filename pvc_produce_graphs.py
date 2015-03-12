@@ -13,15 +13,15 @@ Created on Thu Jul 17 11:29:28 2014
 import os, sys, optparse
 
 #Internal
-import pvc_outputs as outputs
-import pvc_write   as write 
-import pvc_config  as config
+import pvc_outputs   as outputs
+import pvc_write     as write 
+import pvc_configure as configure
 
 ################################ 
 #        Load settings       
 ################################    
-commands = config.commands(optparse.OptionParser())
-config   = config.Config('pvc.cfg')
+commands = configure.commands(optparse.OptionParser())
+config   = configure.Config('pvc.cfg')
 
 ################################ 
 #        working function       

@@ -19,10 +19,11 @@ def main():
     import os, sys, shutil, argparse, subprocess, random
     
     #Internal
-    import pvc_write  as write
-    import pvc_vissim as vissim
-    import pvc_define as define
-    import pvc_config as config
+    import pvc_write      as write
+    import pvc_vissim     as vissim
+    import pvc_calibTools as calibTools
+    import pvc_configure  as configure
+    import pvc_csvParse   as csvParse
     
     ################################ 
     #        Os verification       
@@ -37,14 +38,14 @@ def main():
     ################################ 
     #        Load settings       
     ################################    
-    commands = config.commands(argparse.ArgumentParser(),'Cali')
-    config   = config.Config('calib.cfg')      
+    commands = configure.commands(argparse.ArgumentParser(),'Cali')
+    config   = configure.Config('calib.cfg')      
                  
     ###################################### 
     #        Preparing  environnement       
     ######################################     
     #Checking if Vissim is already running and closing it to avoid problems latter on
-    running = vissim.isVissimRunning(True)    
+    running = vissim.isVissimRunning(kill=True)    
     if running is not False:
         print 'Could not close Vissim, the program may potentially have problems with the COM interface'
         
@@ -55,15 +56,15 @@ def main():
         first_seed = config.first_seed
         increments = config.increments
     else:
-        first_seed = random.randint(1,1000)
+        first_seed = random.randint(1,700)
         increments = random.randint(1,10)
     parameters = [config.sim_steps, first_seed, config.nbr_runs, Sim_lenght, sim_cores, increments]
     
     #determining vissim, video, and corridor lists
-    networks = define.buildNetworkObjects(config)      
+    networks = calibTools.Network.buildNetworkObjects(config)      
         
     #generating the raw variables contained in the csv
-    variables = define.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
+    variables = csvParse.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
 
     ##looking for an input starting point
     if commands.start_point is not None:    
@@ -103,10 +104,6 @@ def main():
                 print 'traj file ' +str(traj.split(os.sep)[-1]) + 'yielded incorect version number'
                 running = vissim.isVissimRunning(True)
                 return
-
-        #launching a vissim instance for each network object
-        ### currently there is a maximum of 4 networks objects because of the maximum of 4 vissim instances....
-        vissim.startVissim()
                         
         #moving required inpx file to the calibration location
         shutil.copy(net.inpx_path, os.path.join(working_path, net.inpx_path.split(os.sep)[-1]))

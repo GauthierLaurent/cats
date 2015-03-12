@@ -17,17 +17,18 @@ def main():
     
     ################################ 
     #        Importing dependencies       
-    ################################ 
-    
+    ################################     
     #Native dependencies
     import os, sys, time, argparse, random
     
     #Internal
-    import pvc_vissim   as vissim
-    import pvc_write    as write 
-    import pvc_define   as define
-    import pvc_config   as config
-    import pvc_analysis as analysis
+    import pvc_vissim     as vissim
+    import pvc_write      as write 
+    import pvc_workers    as workers
+    import pvc_configure  as configure
+    import pvc_analysis   as analysis
+    import pvc_calibTools as calibTools
+    import pvc_csvParse   as csvParse
 
     ################################ 
     #        Os verification       
@@ -42,8 +43,8 @@ def main():
     ################################ 
     #        Load settings       
     ################################    
-    commands = config.commands(argparse.ArgumentParser(),'Sensi')
-    config   = config.Config('pvc.cfg')
+    commands = configure.commands(argparse.ArgumentParser(),'Sensi')
+    config   = configure.Config('pvc.cfg')
 
     #overrides default inpx file if command -f was used and Updating the default inpx name to match the file
     if commands.file:
@@ -64,13 +65,13 @@ def main():
     InpxPath = os.path.join(MainInpxPath, InpxName)
 
     #creating an output folder for that named inpx being studied
-    if not os.path.isdir(os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))):
-        os.makedirs(os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))) 
+    if not os.path.isdir(os.path.join(MainInpxPath,'Analysis_on__' + InpxName.strip('.inpx'))):
+        os.makedirs(os.path.join(MainInpxPath,'Analysis_on__' + InpxName.strip('.inpx'))) 
         
-    WorkingPath = os.path.join(MainInpxPath,"Analysis_on__" + InpxName.strip(".inpx"))
+    WorkingPath = os.path.join(MainInpxPath,'Analysis_on__' + InpxName.strip('.inpx'))
     
     #Checking if Vissim is already running and closing it to avoid problems latter on
-    running = vissim.isVissimRunning(True)    
+    running = vissim.isVissimRunning(kill=True)    
     if running is not False:
         print 'Could not close Vissim, the program may potentially have problems with the COM interface'
         
@@ -84,7 +85,7 @@ def main():
         first_seed = random.randint(1,1000)
         increments = random.randint(1,100)
     parameters = [config.sim_steps, first_seed, config.nbr_runs, Sim_lenght, sim_cores, increments]
-    VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(InpxPath, InpxName)
+    VissimCorridors, trafIntCorridors = csvParse.extractVissimCorridorsFromCSV(InpxPath, InpxName)
                 
     ###################################### 
     #        Statistical precision Analysis       
@@ -95,7 +96,7 @@ def main():
         if commands.verbose is True: write.verboseIntro(commands, config, TypeOfAnalysis)
            
         #generating the raw variables contained in the csv
-        variables = define.extractParamFromCSV(InpxPath,InpxName)
+        variables = csvParse.extractParamFromCSV(InpxPath,InpxName)
 
         #gathering the variables that need to be analysed
         working_variables = [i for i in variables if i.include is True]
@@ -117,25 +118,12 @@ def main():
         concat_variables = [variables[i].vissim_name for i in xrange(len(variables))]
 
         #opening the output file and writing the appropriate header       
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values)        
+        out, subdirname = write.writeSensitivityHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values)        
         filename = subdirname.split(os.sep)[-1]        
         
         #generating the graphic and output folder
-        graphspath = None        
-        '''        
-        if commands.vis_save:
-            graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
-            write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs"), "cumul_dist_graphs")
-            write.createSubFolder(os.path.join(graphspath, "distribution_graphs"), "distribution_graphs")
-            for i in range(len(default_values) +1):            
-                if i == 0:
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
-                else:                    
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", concat_variables[i-1]), "cumul_dist_graphs" + os.sep + concat_variables[i-1])
-        '''
-        outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
+        #copy paste the graph code here        
+        outputspath = write.createSubFolder(os.path.join(subdirname,'outputs'), 'outputs')
                 
         text = analysis.statistical_ana(concat_variables, default_values, filename, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, VissimCorridors)        
 
@@ -163,7 +151,7 @@ def main():
             print '-> Generating the range values and default values from memory'
         
         #generating the raw variables contained in the csv
-        variables = define.extractParamFromCSV(InpxPath,InpxName)
+        variables = csvParse.extractParamFromCSV(InpxPath,InpxName)
 
         #gathering the variables that need to be analysed
         working_variables = [i for i in variables if i.include is True]
@@ -176,27 +164,27 @@ def main():
         if commands.verbose is True:
             print '-> Generating relevant subfolders for the analysis\n'
 
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
+        out, subdirname = write.writeSensitivityHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
         graphspath = None        
         if commands.vis_save:
-            graphspath = write.createSubFolder(os.path.join(subdirname,"graphs"), "graphs")
-            write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs"), "cumul_dist_graphs")
-            write.createSubFolder(os.path.join(graphspath, "distribution_graphs"), "distribution_graphs")
+            graphspath = write.createSubFolder(os.path.join(subdirname,'graphs'), 'graphs')
+            write.createSubFolder(os.path.join(graphspath, 'cumul_dist_graphs'), 'cumul_dist_graphs')
+            write.createSubFolder(os.path.join(graphspath, 'distribution_graphs'), 'distribution_graphs')
             for i in range(len(variables) +1):            
                 if i == 0:
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", "Default_values"), "cumul_dist_graphs" + os.sep + "Default_values")
+                    write.createSubFolder(os.path.join(graphspath, 'cumul_dist_graphs', 'Default_values'), 'cumul_dist_graphs' + os.sep + 'Default_values')
+                    write.createSubFolder(os.path.join(graphspath, 'distribution_graphs', 'Default_values'), 'cumul_dist_graphs' + os.sep + 'Default_values')
                 else:                    
-                    write.createSubFolder(os.path.join(graphspath, "cumul_dist_graphs", variables[i-1].name), "cumul_dist_graphs" + os.sep + variables[i-1].name)
-                    write.createSubFolder(os.path.join(graphspath, "distribution_graphs", variables[i-1].name), "cumul_dist_graphs" + os.sep + variables[i-1].name)
-        outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")        
+                    write.createSubFolder(os.path.join(graphspath, 'cumul_dist_graphs', variables[i-1].name), 'cumul_dist_graphs' + os.sep + variables[i-1].name)
+                    write.createSubFolder(os.path.join(graphspath, 'distribution_graphs', variables[i-1].name), 'cumul_dist_graphs' + os.sep + variables[i-1].name)
+        outputspath = write.createSubFolder(os.path.join(subdirname,'outputs'), 'outputs')        
         
         #treating the simulations        
         ##calculating the default values
         inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors]
-        text, firstrun_results = analysis.OAT_sensitivity(define.intelligentChunks(len(variables), variables, concat_variables), inputs, default = True)
+        text, firstrun_results = analysis.OAT_sensitivity(workers.intelligentChunks(len(variables), variables, concat_variables), inputs, default = True)
         
         ##Running the rest of the simulations
         if commands.multi is True:
@@ -206,9 +194,9 @@ def main():
                A way to deal with this would be to generate the simulations, than have a crawler reach through the
                folders to deal with the outputs - possibly while the next simulations are being processed'''
 
-            minChunkSize = min(4,define.countPoints(concat_variables, config.nbr_points, config.nbr_runs))
+            minChunkSize = min(4,workers.countPoints(concat_variables, config.nbr_points, config.nbr_runs))
             inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, False, VissimCorridors, firstrun_results]            
-            unpacked_outputs = define.createWorkers(working_variables, analysis.OAT_sensitivity, inputs, commands, minChunkSize, concat_variables)                  
+            unpacked_outputs = workers.createWorkers(working_variables, analysis.OAT_sensitivity, inputs, commands, minChunkSize, concat_variables)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for i in unpacked_outputs:
                 for j in i:
@@ -216,7 +204,7 @@ def main():
 
         else:   
             inputs = [variables, InpxPath, InpxName, outputspath, graphspath, config, commands, running, parameters, commands.verbose, VissimCorridors, firstrun_results]                             
-            packed_outputs = analysis.OAT_sensitivity(define.intelligentChunks(len(working_variables), working_variables, concat_variables), inputs)           
+            packed_outputs = analysis.OAT_sensitivity(workers.intelligentChunks(len(working_variables), working_variables, concat_variables), inputs)           
             #unpacking the outputs -- the outputs here come back with 2 layers: runs/text -- ie: text = packed_outputs[0]
          
             for i in packed_outputs:
@@ -245,7 +233,7 @@ def main():
             print '-> Generating the range values and default values from memory'
             
         #generating the raw variables contained in the csv
-        variables = define.extractParamFromCSV(InpxPath,InpxName)
+        variables = csvParse.extractParamFromCSV(InpxPath,InpxName)
         
         #removing unwanted variables for this weidemann model
         working_variables = [i for i in variables if i.include is True]
@@ -270,27 +258,27 @@ def main():
         if commands.verbose is True:
             print '-> Generating relevant subfolders for the analysis'
 
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
+        out, subdirname = write.writeSensitivityHeader(WorkingPath, concat_variables, TypeOfAnalysis, config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName)        
 
         #creating appropriate output folder and graphic folder (if option is "on")
-        outputspath = write.createSubFolder(os.path.join(subdirname,"outputs"), "outputs")
+        outputspath = write.createSubFolder(os.path.join(subdirname,'outputs'), 'outputs')
         if commands.verbose is True:
             print '-> Name of the report file: ' + subdirname.split(os.sep)[-1] + '.csv\n'
         
         #creating 1000 random values
-        valuesVector = define.genMCsample(variables, 1000)
+        valuesVector = calibTools.genMCsample(variables, 1000)
             
         #treating the simulations
         if commands.verbose:
             print '=== Starting the modelisations of the ' + str(len(valuesVector)) + ' points ==='
         
         if commands.multi is True:
-            cores_per_process, number_of_process, unused_cores = define.cpuPerVissimInstance()
+            cores_per_process, number_of_process, unused_cores = workers.cpuPerVissimInstance()
             minChunkSize = number_of_process
             parameters[5] = cores_per_process
             out_valuesVector = []
             inputs = [variables, InpxPath, InpxName, outputspath, commands, running, parameters, valuesVector]            
-            unpacked_outputs = define.createWorkers(valuesVector, analysis.monteCarlo_vissim, inputs, commands, minChunkSize)                  
+            unpacked_outputs = workers.createWorkers(valuesVector, analysis.monteCarlo_vissim, inputs, commands, minChunkSize)                  
             #unpacking the outputs -- the outputs here come back with 3 layers: nbr of chunk/runs in the chunk/text -- ie: text = unpacked_outputs[0][0]
             for k in unpacked_outputs:
                 out_valuesVector += k
@@ -306,9 +294,9 @@ def main():
         text = []
         ##note: data is now passed as [[list of values], path_to_folder]
         if commands.multi is True:
-            minChunkSize = define.monteCarloCountPoints(len(valuesVector), config.nbr_runs)
+            minChunkSize = workers.monteCarloCountPoints(len(valuesVector), config.nbr_runs)
             inputs = [variables, parameters, outputspath, config, commands, VissimCorridors, InpxName]            
-            unpacked_outputs = define.createWorkers(out_valuesVector, analysis.monteCarlo_outputs, inputs, commands, minChunkSize)
+            unpacked_outputs = workers.createWorkers(out_valuesVector, analysis.monteCarlo_outputs, inputs, commands, minChunkSize)
             
             for k in unpacked_outputs:
                 for j in k:
@@ -334,7 +322,7 @@ def main():
 ###################
 # Launch main
 ###################
-if __name__ == "__main__": 
+if __name__ == '__main__': 
 
     main()
 

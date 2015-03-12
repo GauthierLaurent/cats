@@ -30,15 +30,16 @@ sys.stdout = oldstdout
 ##################
 # Import Internal Libraries
 ##################
-import pvc_define  as define
-import pvc_write   as write
-import pvc_outputs as outputs
-import pvc_config
+import pvc_write     as write
+import pvc_outputs   as outputs
+import pvc_configure as configure
+import pvc_mathTools as mathTools
+import pvc_csvParse  as csvParse
 
 ################################ 
 #        Load settings       
 ################################    
-config   = pvc_config.Config('pvc.cfg')
+config   = configure.Config('pvc.cfg')
     
 ################################ 
 #        Trace functions       
@@ -99,7 +100,7 @@ def processVideolist(config, video_names, save, loadImage, keep_align):
 
         if save is True:
             print '>> Saving data for '+str(video_names[v])+' to the CSV file'
-            define.writeAlignToCSV(config.path_to_csv, config.inpx_name, video_names[v], alignments)
+            configure.CSVparse.writeAlignToCSV(config.path_to_csv, config.inpx_name, video_names[v], alignments)
             print '>> Saving successfull'
         else:
             print '>> No-Saving option chosen, here are the data for manual copy-pasting:'
@@ -175,8 +176,8 @@ def defName(partial_filename, ana_type, min_time, max_time):
 def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, maxSpeed):
     '''process function - saves data into traj files that can be loaded by the calibration algorithm'''
     #loading user defined information from [inpxname].csv
-    VissimCorridors, trafIntCorridors = define.extractVissimCorridorsFromCSV(config.path_to_inpx, config.inpx_name)
-    video_infos = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+    VissimCorridors, trafIntCorridors = csvParse.extractVissimCorridorsFromCSV(config.path_to_inpx, config.inpx_name)
+    video_infos = csvParse.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
 
     #keeping only video_infos that are in video_list
     if video_list != 'all':    
@@ -248,12 +249,17 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
             #discarding problematic objects
             for prob in reversed(problems):
                 objects.pop(prob.getNum())
-                
+            
+            
             if diagnosis is True:
-                for excess in reversed(excess_speed):
-                    objects.pop(excess.getNum())
+                numlist = [o.getNum() for o in objects]
+                if len(excess_speed) > 0:
+                    for excess in reversed(excess_speed):
+                        objects.pop(numlist.index(excess.getNum()))
+                    numlist = [o.getNum() for o in objects]         #refresh indexes for invert poping
+                    
                 for invert in reversed(invert_speed):
-                    objects.pop(invert.getNum())
+                    objects.pop(numlist.index(invert.getNum()))
                     
             #saving a figure for the run, highlighting discarded objects        
             fig = plt.figure()
@@ -349,7 +355,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
                             print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(alignments)) + ' ==  |' + str(time.clock())# + ' | ' + str(len(raw_gaps))
                    
                     #trace graph: flow vs time during video
-                    sorted_graph_inst, sorted_graph_gaps = define.sort2lists(graph_inst,graph_gaps)
+                    sorted_graph_inst, sorted_graph_gaps = mathTools.sort2lists(graph_inst,graph_gaps)
                     if len(sorted_graph_inst) > 0:
                         write.plot_qt(sorted_graph_inst, sorted_graph_gaps, config.path_to_inpx, video_infos[i].video_name, trafIntCorridors[c].name, fps, min_time, max_time)
                    
@@ -371,24 +377,24 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
                 man_bgaps += list(onevid_man_bgaps)
                 opp_agaps += list(onevid_opp_agaps)
                 opp_bgaps += list(onevid_opp_bgaps)
-                all_count = list(define.merge_vectors(np.asarray(all_count),np.asarray(counts)))
+                all_count = list(mathTools.merge_vectors(np.asarray(all_count),np.asarray(counts)))
 
     if diagnosis is True:
         pass
     else:           
         #statistical distribution treatment
-        forward_followgap = outputs.stats([forward_gaps])
-        opportunistic_LCagap = outputs.stats([opp_agaps])
-        opportunistic_LCbgap = outputs.stats([opp_bgaps])
-        mandatory_LCagap = outputs.stats([man_agaps])
-        mandatory_LCbgap = outputs.stats([man_bgaps])
-        forward_speeds = outputs.stats([forward_speeds])
+        forward_followgap = outputs.Stats([forward_gaps])
+        opportunistic_LCagap = outputs.Stats([opp_agaps])
+        opportunistic_LCbgap = outputs.Stats([opp_bgaps])
+        mandatory_LCagap = outputs.Stats([man_agaps])
+        mandatory_LCbgap = outputs.Stats([man_bgaps])
+        forward_speeds = outputs.Stats([forward_speeds])
     
         #from forward TIV, calculate flow:
         raw_flow_dist = []
         for dist in forward_followgap.distributions:
             raw_flow_dist.append(list(3600*fps/np.asarray(dist.raw)))    
-        flowDist = outputs.stats(raw_flow_dist)
+        flowDist = outputs.Stats(raw_flow_dist)
     
         #putting the calculated information into a report file
         ##calculating 13 usefull centiles for tracing speeds in vissim
@@ -444,7 +450,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
 def main(argv):
     time.clock()
 
-    commands = pvc_config.commands(argparse.ArgumentParser(), 'Video')
+    commands = configure.commands(argparse.ArgumentParser(), 'Video')
 
     #process options
     min_time = commands.min_time
@@ -481,7 +487,7 @@ def main(argv):
         else:
             if video_names is None:
                 print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' | Concatenation = False =='
-                video_list = define.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+                video_list = csvParse.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
                 video_list = [v.video_name for v in video_list]
             else:
                 print '== Processing specified sqlites for ' + str(config.inpx_name)  +' | Concatenation = False =='

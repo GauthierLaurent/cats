@@ -1,23 +1,50 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Wed Jul 09 10:18:28 2014
 
 @author: Laurent
-"""
+'''
 ##################
-# Forword
-##################
-#This code is mainly imported from pvatools from Paul St-Aubin with his expressed
-#permission with minor modifications to make it work within pvctools
-
-##################
-# Import Native Libraries
+# Import libraries
 ##################
 ## Native
 import ConfigParser, os
 
 ##################
+# Code Version
+##################
+class Version:
+    def __init__(self):
+        '''
+        version is RX.Y.Z u. DD-MM-AAAA
+        where:
+                X is the release version
+                Y is the serialized data version
+                Z is the subrelease update version
+        '''
+        self.version = 'R1.6.1 u. 04-03-2015' 
+
+    @staticmethod 
+    def verify_release_version(in_version):
+        '''looks for the X part of the version number'''       
+        if in_version.version.split('.')[0] == Version().version.split('.')[0]:
+            return True
+        else:
+            return False 
+    
+    @staticmethod
+    def verify_data_version(in_version):
+        '''looks for the Y part of the version number'''
+        if in_version.version.split('.')[1] == Version().version.split('.')[1]:
+            return True
+        else:
+            return False 
+
+##################
 ## The following functions are used for parsing config string data
+##
+## This code is mainly imported from pvatools from Paul St-Aubin with his expressed
+## permission with modifications to make it work within pvctools
 ##################
 def config(config, key, default, c_type='int', c_struct='simple', section='Main'):
     ''' Handle configuration file values. '''
@@ -35,11 +62,6 @@ def config(config, key, default, c_type='int', c_struct='simple', section='Main'
     else:
         if(c_struct == 'list1D'): return list1D(config.get(section, key), i_type='string')
         else:                     return config.get(section, key)
-
-def expandLiteralListRange(item, i_type='int'):
-    ''' TODO: '''
-    return
-
 
 def list1D(item, i_type='int'):
     ''' Parse string format into 1 dimensional array (values). Will automatically generate range for int values (i.e. [1,3-5] -> [1,3,4,5]).
@@ -122,7 +144,7 @@ def str2bool(string):
 
 def raw(string):
     ''' Returns a raw string representation of text. '''
-    escape_dict={'\a':r'\a','\b':r'\b','\c':r'\c','\f':r'\f','\n':r'\n','\r':r'\r','\t':r'\t','\v':r'\v','\'':r'\'','\"':r'\"','\0':r'\0','\1':r'\1','\2':r'\2','\3':r'\3','\4':r'\4','\5':r'\5','\6':r'\6','\7':r'\7','\8':r'\8','\9':r'\9'}
+    escape_dict={'\a':r'\a','\b':r'\b','\c':r'\c','\f':r'\f','\n':r'\n','\r':r'\r','\t':r'\t','\v':r'\v','\'':r'\'','\'':r'\'','\0':r'\0','\1':r'\1','\2':r'\2','\3':r'\3','\4':r'\4','\5':r'\5','\6':r'\6','\7':r'\7','\8':r'\8','\9':r'\9'}
     new_string=''
     for char in string:
         try: new_string+=escape_dict[char]
@@ -138,7 +160,6 @@ def path_slashes(string):
 # Configuration
 ##################
 class Config:
-    #config_name = 'pvc.cfg'
     
     def __init__(self,config_name):
         self.config = ConfigParser.ConfigParser(allow_no_value=True)        
@@ -208,29 +229,69 @@ class Config:
         if(not os.path.isfile(config_name)):
             print('Notice: No default configuration found. Creating new ' + str(config_name))
             self.write()      
-
-        
+       
     def write(self,config_name):
         with open(config_name, 'w') as new_file:
-            new_file.write('[Main]\n'
-                           'path_to_inpx       = '+self.path_to_inpx+'\n'
-                           'inpx_name          = '+self.inpx_name+'\n'
-                           'path_to_trafint    = '+self.path_to_trafint+'\n'
+            new_file.write('[General]\n'
+                           'path_to_inpx              = ' + self.path_to_inpx+'\n'
+                           'inpx_name                 = ' + self.inpx_name+'\n'
+                           'path_to_trafint           = ' + self.path_to_trafint+'\n'
+                           'path_to_csv               = ' + self.path_to_csv+'\n'
                            '\n'
                            '[Video]\n'
-                           'path_to_sqlite     = '+self.path_to_sqlite+'\n'
+                           'path_to_sqlite            = ' + self.path_to_sqlite+'\n'
+                           'path_to_image             = ' + self.path_to_image+'\n'
+                           'image_name                = ' + self.image_name+'\n'
+                           'pixel_to_unit_ratio       = ' + self.pixel_to_unit_ratio+'\n'
+                           'fps                       = ' + str(self.fps)+'\n'
+                           '\n'                                                                                       
+                           '[Simulation]\n'                                                              
+                           'steps_per_sec             = ' + str(self.sim_steps)+'\n'
+                           'random_increment          = ' + str(self.random_seed)+'\n'       
+                           'first_seed                = ' + str(self.first_seed)+'\n'
+                           'increments                = ' + str(self.increments)+'\n'       
+                           'nbr_runs                  = ' + str(self.nbr_runs)+'\n'
+                           'simulation_time           = ' + str(self.simulation_time)+'\n'
+                           'warm_up_time              = ' + str(self.warm_up_time)+'\n'
+                           '\n'        
+                           '[Sensitivity]\n'
+                           'nbr_points                = ' + str(self.nbr_points)+'\n'
+                           '\n'        
+                           '[Statistical precision]\n'
+                           'desired_pct_error         = ' + str(self.desired_pct_error)+'\n'
+                           '\n'        
+                           '[Calibration]\n'
+                           'output_forward_gaps       = ' + str(self.output_forward_gaps)+'\n'
+                           'output_lane_change        = ' + str(self.output_lane_change)+'\n'
+                           'NOMAD_solution_filename   = ' + self.NOMAD_solution_filename+'\n'
+                           'ks_threshold              = ' + str(self.ks_threshold)+'\n'
+                           'reject_vissim_dist        = ' + str(self.ks_switch)+'\n'
+                           'Vehic_gen_err_constraint  = ' + str(self.num_const_thresh)+'\n'
+                           'Decel_gen_err_constraint  = ' + str(self.dp_const_thresh)+'\n'
+                           'Accel_gen_err_constraint  = ' + str(self.a0_const_thresh)+'\n'
+                           '\n'        
+                           '[Networks]\n'
+                           'active_network_1          = ' + str(self.active_network_1)+'\n'
+                           'active_network_2          = ' + str(self.active_network_2)+'\n'
+                           'active_network_3          = ' + str(self.active_network_3)+'\n'
+                           'active_network_4          = ' + str(self.active_network_4)+'\n'
                            '\n'
-                           '[Simulation]\n'
-                           'sim_steps          = '+str(self.sim_steps)+'\n'
-                           'first_seed         = '+str(self.first_seed)+'\n'
-                           'nbr_runs           = '+str(self.nbr_runs)+'\n'
-                           'simulation_time    = '+str(self.simulation_time)+'\n'
-                           'warm_up_time       = '+str(self.warm_up_time)+'\n'
-                           'nbr_points         = '+str(self.nbr_points)+'\n'
-                           '\n'
-                           '[Statistical precision]'
-                           'desired_pct_error  = '+str(self.desired_pct_error)+'\n'
-                           '\n'
+                           '[Calibration paths (fullpath = complete paths)]\n'
+                           'fullpath_to_NOMAD         = ' + self.path_to_NOMAD+'\n'
+                           'fullpath_to_NOMAD_param   = ' + self.path_to_NOMAD_param+'\n'
+                           'path_of_output_folder     = ' + self.path_to_output_folder+'\n'
+                           'fullpath_to_inpx_file_1   = ' + self.path_to_inpx_file_1+'\n'
+                           'fullpath_to_inpx_file_2   = ' + self.path_to_inpx_file_2+'\n'
+                           'fullpath_to_inpx_file_3   = ' + self.path_to_inpx_file_3+'\n'
+                           'fullpath_to_inpx_file_4   = ' + self.path_to_inpx_file_4+'\n'
+                           'fullpath_to_video_data_1  = ' + self.path_to_video_data_1+'\n'
+                           'fullpath_to_video_data_2  = ' + self.path_to_video_data_2+'\n'
+                           'fullpath_to_video_data_3  = ' + self.path_to_video_data_3+'\n'
+                           'fullpath_to_video_data_4  = ' + self.path_to_video_data_4+'\n'
+                           'fullpath_to_csv_network_1 = ' + self.path_to_csv_net1+'\n'
+                           'fullpath_to_csv_network_2 = ' + self.path_to_csv_net2+'\n'
+                           'fullpath_to_csv_network_3 = ' + self.path_to_csv_net3+'\n'
+                           'fullpath_to_csv_network_4 = ' + self.path_to_csv_net4+'\n'
                            )
         
     def parse(self, key, default, c_type='int', c_struct='simple'):
@@ -250,51 +311,8 @@ class Config:
             if(c_struct == 'list1D'): return list1D(self.config.get(self.section, key), i_type='string')
             else:                     return self.config.get(self.section, key)
 
-
 ##################
 # Parse commands
-##################
-'''
-def commands(parser, script_type = 'Sensi'):
-    ## Trajectory extraction (Traffic Intelligence), off by default
-    parser.add_option(      '--concat',         action='store_true',   dest='concat',         default=False,  help='[bool] Run concatenation functions')
-    parser.add_option(      '--undistort',      action='store_true',   dest='undistort',      default=False,  help='[bool] Run undistortion functions')
-    parser.add_option(      '--homo',           type='int',            dest='homo',           default=0,      help='[int]  Run homography functions with this many points')
-    parser.add_option(      '--trafint',        action='store_true',   dest='trafint',        default=False,  help='[bool] Run trajectory extraction functions')
-    parser.add_option(      '--trafint-watch',  action='store_true',   dest='trafint_watch',  default=False,  help='[bool] Watch trajectory extraction')
-    
-    if script_type == 'Sensi':
-        ## Analysis, on by default
-        parser.add_option('-c', '--cali',           action='store_true',   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration"               - off by default')
-        parser.add_option('-d', '--student',        action='store_true',   dest='student',        default=False,  help='[bool] Set the working analysis to "Student t-test"            - off by default')
-        parser.add_option('-o', '--monte-carlo',    action='store_true',   dest='montecarlo',     default=False,  help='[bool] Set the working analysis to "Sensitivity Monte Carlo"   - off by default')
-        parser.add_option('-s', '--sensi',          action='store_true',   dest='sensitivity',    default=False,  help='[bool] Set the working analysis to "Sensitivity One at a time" - on  by default')    
-        parser.add_option('-m', '--multi',          action='store_false',  dest='multi',          default=True,   help='[bool] Disables multiprocessing while running the analysis')
-        parser.add_option('-u', '--multi_testing',  action='store_true',   dest='multi_test',     default=False,  help='[bool] Enables a debugging mode for multitesting. Prevents the end of the analysis but enables to read a clear traceback')
-        parser.add_option('-f', '--file',                                  dest='file',                           help='[str]  Load specific inpx file')
-        parser.add_option('-a', '--save-figures',   action='store_true',   dest='vis_save',       default=False,  help='[bool] Save figures')
-        parser.add_option(      '--figure-format',                         dest='fig_format',     default='png',  help='[str]  Force saving images to a particular format. Enter a supported extensions (e.g. png, svg, pdf). Default is .png.')
-        parser.add_option('-l', '--save-swp',       action='store_true',   dest='save_swp',       default=False,  help='[bool] Enables Vissim lane change (.swp) outputs')
-        parser.add_option('-v', '--verbose',        action='store_true',   dest='verbose',        default=False,  help='[bool]  Level of detail of results')
-        parser.add_option('-t', '--test',           action='store_true',   dest='mode',           default=False,  help='[bool]  Put the code into test mode, bypassing Vissim and generating random outputs')
-
-    if script_type == 'Cali':
-        parser.add_option('-p','--point', dest = 'start_point', default = None)
-        #parser.add_option('-c', '--cali',           type = list,   dest='calibration',    default=False,  help='[bool] Set the working analysis to "Calibration"               - off by default')        
-    
-    if script_type == 'Video':
-        parser.add_option('-a', '--analysis',                             dest='analysis',        default='',     help='[str] ')    
-        parser.add_option('-i', '--image',         action='store_true',   dest='loadImage',       default=False,  help='[bool] ')    
-        parser.add_option('-s', '--save',          action='store_true',   dest='save',            default=False,  help='[bool] ')    
-        parser.add_option('-v', '--video',                                dest='video_name',      default=None,   help='[str] ')    
-        parser.add_option('-g', '--fps',           type='int',            dest='fps',             default=30,     help='[int] ')    
-        parser.add_option('-m', '--min',           type='int',            dest='min_time',        default=None,   help='[int] ')    
-        parser.add_option('-M', '--max',           type='int',            dest='max_time',        default=None,   help='[int] ')    
-            
-    (commands, args) = parser.parse_args() 
-        
-    return commands
-'''
 def commands(parser, script_type):
     if script_type == 'Sensi':
         ## Analysis, on by default

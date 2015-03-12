@@ -8,14 +8,19 @@ Created on Thu Jul 03 11:25:24 2014
 # Import Native Libraries
 ##################
 
-import psutil, sys
+import psutil, sys, os
 import win32com.client
+
+def error_message(dirname, errtype, err, traceback):
+    with open(os.path.join(dirname, errtype + '.err'),'w') as err:
+        err.write(str(err) + '\n')
+        err.write(str(traceback))
 
 ##################
 # Vissim management tools
 ##################
 
-def isVissimRunning(kill):
+def isVissimRunning(kill=False):
     '''This function is used to verify if the Vissim program is running
        The first time it is called in the program, firstTime should be called
        as True:
@@ -47,9 +52,8 @@ def startVissim():
         #      win32com.client.Dispatch() will ignore already opened vissim instances and start a fresh one
     except:
         return 'StartError'
-        
-   
-def loadNetwork(Vissim, InpxPath):
+           
+def loadNetwork(Vissim, InpxPath, err_file=False):
     '''start a Vissim network. Returns True if successfull, LoadNetError otherwise
        The filename MUST have a capital first letter'''
     if Vissim is not False and Vissim is not 'StartError':
@@ -57,7 +61,9 @@ def loadNetwork(Vissim, InpxPath):
             Vissim.LoadNet (InpxPath)
             return True
         except:
-           return 'LoadNetError'
+            if err_file is True:
+                error_message(InpxPath, 'loadNetwork', sys.exc_info()[1], sys.exc_info()[2]) 
+            return 'LoadNetError'
 
 def stopVissim(Vissim):
     '''Closes the current instance of Vissim. Return True if successfull, False otherwise'''
@@ -70,7 +76,7 @@ def stopVissim(Vissim):
     else:
         return True
         
-def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False):          #Change Lane parameters need to be added
+def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False, err_file_path=False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
         the sim_parameters variables must be [simulationStepsPerTimeUnit,
         first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
@@ -115,8 +121,11 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
         
         simulated = True        
     except:
-        simulated = sys.exc_info()
-        
+        if err_file_path is False:           
+            simulated = sys.exc_info()
+        else:
+            simulated = False
+            error_message(err_file_path, 'initializeSimulation', sys.exc_info()[1], sys.exc_info()[2])         
     return simulated
     
 def caracterizedParameter(param_type, parameter):

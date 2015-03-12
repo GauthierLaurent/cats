@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Thu Jul 10 14:43:44 2014
 
 @author: Laurent
-"""
+'''
 
 ################################ 
 #        Importing dependencies       
@@ -11,88 +11,21 @@ Created on Thu Jul 10 14:43:44 2014
 #Natives
 import os, shutil, sys, copy
 from scipy.stats import t, chi2
-from scipy.stats.mstats import ks_twosamp
 import cPickle as pickle
-import numpy as np
 
 #Internal
-import pvc_write as write
-import pvc_vissim as vissim
-import pvc_outputs as outputs
-import pvc_define as define
+import pvc_write      as write
+import pvc_vissim     as vissim
+import pvc_outputs    as outputs
+import pvc_calibTools as calibTools
+import pvc_workers    as workers
+import pvc_configure  as configure
 
 ################################ 
 #        Calibration analysis       
 ################################
-def ks_matrix(dist_list):
-    '''building the 2 by 2 matrix'''
-    matrix = []
-    for i in xrange(len(dist_list)):
-        line_i = []
-        for j in xrange(len(dist_list)):
-            d_v, p_v = ks_twosamp(dist_list[i],dist_list[j])
-            line_i.append(d_v)
-        matrix.append(line_i)
-    return matrix
-
-def count_mat(matrix, treshold):
-    '''count how many members of each line respect the treshold'''
-    count_list = []
-    for line in matrix:
-        count_list.append(np.count_nonzero(line < treshold))
-    return count_list
-
-def treat_stats_list(stats_list):
-    '''used to transform a stat list into a list of lists'''
-    raw_list = []
-    for i in xrange(len(stats_list.distributions)):
-        raw_list.append(stats_list.distributions[i].raw)
-    return raw_list
-
-def filter_dist_with_ks(dist_list, treshold):
-    '''filter a list of distribution with the Komolgorov-Smirnov test to
-       keep only the distributions with the d value lower than threshold.
-       
-       returns a concatenated distribution and the list of indexes of the
-       rejected distributions
-       
-       IMPORTANT: does not support stat list as input
-    '''
-
-    matrix = np.asarray(ks_matrix(dist_list))
-    count_list = count_mat(matrix, treshold)
-    index = count_list.index(max(count_list))
-
-    concat = [index]
-    rejected = []
-    for i in range(len(dist_list)):
-        if i != index and (matrix[index] <= treshold )[i]:
-            concat.append(i)
-        elif not (matrix[index] < treshold )[i]:
-            rejected.append(i)
-
-    return rejected
-    
-def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsPerTimeUnit,fps):
-    '''Test a range of values with the kolmolgorov-Smirnov test'''
-
-    D_statistic_list = []
-    p_value_list = []
-
-    for i in range(len(calculated_value)):
-        if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
-            D_statistic, p_value = ks_twosamp([p/float(simulationStepsPerTimeUnit) for p in video_value[i].cumul_all.raw], [p/float(fps) for p in calculated_value[i].cumul_all.raw])
-            D_statistic_list.append(calculated_value[i].cumul_all.mean)     #value (mean)
-            D_statistic_list.append(D_statistic)                            #value (delta)
-            p_value_list.append(p_value)
-        else:
-            D_statistic_list.append('0.00') #value (mean)
-            D_statistic_list.append('DNE')  #value (delta)
-    
-    return D_statistic_list
-
 def runVissimForCalibrationAnalysis(network, inputs):
-    '''Note: Vissim is passed in the Network class variable "network" 
+    '''Note: Vissim is passed in the Network class variable 'network' 
        
        One instance of runVissimForCalibrationAnalysis is started for each studied
        Network
@@ -105,7 +38,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
     point_folderpath = inputs[3]
     multi_networks   = inputs[4]
     
-    Vissim = network[0].vissim
+    Vissim = vissim.startVissim()
     
     if multi_networks is True:
         #if we are treating more than one network, than we subdivide the point folder into network folders
@@ -118,18 +51,37 @@ def runVissimForCalibrationAnalysis(network, inputs):
     else:
         final_inpx_path = copy.deepcopy(point_folderpath)
 
-    Vissim.LoadNet(os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]))
+    #retry the start vissim after having killed all vissims - only owrks if not in multi network mode    
+    if isinstance(Vissim, str) and multi_networks is False:
+        vissim.isVissimRunning(True)
+        Vissim = vissim.startVissim()        
+    
+    #check for starting error
+    if isinstance(Vissim, str):           
+        for traj in network[0].traj_paths:        
+            network[0].addVideoComparison(['StartError'])
+            return False, network[0]
+
+    #load the network
+    load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]), err_file=True)    
+
+    #check for network loading error
+    if load is not True:
+        for traj in network[0].traj_paths:        
+            network[0].addVideoComparison(['LoadNetError'])
+            return False, network[0]
     
     values = []
     for var in variables:
         values.append(var.point)
            
     #Initializing and running the simulation
-    simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)
+    simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
     
     if simulated is not True:
         for traj in network[0].traj_paths:
             network[0].addVideoComparison(['SimulationError'])
+            vissim.stopVissim(Vissim)
         return False, network[0]
              
     else:
@@ -140,22 +92,22 @@ def runVissimForCalibrationAnalysis(network, inputs):
         inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         if len(file_list) > 1:
-            commands = define.FalseCommands()
-            packedStatsLists = define.createWorkers(file_list, outputs.treatVissimOutputs, inputs, commands, defineNbrProcess = 2)
-            #define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands)
+            commands = workers.FalseCommands()
+            packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, commands, defineNbrProcess = 2)
+            #define.createWorkers([f for f in os.listdir(outputspath) if f.endswith('fzp')], outputs.treatVissimOutputs, inputs, commands)
 
             flow = packedStatsLists[0][0]; oppLCcount = packedStatsLists[0][1]; manLCcount = packedStatsLists[0][2]; forFMgap = packedStatsLists[0][3]; oppLCagap = packedStatsLists[0][4]; oppLCbgap = packedStatsLists[0][5]; manLCagap = packedStatsLists[0][6]; manLCbgap = packedStatsLists[0][7]; forSpeeds = packedStatsLists[0][8]
 
             for stat in xrange(1,len(packedStatsLists)):
-                outputs.singleValueStats.concat(flow, packedStatsLists[stat][0])
-                outputs.singleValueStats.concat(oppLCcount, packedStatsLists[stat][1])
-                outputs.singleValueStats.concat(manLCcount, packedStatsLists[stat][2])
-                outputs.stats.concat(forFMgap, packedStatsLists[stat][3])
-                outputs.stats.concat(oppLCagap, packedStatsLists[stat][4])
-                outputs.stats.concat(oppLCbgap, packedStatsLists[stat][5])
-                outputs.stats.concat(manLCagap, packedStatsLists[stat][6])
-                outputs.stats.concat(manLCbgap, packedStatsLists[stat][7])
-                outputs.stats.concat(forSpeeds, packedStatsLists[stat][8])
+                outputs.SingleValueStats.concat(flow, packedStatsLists[stat][0])
+                outputs.SingleValueStats.concat(oppLCcount, packedStatsLists[stat][1])
+                outputs.SingleValueStats.concat(manLCcount, packedStatsLists[stat][2])
+                outputs.Stats.concat(forFMgap, packedStatsLists[stat][3])
+                outputs.Stats.concat(oppLCagap, packedStatsLists[stat][4])
+                outputs.Stats.concat(oppLCbgap, packedStatsLists[stat][5])
+                outputs.Stats.concat(manLCagap, packedStatsLists[stat][6])
+                outputs.Stats.concat(manLCbgap, packedStatsLists[stat][7])
+                outputs.Stats.concat(forSpeeds, packedStatsLists[stat][8])
         else:
             flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds = outputs.treatVissimOutputs(file_list, inputs)
         
@@ -163,13 +115,13 @@ def runVissimForCalibrationAnalysis(network, inputs):
             #verifying the validity of the distributions
             if config.output_forward_gaps:
                 if len(forFMgap.distributions) > 1:
-                    rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(forFMgap), config.ks_threshold)
                 else:
                     rejected = []
                     
             if config.output_lane_change:
                 if len(oppLCbgap.distributions) > 1:
-                    rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
                 else:
                     rejected = []
                     
@@ -185,9 +137,9 @@ def runVissimForCalibrationAnalysis(network, inputs):
             forSpeeds.pop_dist_list(rejected)
     
             #memorizing bad files
-            for r in rejected:
-                rejected_files.append(file_list[r]) 
-    
+            for r in reversed(rejected):
+                rejected_files.append(file_list[r])
+                
             #running new data
             goal = parameters[2]
             total_retries = 5 ###this could be moved to the cfg file
@@ -201,7 +153,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 parameters[1] = seed
             
                 #Initializing and running the simulation
-                simulated = vissim.initializeSimulation(Vissim, parameters, values, variables)        
+                simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)        
             
                 if simulated is True:
                     #treating the outputs
@@ -209,26 +161,26 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
                     new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
                     
-                    outputs.singleValueStats.concat(flow, new_flow)
-                    outputs.singleValueStats.concat(oppLCcount, new_oppLCcount)
-                    outputs.singleValueStats.concat(manLCcount, new_manLCcount)
-                    outputs.stats.concat(forFMgap, new_forwFMgap)
-                    outputs.stats.concat(oppLCagap, new_oppLCagap)
-                    outputs.stats.concat(oppLCbgap, new_oppLCbgap)
-                    outputs.stats.concat(manLCagap, new_manLCagap)
-                    outputs.stats.concat(manLCbgap, new_manLCbgap)
-                    outputs.stats.concat(forSpeeds, new_forSpeeds)                   
+                    outputs.SingleValueStats.concat(flow, new_flow)
+                    outputs.SingleValueStats.concat(oppLCcount, new_oppLCcount)
+                    outputs.SingleValueStats.concat(manLCcount, new_manLCcount)
+                    outputs.Stats.concat(forFMgap, new_forwFMgap)
+                    outputs.Stats.concat(oppLCagap, new_oppLCagap)
+                    outputs.Stats.concat(oppLCbgap, new_oppLCbgap)
+                    outputs.Stats.concat(manLCagap, new_manLCagap)
+                    outputs.Stats.concat(manLCbgap, new_manLCbgap)
+                    outputs.Stats.concat(forSpeeds, new_forSpeeds)                   
                     
                     #verifying the validity of the distributions
                     if config.output_forward_gaps:
                         if len(forFMgap.distributions) > 1:
-                            rejected = filter_dist_with_ks(treat_stats_list(forFMgap), config.ks_threshold)
+                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(forFMgap), config.ks_threshold)
                         else:
                             rejected = []
                             
                     if config.output_lane_change:
                         if len(oppLCbgap.distributions) > 1:
-                            rejected = filter_dist_with_ks(treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
                         else:
                             rejected = []
                             
@@ -244,8 +196,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     forSpeeds.pop_dist_list(rejected)
                     
                     #memorizing bad files
-                    for r in rejected:
-                        rejected_files.append(file_list[-nbr_run_this_try:][r]) 
+                    for r in reversed(rejected):
+                        rejected_files.append(file_list[r]) 
                     
                 #fixing while loop info
                 seed += nbr_run_this_try
@@ -257,7 +209,14 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
                 for rejected_file in rejected_files:
                     shutil.copy(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
-        
+                    
+                    #moving associated error files if they exist
+                    if os.path.exists(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err')):
+                        shutil.copy(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err'), os.path.join(final_inpx_path,'rejected_tests',os.path.splitext(rejected_file)[0] + '.err'))
+                        
+                    #removing them for the file list
+                    file_list.remove(rejected_file)
+                            
         non_dist_data = [oppLCcount, manLCcount, flow]
         dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds]
         
@@ -276,7 +235,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #                M = mean from modelisation
                 # of course this would fail is V = 0, in which case we must turn to
                 #                       AE = M-V...   with V = 0: AE = M
-                #to which we will add a " * "
+                #to which we will add a ' * '
                 secondary_values = []
                 for d in xrange(len(non_dist_data)):
                     if video_data_list[d] != 0:
@@ -289,7 +248,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
        
                 #comparing video_values with output values
                 video_dist_data = video_data_list[3:]
-                secondary_values += checkCorrespondanceOfOutputs(video_dist_data, dist_data, parameters[0], config.fps)
+                secondary_values += calibTools.checkCorrespondanceOfOutputs(video_dist_data, dist_data, parameters[0], config.fps)
 
                 #adding video comparison data to the network                   
                 network[0].addVideoComparison(secondary_values)
@@ -305,14 +264,15 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     else:
                         d_stat.append([secondary_values[4], c0, c1, c2])
                     write.plot_dists(point_folderpath, video_data_list[4], dist_data[0], secondary_values[4], parameters[0], config.fps)
-                    
+                        
                 if config.output_lane_change:
                     if secondary_values[6] == 'DNE':        #using the before gap to calibrate
                         d_stat.append(['inf', c0, c1, c2])
                     else:
                         d_stat.append([secondary_values[6], c0, c1, c2])
                     write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
-        
+        #file_nums = vissim.extract_num_from_fzp_list(file_list)
+        vissim.stopVissim(Vissim)
         return d_stat, network[0]
 
 ################################ 
@@ -330,7 +290,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             2a. calculate the confidence interval for the standard deviation
             
         3. check if N > number of simulations ran up to this point
-        4. if yes, run one more simulation and repeat steps 2, 3 and 4 until "number of simulations" >= N
+        4. if yes, run one more simulation and repeat steps 2, 3 and 4 until 'number of simulations' >= N
         
     '''
     max_itt = 25    #might consider adding it to the cfg file    
@@ -343,9 +303,9 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
     iterrations_ran = 10
     
     #renaming the inpx and moving it to the output folder
-    if os.path.exists(os.path.join(outputspath, "Statistical_test.inpx")) is False:
+    if os.path.exists(os.path.join(outputspath, 'Statistical_test.inpx')) is False:
         shutil.copy(InpxPath, os.path.join(outputspath, InpxName))
-        os.rename(os.path.join(outputspath, InpxName), os.path.join(outputspath, "Statistical_test.inpx"))
+        os.rename(os.path.join(outputspath, InpxName), os.path.join(outputspath, 'Statistical_test.inpx'))
     
     if commands.verbose is True:
         print 'Starting the first 10 runs'
@@ -358,7 +318,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
                 print 'Could not start Vissim'
                 sys.exit()
         else:
-            loaded = vissim.loadNetwork(os.path.join(outputspath,  "Statistical_test.inpx"))
+            loaded = vissim.loadNetwork(os.path.join(outputspath,  'Statistical_test.inpx'))
             
             if loaded == 'LoadNetError':                    
                 print 'Could not load the Network'
@@ -376,7 +336,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
                     #output treatment
                     if commands.multi is True:
                         inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                        results = define.createWorkers([f for f in os.listdir(outputspath) if f.endswith("fzp")], outputs.treatVissimOutputs, inputs, commands)            
+                        results = workers.createWorkers([f for f in os.listdir(outputspath) if f.endswith('fzp')], outputs.treatVissimOutputs, inputs, commands)            
                         
                         #building the old_data            
                         for i in range(len(results)):
@@ -404,7 +364,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
 
                     else:
                         inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith("fzp")], inputs)
+                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith('fzp')], inputs)
        
     #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
@@ -426,13 +386,13 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
     SCI4 = [manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
     SCI5 = [manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
     
-    text.append(["Nbr_itt","Student-t","Std1","Mean1","N1","Std2","Mean2","N2","Std3","Mean3","N3","Std4","Mean4","N4","Std5","Mean5","N5","N","SCI1max","SCI1min","SCI2max","SCI2min","SCI3max","SCI3min","SCI4max","SCI4min","SCI5max","SCI5min"])
+    text.append(['Nbr_itt','Student-t','Std1','Mean1','N1','Std2','Mean2','N2','Std3','Mean3','N3','Std4','Mean4','N4','Std5','Mean5','N5','N','SCI1max','SCI1min','SCI2max','SCI2min','SCI3max','SCI3min','SCI4max','SCI4min','SCI5max','SCI5min'])
     text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])    
     
     while N > iterrations_ran and iterrations_ran < max_itt:
         
         if commands.verbose is True:
-            print 'Starting the ' + str(iterrations_ran + 1) + "th iteration"        
+            print 'Starting the ' + str(iterrations_ran + 1) + 'th iteration'        
         
         #building the old_data
         old_data   = [flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds]        
@@ -449,14 +409,14 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             
             #Initialize the new Vissim simulation
             Simulation = Vissim.Simulation
-            Simulation.SetAttValue("RandSeed", parameters[1])
-            Simulation.SetAttValue("NumRuns", parameters[2])
+            Simulation.SetAttValue('RandSeed', parameters[1])
+            Simulation.SetAttValue('NumRuns', parameters[2])
                                 
             #Starting the simulation            
             Simulation.RunContinuous()                                
             
             #determining current file
-            file_to_run = ["Statistical_test_" + str(iterrations_ran).zfill(3) + ".fzp"]            
+            file_to_run = ['Statistical_test_' + str(iterrations_ran).zfill(3) + '.fzp']            
 
             #output treatment
             inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
@@ -482,9 +442,9 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])     
         
     if iterrations_ran == max_itt and commands.verbose is True:
-        print "Maximum number of iterations reached - Stoping calculations and generating report"
+        print 'Maximum number of iterations reached - Stoping calculations and generating report'
     elif commands.verbose is True:
-        print "Statistical precision achieved - generating report"     
+        print 'Statistical precision achieved - generating report'     
                 
     #closing vissim
     if not commands.mode: 
@@ -511,7 +471,7 @@ def setCalculatingValues(default_values, current_name, nbr_points, current_range
     if default is True:        
         points_array = [default_values[0]]
     else:
-        if current_name == "CoopLnChg":
+        if current_name == 'CoopLnChg':
             points_array = current_range
         else:
             points_array = []
@@ -537,25 +497,25 @@ def correctingValues(default_values, current_value, current_name, var_dict):
     
     message = []
     working_values = copy.deepcopy(default_values)
-    if current_name == "CoopLnChgSpeedDiff":
-        working_values[var_dict["CoopLnChg"][1]] = True
-    elif current_name == "CoopLnChgCollTm":
-        working_values[var_dict["CoopLnChg"][1]] = True
-    elif current_name == "LookAheadDistMin":
-        if working_values[var_dict["LookAheadDistMax"][1]] < current_value:
-            working_values[var_dict["LookAheadDistMax"][1]] = current_value + 0.1
+    if current_name == 'CoopLnChgSpeedDiff':
+        working_values[var_dict['CoopLnChg'][1]] = True
+    elif current_name == 'CoopLnChgCollTm':
+        working_values[var_dict['CoopLnChg'][1]] = True
+    elif current_name == 'LookAheadDistMin':
+        if working_values[var_dict['LookAheadDistMax'][1]] < current_value:
+            working_values[var_dict['LookAheadDistMax'][1]] = current_value + 0.1
             message.append('LookAheadDistMax was set to a value lower than the value set to LookAheadDistMin. To avoid a crash of Vissim, the value was adjusted')
-    elif current_name == "LookAheadDistMax":
-        if working_values[var_dict["LookAheadDistMin"][1]] > current_value:
-            working_values[var_dict["LookAheadDistMin"][1]] = current_value - 0.1
+    elif current_name == 'LookAheadDistMax':
+        if working_values[var_dict['LookAheadDistMin'][1]] > current_value:
+            working_values[var_dict['LookAheadDistMin'][1]] = current_value - 0.1
             message.append('LookAheadDistMin was set to a value higher than the value set to LookAheadDistMax. To avoid a crash of Vissim, the value was adjusted')
-    elif current_name == "LookBackDistMin":
-        if working_values[var_dict["LookBackDistMax"][1]] < current_value:
-            working_values[var_dict["LookBackDistMax"][1]] = current_value + 0.1
+    elif current_name == 'LookBackDistMin':
+        if working_values[var_dict['LookBackDistMax'][1]] < current_value:
+            working_values[var_dict['LookBackDistMax'][1]] = current_value + 0.1
             message.append('LookBackDistMax was set to a value lower than the value set to LookBackDistMin. To avoid a crash of Vissim, the value was adjusted')
-    elif current_name == "LookBackDistMax":
-        if working_values[var_dict["LookBackDistMin"][1]] > current_value:
-            working_values[var_dict["LookBackDistMin"][1]] = current_value - 0.1
+    elif current_name == 'LookBackDistMax':
+        if working_values[var_dict['LookBackDistMin'][1]] > current_value:
+            working_values[var_dict['LookBackDistMin'][1]] = current_value - 0.1
             message.append('LookBackDistMin was set to a value higher than the value set to LookBackDistMax. To avoid a crash of Vissim, the value was adjusted')
         
     return working_values, message
@@ -650,7 +610,7 @@ def monteCarlo_outputs(valuesVector, inputs):
             os.makedirs(os.path.join(outputspath.strip(os.sep+'outputs'),'tempfiles'))
         WorkingPath = os.path.join(outputspath.strip(os.sep+'outputs'),'tempfiles')
         multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_points_' + str(lowerbound) + '_to_' + str(len(valuesVector)+lowerbound)
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, "Monte Carlo", config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, None, multiProcTempFile)       
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, 'Monte Carlo', config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, None, multiProcTempFile)       
             
     #preparing the outputs    
     text = []
@@ -661,10 +621,10 @@ def monteCarlo_outputs(valuesVector, inputs):
             success = True
         else:
             if os.path.isdir(valuesVector[value][1]):
-                if [f for f in os.listdir(valuesVector[value][1]) if f.endswith("fzp")] != []:                
+                if [f for f in os.listdir(valuesVector[value][1]) if f.endswith('fzp')] != []:                
                     #output treatment
                     inputs = [valuesVector[value][1], config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith("fzp")], inputs)
+                    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith('fzp')], inputs)
                     success = True
                 else:
                     success = False
@@ -701,7 +661,7 @@ def monteCarlo_outputs(valuesVector, inputs):
     
     ##dumping serialised data
     with open(os.path.join(outputspath.strip(os.sep+'outputs'),'traj_files', trajfilename), 'wb') as output:
-        pickle.dump(define.version, output, protocol=2)
+        pickle.dump(configure.Version(), output, protocol=2)
         pickle.dump(oppLCcount, output, protocol=2)
         pickle.dump(manLCcount, output, protocol=2)
         pickle.dump(flow, output, protocol=2)
@@ -770,7 +730,7 @@ def OAT_sensitivity(values, inputs, default = False):
         #opening a process output file
         WorkingPath = outputspath.strip(os.sep+'outputs')
         multiProcTempFile = outputspath.split(os.sep)[-2] + '_ProcTempFile_' + values[0][0].name
-        out, subdirname = write.writeHeader(WorkingPath, concat_variables, "Sensitivity", config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values, multiProcTempFile)       
+        out, subdirname = write.writeHeader(WorkingPath, concat_variables, 'Sensitivity', config.first_seed, config.nbr_runs, config.warm_up_time, config.simulation_time, InpxName, default_values, multiProcTempFile)       
     
     #creating a dictionnary
     var_dict = varDict(concat_variables, default_values)    
@@ -781,7 +741,7 @@ def OAT_sensitivity(values, inputs, default = False):
         #defining the variable being worked on and the range of values it can take
         if default is True:
             current_range = []
-            value_name = "Default"
+            value_name = 'Default'
             position = 0
         else:
             current_range = [values[value][0].desired_min,values[value][0].desired_max]   
@@ -852,7 +812,7 @@ def OAT_sensitivity(values, inputs, default = False):
                         else:
                             #output treatment
                             inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose, corridors]
-                            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith("fzp")], inputs)
+                            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith('fzp')], inputs)
                             #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                             
             
@@ -923,11 +883,11 @@ def OAT_sensitivity(values, inputs, default = False):
             #printing graphs
             if commands.vis_save:
                 variables = [forFMgap,oppLCagap,oppLCbgap,manLCagap,manLCbgap]
-                variables_name =["Forward_gaps","Opportunistic_lane_change_'after'_gaps","Opportunistic_lane_change_'before'_gaps","Mandatory_lane_change_'after'_gaps","Mandatory_lane_change_'before'_gaps"]
+                variables_name = ['Forward_gaps','Opportunistic_lane_change_after_gaps','Opportunistic_lane_change_before_gaps','Mandatory_lane_change_after_gaps','Mandatory_lane_change_before_gaps']
                 for var in xrange(len(variables)):
                     if default is True:
-                        name = "Default_values"
-                        subpath = "Default_values"
+                        name = 'Default_values'
+                        subpath = 'Default_values'
                     else:
                         name = filename.strip('.inpx')
                         subpath = value_name[:]
@@ -936,13 +896,13 @@ def OAT_sensitivity(values, inputs, default = False):
                     
             #writing to file
             if default is True:
-                text.append(["Default_values", corrected_values, flow.mean, "---",  oppLCcount.mean, "---", manLCcount.mean, "---",
-                             forFMgap.cumul_all.mean,  "---", forFMgap.cumul_all.firstQuart,  "---", forFMgap.cumul_all.median,  "---", forFMgap.cumul_all.thirdQuart,  "---", forFMgap.cumul_all.std,  "---",
-                             oppLCagap.cumul_all.mean, "---", oppLCagap.cumul_all.firstQuart, "---", oppLCagap.cumul_all.median, "---", oppLCagap.cumul_all.thirdQuart, "---", oppLCagap.cumul_all.std, "---",
-                             oppLCbgap.cumul_all.mean, "---", oppLCbgap.cumul_all.firstQuart, "---", oppLCbgap.cumul_all.median, "---", oppLCbgap.cumul_all.thirdQuart, "---", oppLCbgap.cumul_all.std, "---",
-                             manLCagap.cumul_all.mean, "---", manLCagap.cumul_all.firstQuart, "---", manLCagap.cumul_all.median, "---", manLCagap.cumul_all.thirdQuart, "---", manLCagap.cumul_all.std, "---",
-                             manLCbgap.cumul_all.mean, "---", manLCbgap.cumul_all.firstQuart, "---", manLCbgap.cumul_all.median, "---", manLCbgap.cumul_all.thirdQuart, "---", manLCbgap.cumul_all.std, "---",
-                             forward_speeds.cumul_all.mean, "---", forward_speeds.cumul_all.firstQuart, "---", forward_speeds.cumul_all.median, "---", forward_speeds.cumul_all.thirdQuart, "---", forward_speeds.cumul_all.std, "---"])       
+                text.append(['Default_values', corrected_values, flow.mean, '---',  oppLCcount.mean, '---', manLCcount.mean, '---',
+                             forFMgap.cumul_all.mean,  '---', forFMgap.cumul_all.firstQuart,  '---', forFMgap.cumul_all.median,  '---', forFMgap.cumul_all.thirdQuart,  '---', forFMgap.cumul_all.std,  '---',
+                             oppLCagap.cumul_all.mean, '---', oppLCagap.cumul_all.firstQuart, '---', oppLCagap.cumul_all.median, '---', oppLCagap.cumul_all.thirdQuart, '---', oppLCagap.cumul_all.std, '---',
+                             oppLCbgap.cumul_all.mean, '---', oppLCbgap.cumul_all.firstQuart, '---', oppLCbgap.cumul_all.median, '---', oppLCbgap.cumul_all.thirdQuart, '---', oppLCbgap.cumul_all.std, '---',
+                             manLCagap.cumul_all.mean, '---', manLCagap.cumul_all.firstQuart, '---', manLCagap.cumul_all.median, '---', manLCagap.cumul_all.thirdQuart, '---', manLCagap.cumul_all.std, '---',
+                             manLCbgap.cumul_all.mean, '---', manLCbgap.cumul_all.firstQuart, '---', manLCbgap.cumul_all.median, '---', manLCbgap.cumul_all.thirdQuart, '---', manLCbgap.cumul_all.std, '---',
+                             forward_speeds.cumul_all.mean, '---', forward_speeds.cumul_all.firstQuart, '---', forward_speeds.cumul_all.median, '---', forward_speeds.cumul_all.thirdQuart, '---', forward_speeds.cumul_all.std, '---'])       
 
             else:
                 text.append([value_name, corrected_values, flow.mean, delta_flow, oppLCcount.mean, delta_oppLCcount, manLCcount.mean, delta_manLCcount,
