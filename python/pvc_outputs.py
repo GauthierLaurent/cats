@@ -437,7 +437,7 @@ def search_folder_for_error_files(dirname):
             for i in xrange(len(fzp_files)-len(filenames)):
                 num_list.append(0); dp_list.append(0); a0_list.append(0)
         
-        return np.mean(num_list), np.mean(dp_list), np.mean(a0_list)
+        return max(num_list), max(dp_list), max(a0_list)
     else:
         return float('nan'), float('nan'), float('nan')
 
@@ -447,16 +447,9 @@ def convert_errors_to_constraints(config, num, dp, a0):
        values are reduced by the tolerance threshold, allowing the use of
        EB, PB or PEB constraint handling strategies
     '''
-    C_0 = 0
-    C_1 = 0
-    C_2 = 0
-
-    if num > config.num_const_thresh:
-        C_0 = num - config.num_const_thresh
-    if dp > config.dp_const_thresh:
-        C_1 = dp - config.dp_const_thresh
-    if a0 > config.a0_const_thresh:
-        C_2 = a0 - config.a0_const_thresh
+    C_0 = num - config.num_const_thresh
+    C_1 = dp - config.dp_const_thresh
+    C_2 = a0 - config.a0_const_thresh
         
     return C_0, C_1, C_2
 
@@ -469,7 +462,7 @@ def sort_fout_and_const(fout_lists):
     valids = []    
     #check constraints:
     for l in fout_lists:
-        if l[1] == 0 and l[2] == 0 and l[3] == 0:
+        if np.all(np.asarray(l[1:]) <= 0):      #all constraints are <= 0
             valids.append(fout_lists.index(l))
 
     #sort valids
@@ -483,7 +476,7 @@ def sort_fout_and_const(fout_lists):
     else:
         for i in xrange(len(fout_lists)):
             if i not in valids:
-                return fout_lists[i]
+                return fout_lists[i]  #constains [fout, C_0, C_1, ...]
 
 def extract_num_from_fzp_name(filename):
     '''returns the numerical component of a vissim fzp file'''
