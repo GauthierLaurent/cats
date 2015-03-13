@@ -8,13 +8,8 @@ Created on Thu Jul 03 11:25:24 2014
 # Import Native Libraries
 ##################
 
-import psutil, sys, os
+import psutil, sys, os, traceback
 import win32com.client
-
-def error_message(dirname, errtype, err, traceback):
-    with open(os.path.join(dirname, errtype + '.err'),'w') as err:
-        err.write(str(err) + '\n')
-        err.write(str(traceback))
 
 ##################
 # Vissim management tools
@@ -62,7 +57,7 @@ def loadNetwork(Vissim, InpxPath, err_file=False):
             return True
         except:
             if err_file is True:
-                error_message(InpxPath, 'loadNetwork', sys.exc_info()[1], sys.exc_info()[2]) 
+                traceback.print_exc(file=open(os.path.join(InpxPath, 'loadNetwork.err'),'w'))
             return 'LoadNetError'
 
 def stopVissim(Vissim):
@@ -125,7 +120,7 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
             simulated = sys.exc_info()
         else:
             simulated = False
-            error_message(err_file_path, 'initializeSimulation', sys.exc_info()[1], sys.exc_info()[2])         
+            traceback.print_exc(file=open(os.path.join(err_file_path, 'initializeSimulation'),'w'))
     return simulated
     
 def caracterizedParameter(param_type, parameter):

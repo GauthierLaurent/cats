@@ -144,13 +144,14 @@ def runVissimForCalibrationAnalysis(network, inputs):
             goal = parameters[2]
             total_retries = 5 ###this could be moved to the cfg file
             retry = 0
-            seed = parameters[1] + goal + 1
+            first_seed = parameters[1]
+            new_seed = first_seed + goal*parameters[5]
             
             while len(forFMgap.distributions) < goal and retry <= total_retries:
                 #fixing vissim parameters            
                 nbr_run_this_try = len(rejected)
                 parameters[2] = nbr_run_this_try  #number of rerun
-                parameters[1] = seed
+                parameters[1] = new_seed
             
                 #Initializing and running the simulation
                 simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)        
@@ -200,7 +201,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         rejected_files.append(file_list[r]) 
                     
                 #fixing while loop info
-                seed += nbr_run_this_try
+                new_seed += nbr_run_this_try*parameters[5]
                 retry += 1
     
             #moving unwanted file        
@@ -208,15 +209,25 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 if not os.path.exists(os.path.join(final_inpx_path, 'rejected_tests')):
                     os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
                 for rejected_file in rejected_files:
-                    shutil.copy(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
+                    shutil.move(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
                     
                     #moving associated error files if they exist
                     if os.path.exists(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err')):
-                        shutil.copy(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err'), os.path.join(final_inpx_path,'rejected_tests',os.path.splitext(rejected_file)[0] + '.err'))
-                        
-                    #removing them for the file list
-                    file_list.remove(rejected_file)
+                        shutil.move(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err'), os.path.join(final_inpx_path,'rejected_tests',os.path.splitext(rejected_file)[0] + '.err'))
                             
+                    #removing the unwanted files from the file list
+                    file_list.remove(rejected_file)
+                    
+                #creating a storage file for seed information
+                with open(os.path.join(final_inpx_path,'rejected_tests','info.seeds'),'w') as seed:
+                    seed.write('first seed:      '+str(first_seed)+'\n'
+                               'seed increment : '+str(parameters[5])+'\n'
+                               '\n')
+                    for s in xrange(len(file_list)+len(rejected_files)):
+                        seed.write('seed_'+str(s+1)+': '+str(parameters[1]+s*parameters[5])+'\n')
+
+        seed_nums = outputs.extract_num_from_fzp_list(file_list)
+                    
         non_dist_data = [oppLCcount, manLCcount, flow]
         dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds]
         
@@ -271,9 +282,9 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     else:
                         d_stat.append([secondary_values[6], c0, c1, c2])
                     write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
-        #file_nums = vissim.extract_num_from_fzp_list(file_list)
+        
         vissim.stopVissim(Vissim)
-        return d_stat, network[0]
+        return d_stat, network[0], seed_nums
 
 ################################ 
 #        Statistical precision analysis       

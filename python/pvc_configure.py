@@ -22,7 +22,7 @@ class Version:
                 Y is the serialized data version
                 Z is the subrelease update version
         '''
-        self.version = 'R1.6.1 u. 04-03-2015' 
+        self.version = 'R1.6.2 u. 12-03-2015' 
 
     @staticmethod 
     def verify_release_version(in_version):

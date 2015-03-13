@@ -9,7 +9,7 @@ Created on Thu Jul 03 11:32:08 2014
 # Import Libraries
 ##################
 #Native
-import os, time, shutil, re, sys
+import os, time, shutil, re, traceback
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plb
 from matplotlib import rcParams
@@ -1020,13 +1020,7 @@ def plot_dists(dirname, video_data, vissim_data, fout, simulationStepsPerTimeUni
         plt.clf()
         plt.close(fig)    
     except:
-        error_message(dirname, 'graphic', sys.exc_info()[1], sys.exc_info()[2])
-        
-def error_message(dirname, errtype, err, traceback):
-    with open(os.path.join(dirname, errtype + '.err'),'w') as err:
-        err.write(str(err) + '\n')
-        err.write(str(traceback))
-
+        traceback.print_exc(file=open(os.path.join(dirname, 'Graphic.err'),'w'))
     
 ##################
 # Drawing tools

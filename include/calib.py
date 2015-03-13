@@ -25,14 +25,14 @@ import os, sys, multiprocessing, shutil, random
 ################################
 def main(argv):
 
-    #Internal 
-
+    #Internal
     import pvc_write     as write 
     import pvc_workers   as workers
     import pvc_mathTools as mathTools
     import pvc_configure as configure
     import pvc_csvParse  as csvParse
     import pvc_analysis  as analysis
+    import pvc_vissim    as vissim
     import pvc_outputs   as outputs
 
     config = configure.Config('calib.cfg')
@@ -56,7 +56,7 @@ def main(argv):
         parameters[1] = random.randint(1,700)
         parameters[5] = random.randint(1,100)
         
-        seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
+    store = [parameters[1], parameters[5]] #first seed, increment
         
     #gathering the variables that need to be analysed
     to_include_list = [i for i in variables if i.include is True]
@@ -83,6 +83,7 @@ def main(argv):
 		net.addVideoComparison(['BoundingError'])
 
         #history
+        seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
         write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
         
         #output
@@ -92,6 +93,10 @@ def main(argv):
     #move all inpx files to the point folder
     for net in networks:
         shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
+  
+    #adding vissim instances to each network
+    for net in networks:
+        net.addVissim(vissim.startVissim())
         
     #pass data to vissim and simulate
     if len(networks) == 1:
@@ -101,31 +106,41 @@ def main(argv):
         unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
 
         if mathTools.isbool(list(unpacked_outputs)):
+            seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
             write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = outputs.sort_fout_and_const(unpacked_outputs[0])
             networks = [unpacked_outputs[1]]
+            seeds = [store[0]+(i-1)*store[1] for i in unpacked_outputs[2]]
 
     else:
         ##run the analysis through workers -- separate with networks
         commands = workers.FalseCommands()
         inputs = [config, variables, parameters, point_folderpath, True]
-        for net in networks:            
+        for net in networks:
             packed_outputs = workers.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
         
         d_stat = []
         networks = []
-
+        seed_num_list = []
+        
         for unpacked in packed_outputs:
             d_stat.append(unpacked[0])
             networks.append(unpacked[1])
+            seed_num_list.append(unpacked[2])
 
         if mathTools.isbool(d_stat):
+            seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
             write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:
             fout = outputs.sort_fout_and_const(d_stat)
+            seeds = []
+            for j in xrange(len(seed_num_list)):
+                seeds += [store[0]+(i-1)*store[1] for i in seed_num_list[j]]
+                if j < len(seed_num_list)-1:
+                    seeds += ['|']
 
     #write to history
     write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
