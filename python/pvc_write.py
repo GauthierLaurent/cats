@@ -166,13 +166,28 @@ class History:
     @staticmethod
     def create_history(dirname, filename, nbr_seeds, networks):
         with open(os.path.join(dirname, filename), 'w') as hist:
-            hist.write('Itt\t|\t')            
-            for seed in xrange(nbr_seeds):
-                hist.write('Seed_'+str(seed)+'\t')
+            #first line:
+            hist.write('Itt\t|\t')
+            for net in xrange(len(networks)):
+                for seed in xrange(nbr_seeds):
+                    hist.write('Seeds, net'+str(seed+1)+'\t')
+                    for i in xrange(nbr_seeds-1):
+                       hist.write('\t') 
             hist.write('|\tpoint\t|\t')   
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
-                    hist.write('Network_'+str(net)+'_Video_'+str(comp)+': ')
+                    hist.write('Network_'+str(net)+'_Video_'+str(comp)+'\t')
+                    for i in xrange(18):
+                        hist.write('\t')
+                    hist.write('|\t')
+            #2nd line:
+            hist.write('#\t|\t')
+            for net in xrange(len(networks)):
+                for seed in xrange(nbr_seeds):
+                    hist.write('Seed_'+str(seed+1)+'\t')
+            hist.write('|\tpoint\t|\t')   
+            for net in xrange(len(networks)):
+                for comp in xrange(len(networks[net].traj_paths)):
                     hist.write('oppLCcount (mean)\t oppLCcount (delta)\t')
                     hist.write('manLCcount (mean)\t manLCcount (delta)\t')
                     hist.write('flow (mean)\t flow (delta)\t')  
@@ -206,9 +221,9 @@ class History:
             #secondary comparaison
             for net in xrange(len(networks)):
                 for comp in networks[net].videoComparison:
-                    variables = writeToOneList(list(comp))
+                    variables = mathTools.ToOneList(list(comp))
                     for v in xrange(len(variables)):
-                        if v == 4:
+                        if v == 6:
                             hist.write('-\t')
                         hist.write(str(variables[v]) +'\t')
                     hist.write('|\t')
@@ -750,29 +765,10 @@ def writeListToCSV(lists, name):
     for sublist in lists:
         writeInFile(out,sublist)
     out.close()
-    
-def intoList(out, mylist):
-    '''iterates over mylist to write it's content into the list given in out'''
-    for i in mylist:
-        if isinstance(i, list) is True:
-            intoList(out, i)            
-        else:
-            out.append(i)
-    return out   
-
-def writeToOneList(*args):
-    '''Take any number of arguments and returns a single list'''  
-    out = []    
-    for arg in list(args):
-        if isinstance(arg, list) is True:
-            out = intoList(out, arg)
-        else:
-            out.append(arg)
-    return out
-    
+        
 def writeInFile(out, *args, **kwargs):
     '''Writes any number of arguments into the file given in out'''    
-    variables = writeToOneList(list(args))
+    variables = mathTools.ToOneList(list(args))
 
     rounding = 4
     if kwargs is not None:

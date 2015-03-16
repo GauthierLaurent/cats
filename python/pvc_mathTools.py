@@ -57,6 +57,24 @@ def sort2lists(list1,list2,ascending_order=True):
         
     return sorted_list1, sorted_list2
 
+def intoList(out, mylist):
+    '''unpack list of list into the list given in out'''
+    for i in mylist:
+        if isinstance(i, list) is True:
+            intoList(out, i)            
+        else:
+            out.append(i)
+    return out   
+
+def ToOneList(*args):
+    '''Take any number of arguments and returns a single list'''  
+    out = []    
+    for arg in list(args):
+        if isinstance(arg, list) is True:
+            out = intoList(out, arg)
+        else:
+            out.append(arg)
+    return out
 
 ##################
 # Variable tools
