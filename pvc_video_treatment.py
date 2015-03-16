@@ -176,7 +176,7 @@ def defName(partial_filename, ana_type, min_time, max_time):
 def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, maxSpeed):
     '''process function - saves data into traj files that can be loaded by the calibration algorithm'''
     #loading user defined information from [inpxname].csv
-    VissimCorridors, trafIntCorridors = csvParse.extractVissimCorridorsFromCSV(config.path_to_inpx, config.inpx_name)
+    trafIntCorridors = csvParse.extractCorridorsFromCSV(config.path_to_inpx, config.inpx_name, 'trafint')
     video_infos = csvParse.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
 
     #keeping only video_infos that are in video_list

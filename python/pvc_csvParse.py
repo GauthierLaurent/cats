@@ -9,7 +9,7 @@ Created on Tue Mar 03 17:08:54 2015
 ##################
 ## Native
 from pylab import csv2rec
-import StringIO, sys, os
+import StringIO, sys, os, traceback
 
 ##################
 # Import Traffic Intelligence
@@ -262,7 +262,7 @@ def extractParamFromCSV(dirname, filename):
         print 'No vissim file or csv file named ' + str(filename) + 'were found, closing program '
         sys.exit()
 
-def extractVissimCorridorsFromCSV(dirname, inpxname):
+def extractCorridorsFromCSV(dirname, inpxname, types):
     '''Reads corridor information for a csv named like the inpx
         - CSV file must be build as: Corridor_name,vissim list,traffic intelligence
           list 
@@ -270,8 +270,7 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
     '''
 
     if inpxname in dirname: dirname = dirname.strip(inpxname)
-    if os.path.exists(os.path.join(dirname, inpxname)):
-
+    try:
         filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
 
         f = open(os.path.join(dirname,filename[0]))
@@ -281,17 +280,20 @@ def extractVissimCorridorsFromCSV(dirname, inpxname):
         brute = []
         for line in f:
             if '$' in line.strip(): break
-            if line.startswith('#') is False and line.strip() != '': brute.append(line.strip().split('#')[0])
+            if line.startswith('#') is False and line.strip() != '': brute.append(line.strip().replace(' ','\t').replace('\t','').split('#')[0])
              
         vissimCorridors = {}
         trafIntCorridors = {}    
         for b in xrange(len(brute)):        
             vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
             trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
-       
-        return vissimCorridors.values(), trafIntCorridors.values()
-    else:
-        print 'No vissim file named ' + str(inpxname) + ', closing program '
+        
+        if types == 'vissim':
+            return vissimCorridors.values()
+        if types == 'trafint':
+            return trafIntCorridors.values()
+    except:
+        print traceback.print_exc()
         sys.exit()
   
 def verifyDesiredRanges(variables):

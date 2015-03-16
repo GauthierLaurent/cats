@@ -127,13 +127,13 @@ class Network:
         inpx_list = {}
         if config.active_network_1:
             inpx_list[config.path_to_inpx_file_1.split(os.sep)[-1]] = Network(config.path_to_inpx_file_1,config.path_to_video_data_1)
-            VissimCorridors1, trafIntCorridors1 = csvParse.extractVissimCorridorsFromCSV(config.path_to_csv_net1.strip(config.path_to_csv_net1.split(os.sep)[-1]), config.path_to_inpx_file_1.split(os.sep)[-1])
+            VissimCorridors1 = csvParse.extractCorridorsFromCSV(config.path_to_csv_net1.strip(config.path_to_csv_net1.split(os.sep)[-1]), config.path_to_inpx_file_1.split(os.sep)[-1], 'vissim')
             inpx_list[config.path_to_inpx_file_1.split(os.sep)[-1]].addCorridor(VissimCorridors1)
             
         if config.active_network_2:
             if config.path_to_inpx_file_2.split(os.sep)[-1] not in inpx_list:
                 inpx_list[config.path_to_inpx_file_2.split(os.sep)[-1]] = Network(config.path_to_inpx_file_2,config.path_to_video_data_2)
-                VissimCorridors2, trafIntCorridors2 = csvParse.extractVissimCorridorsFromCSV(config.path_to_csv_net2.strip(config.path_to_csv_net2.split(os.sep)[-1]), config.path_to_inpx_file_2.split(os.sep)[-1])
+                VissimCorridors2, = csvParse.extractCorridorsFromCSV(config.path_to_csv_net2.strip(config.path_to_csv_net2.split(os.sep)[-1]), config.path_to_inpx_file_2.split(os.sep)[-1], 'vissim')
                 inpx_list[config.path_to_inpx_file_2.split(os.sep)[-1]].addCorridor(VissimCorridors2)
             else:
                 inpx_list[config.path_to_inpx_file_2.split(os.sep)[-1]].addtraj(config.path_to_video_data_2)
@@ -141,7 +141,7 @@ class Network:
         if config.active_network_3:
             if config.path_to_inpx_file_3.split(os.sep)[-1] not in inpx_list:
                 inpx_list[config.path_to_inpx_file_3.split(os.sep)[-1]] = Network(config.path_to_inpx_file_3,config.path_to_video_data_3)
-                VissimCorridors3, trafIntCorridors3 = csvParse.extractVissimCorridorsFromCSV(config.path_to_csv_net3.strip(config.path_to_csv_net3.split(os.sep)[-1]), config.path_to_inpx_file_3.split(os.sep)[-1])
+                VissimCorridors3, = csvParse.extractCorridorsFromCSV(config.path_to_csv_net3.strip(config.path_to_csv_net3.split(os.sep)[-1]), config.path_to_inpx_file_3.split(os.sep)[-1], 'vissim')
                 inpx_list[config.path_to_inpx_file_3.split(os.sep)[-1]].addCorridor(VissimCorridors3)
             else:
                 inpx_list[config.path_to_inpx_file_3.split(os.sep)[-1]].addtraj(config.path_to_video_data_3)    
@@ -149,7 +149,7 @@ class Network:
         if config.active_network_4:
             if config.path_to_inpx_file_4.split(os.sep)[-1] not in inpx_list:
                 inpx_list[config.path_to_inpx_file_4.split(os.sep)[-1]] = Network(config.path_to_inpx_file_4,config.path_to_video_data_4)
-                VissimCorridors4, trafIntCorridors4 = csvParse.extractVissimCorridorsFromCSV(config.path_to_csv_net4.strip(config.path_to_csv_net4.split(os.sep)[-1]), config.path_to_inpx_file_4.split(os.sep)[-1])
+                VissimCorridors4, = csvParse.extractCorridorsFromCSV(config.path_to_csv_net4.strip(config.path_to_csv_net4.split(os.sep)[-1]), config.path_to_inpx_file_4.split(os.sep)[-1], 'vissim')
                 inpx_list[config.path_to_inpx_file_4.split(os.sep)[-1]].addCorridor(VissimCorridors4)
             else:
                 inpx_list[config.path_to_inpx_file_4.split(os.sep)[-1]].addtraj(config.path_to_video_data_4)    
