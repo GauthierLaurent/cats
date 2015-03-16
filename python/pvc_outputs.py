@@ -5,12 +5,15 @@ Created on Thu Jul 03 11:38:05 2014
 @author: Laurent
 """
 ##################
-# Import Native Libraries
+# Import Libraries
 ##################
-
+##natives
 import os, sys
 import numpy as np
 import random, time
+
+##internals
+import pvc_mathTools as mathTools
 
 ##################
 # Import Traffic Intelligence
@@ -171,12 +174,9 @@ class Outputs:
         self.manLCbgap  = manLCbgap
         self.forSpeeds  = forSpeeds
         
-    def add_one_count(self, flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds):
+    def add_one_count(self, flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds, filename):
         pass
-    ##TODO: ajouter une instance de chaque entrée
         
-    def GetFilenames():
-        pass
     ##TODO: passe à travers forFMgap.distributions[i].filename pour les retourner
 
 ##TODO:
@@ -264,135 +264,178 @@ def appendDicts(candidate, dictionnary, position_before, position_after, frame_a
         
     return dictionnary
     
-def laneChange(objects, corridors):
+def start_is_same_corridor_as_end(single_object, corridors, data_type):
+    '''checks data to determine if the start corridor  is the same as the end corridor'''
+    first_appeareance = None
+    last_appeareance = None
+    for i in xrange(len(corridors)):
+        if data_type == 'vissim':
+            if int(single_object.curvilinearPositions.lanes[0].split('_')[0]) in corridors[i].link_list: first_appeareance = i
+            if int(single_object.curvilinearPositions.lanes[-1].split('_')[0]) in corridors[i].link_list: last_appeareance = i
+        else:
+            if int(single_object.curvilinearPositions.lanes[0]) in corridors[i].link_list: first_appeareance = i
+            if int(single_object.curvilinearPositions.lanes[-1]) in corridors[i].link_list: last_appeareance = i
+    return first_appeareance == last_appeareance
+
+def find_all_LC(single_object, to_eval, link_corr_dict, data_type):
+    '''iterates over the lanes taken by an object and checks for lane changes
+    
+       for vissim, it is considered that a link change is not a lane change
+       
+       returns a list of observed changes perr corridor (list of list):
+           [corridor{0}_LC_list, corridor{1}_LC_list, ...]
+           
+           with corridor{i}_LC_list = [LC{0}, LC{1}, ...]
+           
+           and LC{i} the occuring position in o.curvilinearPositions.lanes    
+    '''
+
+    LC_positions = []
+    LC_on_this_corr = []
+
+    current_corr = None
+    #itterating over lanes
+    for i in (xrange(len(single_object.curvilinearPositions.lanes)-1)):
+        
+        if data_type == 'vissim':
+            O_lane = int(single_object.curvilinearPositions.lanes[i].split('_')[1])
+            D_lane = int(single_object.curvilinearPositions.lanes[i+1].split('_')[1])
+            O_link = int(single_object.curvilinearPositions.lanes[i].split('_')[0])
+        else:
+            O_lane = int(single_object.curvilinearPositions.lanes[i])
+            D_lane = int(single_object.curvilinearPositions.lanes[i+1])
+            O_link = int(single_object.curvilinearPositions.lanes[i])
+        
+        if data_type == 'vissim':
+            if int(single_object.curvilinearPositions.lanes[i].split('_')[0]) != int(single_object.curvilinearPositions.lanes[i+1].split('_')[0]):
+                continue
+            
+        #keeping only LC which origine is in an evaluated link
+        if int(O_link) in to_eval:
+            #if current_link is None, we never yet saw a valid point. Thus, we need to set the current working corridor the the present corridor
+            if current_corr is None:
+                current_corr = link_corr_dict[O_link]
+            
+            #if we observe a lane change:
+            if O_lane != D_lane:
+                
+                #if the corridor of the observed point is the same as the current working corridor
+                if current_corr == link_corr_dict[O_link]:
+                    #simple append
+                    LC_on_this_corr.append(i)
+                #otherwise, we start a new working list for the new corridor, first appending the old corridor to the global list
+                else:
+                    LC_positions.append(LC_on_this_corr)
+                    LC_on_this_corr = [i]
+                    current_corr = link_corr_dict[O_link]
+    #end of the loop: adding the last corridor we worked on
+    LC_positions.append(LC_on_this_corr)
+        
+    return LC_positions
+    
+def LC_is_toward_exit(lane1,lane2,exits):
+    '''checks if a LC is in the same direction as the exit direction given for the corridor'''
+    if int(lane2) > int(lane1):
+        turn = 'g'
+    else:
+        turn = 'r'
+    return turn == exits                
+
+def caractLC(previous, lane1, lane2, exits):
+    '''finds if a LC is considered opportunist ('opp') or mandatory ('man')
+    
+       only for case: start corridor != end corridor'''
+    if LC_is_toward_exit(lane1,lane2,exits):                        
+        #if the LC is the last LC of the corridor, and finishes at the rightmost,
+        #it is set as 'man', if it finisheds in lans > 1, then 'opp'
+        #  --> the last one of the last corridor is actually undefined if on lane 1,
+        #      but will be set as 'man' since the case of never changing
+        #      corridor is already adressed by the first 'if'
+        if previous == None:
+            if int(lane2) > 1:
+                return 'opp'                               
+            else:
+                return 'man'
+        else:
+            #if it is not the first, it depends on the last observed LC
+            if previous == 'man':
+                return 'man'
+            else:
+                return 'opp'
+    else:
+        return 'opp'
+
+def calculate_laneChange(objects, corridors, data_type):
+    '''Sorts mandatory and opportunistic lane changes'''
     #Dictionaries    
     oppObjDict = {}
     manObjDict = {}
+    link_exits = {}
+    link_corr  = {}
     laneDict = {}
     
-    to_eval = []
+    to_eval = []    
     for j in xrange(len(corridors)):
         to_eval += corridors[j].to_eval
-                
-    for o in range(len(objects)):
+        for l in corridors[j].to_eval:
+            if l not in link_exits:
+                link_exits[l] = corridors[j].direction
+            if l not in link_corr:
+                link_corr[l] = j
+    
+    for o in objects:
+        
         #building the lane dictionnary
-        for i in set(objects[o].curvilinearPositions.lanes):
+        for i in set(o.curvilinearPositions.lanes):
             if i not in laneDict: laneDict[i] = []
-            if o not in laneDict[i]: laneDict[i].append(o)         
+            if objects.index(o) not in laneDict[i]: laneDict[i].append(objects.index(o))        
         
-        #Vissim data
-        if isinstance(objects[o].curvilinearPositions.lanes[0],str):
-            first_appeareance = None
-            last_appeareance = None
-            for i in xrange(len(corridors)):       
-                if int(objects[o].curvilinearPositions.lanes[0].split('_')[0]) in corridors[i].link_list: first_appeareance = i
-                if int(objects[o].curvilinearPositions.lanes[-1].split('_')[0]) in corridors[i].link_list: last_appeareance = i
-                    
-            #if the object stays in the same corridors over the whole trajectory --> all lane changes are opportunistic lane change        
-            if first_appeareance == last_appeareance:
-                for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
-                    #keeping only the evaluated links                            
-                    if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval or int(objects[o].curvilinearPositions.lanes[pos+1].split('_')[0]) in to_eval:
-                        #eliminating link interface change
-                        if objects[o].curvilinearPositions.lanes[pos].split('_')[0] == objects[o].curvilinearPositions.lanes[pos + 1].split('_')[0]:
-                            if objects[o].curvilinearPositions.lanes[pos].split('_')[1] != objects[o].curvilinearPositions.lanes[pos + 1].split('_')[1]:
-                                oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)                        
-                    
-            #otherwise, we need to investigate more
-            else:      
-                for pos in range(len(objects[o].curvilinearPositions.lanes) -1):                  
-                    #keeping only the evaluated links                            
-                    if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in to_eval or int(objects[o].curvilinearPositions.lanes[pos+1].split('_')[0]) in to_eval:                    
-                        #if link is not the same
-                        if objects[o].curvilinearPositions.lanes[pos].split('_')[0] != objects[o].curvilinearPositions.lanes[pos + 1].split('_')[0]:
-                            start = None
-                            end = None
-                            #Verify if both links are in the same corridor
-                            for i in xrange(len(corridors)):
-                                if int(objects[o].curvilinearPositions.lanes[pos].split('_')[0]) in corridors[i].link_list: start = i
-                                if int(objects[o].curvilinearPositions.lanes[pos +1].split('_')[0]) in corridors[i].link_list: end = i
-        
-                            if start != end:    #if not --> mandatory lane change
-                                manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-
-                        #if link is the same
-                        else:
-                            #if lane is not the same --> opportunistic lane change
-                            if objects[o].curvilinearPositions.lanes[pos].split('_')[1] != objects[o].curvilinearPositions.lanes[pos + 1].split('_')[1]:
-                                
-                                #finding the exit direction of corridor the vehicule is on
-                                direction = None
-                                for i in xrange(len(corridors)):
-                                    if int(objects[o].curvilinearPositions.lanes[0].split('_')[0]) in corridors[i].link_list: direction = corridors[i].direction
-    
-                                if direction == 'r':
-                                    #if the link between the corridors is to the right, an increasing lane number is opportunistic
-                                    if objects[o].curvilinearPositions.lanes[pos].split('_')[1] < objects[o].curvilinearPositions.lanes[pos +1].split('_')[1]:
-                                        oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-                                    else:
-                                        manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-                                                
-                                #if the link between the corridors is to the left, a decreasing lane number is opportunistic
-                                else:
-                                    if objects[o].curvilinearPositions.lanes[pos].split('_')[1] > objects[o].curvilinearPositions.lanes[pos +1].split('_')[1]:
-                                        oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-                                    else:
-                                        manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-
-        #Traffic Intelligence data
-        else:                        
-            first_appeareance = None
-            last_appeareance = None
-            for i in xrange(len(corridors)):            
-                if objects[o].curvilinearPositions.lanes[0] in corridors[i].link_list: first_appeareance = i
-                if objects[o].curvilinearPositions.lanes[-1] in corridors[i].link_list: last_appeareance = i
-                    
-            #if the object stays in the same corridors over the whole trajectory --> all lane changes are opportunistic lane change        
-            if first_appeareance == last_appeareance:
-                for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
-                    #keeping only the evaluated links                            
-                    if objects[o].curvilinearPositions.lanes[pos] in to_eval or objects[o].curvilinearPositions.lanes[pos+1] in to_eval:
-                        if objects[o].curvilinearPositions.lanes[pos] != objects[o].curvilinearPositions.lanes[pos + 1]:
-                            oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)                        
-                        
+        #getting all lane changes in the trajectory            
+        LC_positions = find_all_LC(o, to_eval, link_corr, data_type)
+        LC_type_list = []
+        #if there is at least one LC
+        if len(mathTools.intoList([],LC_positions)) > 0:
+            #checking if all the trajectory is in the same corridor
+            if start_is_same_corridor_as_end(o, corridors, data_type):
+                #all turns are added as 'opp'
+                for co in reversed(xrange(len(LC_positions))):
+                    for i in reversed(LC_positions[co]):
+                        oppObjDict = appendDicts(objects.index(o), oppObjDict, o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1)
             else:
+                for co in reversed(xrange(len(LC_positions))):
+                    for i in reversed(LC_positions[co]):
+                        if data_type == 'vissim':
+                            lane1 = o.curvilinearPositions.lanes[i].split('_')[1]
+                            lane2 = o.curvilinearPositions.lanes[i+1].split('_')[1]
+                            exits = link_exits[int(o.curvilinearPositions.lanes[i].split('_')[0])]
+                        else:
+                            lane1 = o.curvilinearPositions.lanes[i]
+                            lane2 = o.curvilinearPositions.lanes[i+1]
+                            exits = link_exits[int(o.curvilinearPositions.lanes[i])]
+                            
+                        if LC_positions[co].index(i) == len(LC_positions[co])-1:
+                            previous = None
+                        else:
+                            previous = LC_type_list[-1]
+                            
+                        LC_type = caractLC(previous, lane1, lane2, exits)
+                        LC_type_list.append(LC_type)                   
+                        
+                        if LC_type == 'opp':
+                            oppObjDict = appendDicts(objects.index(o), oppObjDict, o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1)
+                        else:
+                            manObjDict = appendDicts(objects.index(o), manObjDict, o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1)
 
-                for pos in range(len(objects[o].curvilinearPositions.lanes) -1):
-                    #keeping only the evaluated links                            
-                    if objects[o].curvilinearPositions.lanes[pos] in to_eval or objects[o].curvilinearPositions.lanes[pos+1] in to_eval:                                            
-                        #if alignment is not the same
-                        if objects[o].curvilinearPositions.lanes[pos] != objects[o].curvilinearPositions.lanes[pos + 1]:
-                            start = None
-                            end = None
-                            #Verify if both alignments are in the same corridor
-                            for i in xrange(len(corridors)):
-                                if objects[o].curvilinearPositions.lanes[pos] in corridors[i].link_list: start = i
-                                if objects[o].curvilinearPositions.lanes[pos +1] in corridors[i].link_list: end = i
-                            if start != end:    #If not --> mandatory lane change
-                                manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
+    return laneDict, oppObjDict, manObjDict
     
-                            else:
-                                #At this point, the convention the store lane informations in the video analysis script
-                                #Lane numbering MUST start with 0 as the right lane and increment towards the left lane
-                                
-                                direction = None
-                                for i in xrange(len(corridors)):
-                                    if objects[o].curvilinearPositions.lanes[0] in corridors[i].link_list: direction = corridors[i].direction
-    
-                                if direction == 'r':
-                                    #if the link between the corridors is to the right, an increasing lane number is opportunistic
-                                    if objects[o].curvilinearPositions.lanes[pos] < objects[o].curvilinearPositions.lanes[pos +1]:
-                                        oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-                                    else:
-                                        manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-                                                
-                                #if the link between the corridors is to the left, a decreasing lane number is opportunistic
-                                else:
-                                    if objects[o].curvilinearPositions.lanes[pos] > objects[o].curvilinearPositions.lanes[pos +1]:
-                                        oppObjDict = appendDicts(o, oppObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-                                    else:
-                                        manObjDict = appendDicts(o, manObjDict, objects[o].curvilinearPositions.lanes[pos], objects[o].curvilinearPositions.lanes[pos+1], pos+1)
-    
+def laneChange(objects, corridors):
+    '''classifies the lane changes between vissim and video data then passes to the calculating function'''                 
+    #Vissim data
+    if isinstance(objects[0].curvilinearPositions.lanes[0],str):
+        laneDict, oppObjDict, manObjDict = calculate_laneChange(objects, corridors, 'vissim')
+    else:
+        laneDict, oppObjDict, manObjDict = calculate_laneChange(objects, corridors, 'video')
+                
     return oppObjDict, manObjDict, laneDict
 
 def read_error_file(dirname,filename):
