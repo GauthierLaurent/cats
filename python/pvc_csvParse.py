@@ -287,7 +287,7 @@ def extractCorridorsFromCSV(dirname, inpxname, types):
         for b in xrange(len(brute)):        
             vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
             trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
-        
+
         if types == 'vissim':
             return vissimCorridors.values()
         if types == 'trafint':

@@ -164,28 +164,33 @@ class History:
         return history.values()
         
     @staticmethod
-    def create_history(dirname, filename, nbr_seeds, networks):
+    def create_history(dirname, filename, nbr_seeds, variables, networks):
         with open(os.path.join(dirname, filename), 'w') as hist:
             #first line:
             hist.write('Itt\t|\t')
             for net in xrange(len(networks)):
-                for seed in xrange(nbr_seeds):
-                    hist.write('Seeds, net'+str(seed+1)+'\t')
-                    for i in xrange(nbr_seeds-1):
-                       hist.write('\t') 
-            hist.write('|\tpoint\t|\t')   
+                hist.write('Seeds, net'+str(net+1)+'\t')
+                for i in xrange(nbr_seeds-1):
+                   hist.write('\t') 
+            hist.write('|\tpoint') 
+            for v in xrange(len(variables)):
+                hist.write('\t')
+            hist.write('|\t')
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
                     hist.write('Network_'+str(net)+'_Video_'+str(comp)+'\t')
                     for i in xrange(18):
                         hist.write('\t')
-                    hist.write('|\t')
+                    hist.write('|\n')
             #2nd line:
             hist.write('#\t|\t')
             for net in xrange(len(networks)):
                 for seed in xrange(nbr_seeds):
-                    hist.write('Seed_'+str(seed+1)+'\t')
-            hist.write('|\tpoint\t|\t')   
+                    hist.write('S_'+str(seed+1)+'\t')
+            hist.write('|\t')
+            for v in variables:
+                hist.write(str(v)+'\t')
+            hist.write('|\t')   
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
                     hist.write('oppLCcount (mean)\t oppLCcount (delta)\t')
@@ -545,40 +550,24 @@ class NOMAD:
 ################################ 
 #        Serialized data files     
 ################################    
-def write_traj(depositpath,name,opp_LC_count,man_LC_count,flow,forward_gaps,opp_LC_agaps,opp_LC_bgaps,man_LC_agaps,man_LC_bgaps,forwar_speed):
+def write_traj(depositpath,name,Outputs):
     '''dumps data into a file named name.traj in the folder provided in depositpath'''    
     with open(os.path.join(depositpath, name + '.traj'), 'wb') as output:       
         Version = configure.Version()     
-        pickle.dump(Version,      output, protocol=2)
-        pickle.dump(opp_LC_count, output, protocol=2)
-        pickle.dump(man_LC_count, output, protocol=2)
-        pickle.dump(flow,         output, protocol=2)
-        pickle.dump(forward_gaps, output, protocol=2)
-        pickle.dump(opp_LC_agaps, output, protocol=2)
-        pickle.dump(opp_LC_bgaps, output, protocol=2)
-        pickle.dump(man_LC_agaps, output, protocol=2)
-        pickle.dump(man_LC_bgaps, output, protocol=2)
-        pickle.dump(forwar_speed, output, protocol=2)
+        pickle.dump(Version, output, protocol=2)
+        pickle.dump(Outputs, output, protocol=2)
 
 def load_traj(fullpath):
     '''loads data from the traj file provided in full path
     full path must end with \name.traj'''
     with open(fullpath, 'rb') as input_file:
-        version      = pickle.load(input_file)
-        opp_LC_count = pickle.load(input_file)
-        man_LC_count = pickle.load(input_file)
-        flow         = pickle.load(input_file)
-        forward_gaps = pickle.load(input_file)
-        opp_LC_agaps = pickle.load(input_file)
-        opp_LC_bgaps = pickle.load(input_file)
-        man_LC_agaps = pickle.load(input_file)
-        man_LC_bgaps = pickle.load(input_file)
-        forwar_speed = pickle.load(input_file)
+        version = pickle.load(input_file)
+        Outputs = pickle.load(input_file)
         
     if configure.Version.verify_data_version(version):
-        return [opp_LC_count, man_LC_count, flow, forward_gaps, opp_LC_agaps, opp_LC_bgaps, man_LC_agaps, man_LC_bgaps, forwar_speed]
+        return Outputs
     else:
-        return ['TrajVersionError']
+        return 'TrajVersionError'
 
 def write_calib(working_path, parameters, variables, networks):
     with open(os.path.join(working_path,'pvcdata.calib'), 'wb') as trans:

@@ -22,7 +22,7 @@ class Version:
                 Y is the serialized data version
                 Z is the subrelease update version
         '''
-        self.version = 'R1.6.2 u. 12-03-2015' 
+        self.version = 'R1.7.2 u. 18-03-2015' 
 
     @staticmethod 
     def verify_release_version(in_version):
@@ -194,37 +194,40 @@ class Config:
         self.desired_pct_error        = self.parse('desired_pct_error',    '20' ,     c_type='float')
         
         self.section = 'Calibration'
-        self.output_forward_gaps      = self.parse('output_forward_gaps',      'True',   c_type='bool')
-        self.output_lane_change       = self.parse('output_lane_change',       'False',  c_type='bool')
-        self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',  '',       c_type='string')
-        self.ks_threshold             = self.parse('ks_threshold',             '0.3',    c_type='float')    #may want to check out that treshold
-        self.ks_switch                = self.parse('reject_vissim_dist',       'False',  c_type='bool')
-        self.num_const_thresh         = self.parse('Vehic_gen_err_constraint', '10',     c_type='float')
-        self.dp_const_thresh          = self.parse('Decel_gen_err_constraint', '0',      c_type='float')
-        self.a0_const_thresh          = self.parse('Accel_gen_err_constraint', '0',      c_type='float')
+        self.output_forward_gaps      = self.parse('output_forward_gaps',          'True',   c_type='bool')
+        self.output_lane_change       = self.parse('output_lane_change',           'False',  c_type='bool')
+        self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',      '',       c_type='string')
+        self.ks_threshold             = self.parse('ks_threshold',                 '0.3',    c_type='float')    #may want to check out that treshold
+        self.ks_switch                = self.parse('reject_vissim_dist',           'False',  c_type='bool')
+        self.num_const_thresh         = self.parse('Vehic_gen_err_constraint',     '10',     c_type='float')
+        self.dp_const_thresh          = self.parse('Decel_gen_err_constraint',     '0',      c_type='float')
+        self.a0_const_thresh          = self.parse('Accel_gen_err_constraint',     '0',      c_type='float')
+        self.cmp_man_lcgaps           = self.parse('Compute_mandatory_LC_gaps',    'True',   c_type='bool')
+        self.cmp_opp_lcgaps           = self.parse('Compute_opportunistic_LC_gaps','True',   c_type='bool')
+        self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'True',   c_type='bool')
         
         self.section = 'Networks'
-        self.active_network_1         = self.parse('active_network_1',     'False',  c_type='bool')       
-        self.active_network_2         = self.parse('active_network_2',     'False',  c_type='bool')  
-        self.active_network_3         = self.parse('active_network_3',     'False',  c_type='bool')  
-        self.active_network_4         = self.parse('active_network_4',     'False',  c_type='bool')  
+        self.active_network_1         = self.parse('active_network_1',             'False',  c_type='bool')       
+        self.active_network_2         = self.parse('active_network_2',             'False',  c_type='bool')  
+        self.active_network_3         = self.parse('active_network_3',             'False',  c_type='bool')  
+        self.active_network_4         = self.parse('active_network_4',             'False',  c_type='bool')  
 
         self.section = 'Calibration paths (fullpath = complete paths)'
-        self.path_to_NOMAD	         = self.parse('fullpath_to_NOMAD',         '',       c_type='string')
-        self.path_to_NOMAD_param      = self.parse('fullpath_to_NOMAD_param',   '',       c_type='string')
-        self.path_to_output_folder    = self.parse('path_of_output_folder',     '',       c_type='string')
-        self.path_to_inpx_file_1      = self.parse('fullpath_to_inpx_file_1',   '',       c_type='string')
-        self.path_to_inpx_file_2      = self.parse('fullpath_to_inpx_file_2',   '',       c_type='string')
-        self.path_to_inpx_file_3      = self.parse('fullpath_to_inpx_file_3',   '',       c_type='string')
-        self.path_to_inpx_file_4      = self.parse('fullpath_to_inpx_file_4',   '',       c_type='string')
-        self.path_to_video_data_1     = self.parse('fullpath_to_video_data_1',  '',       c_type='string')
-        self.path_to_video_data_2     = self.parse('fullpath_to_video_data_2',  '',       c_type='string')
-        self.path_to_video_data_3     = self.parse('fullpath_to_video_data_3',  '',       c_type='string')
-        self.path_to_video_data_4     = self.parse('fullpath_to_video_data_4',  '',       c_type='string')
-        self.path_to_csv_net1         = self.parse('fullpath_to_csv_network_1', '',       c_type='string')
-        self.path_to_csv_net2         = self.parse('fullpath_to_csv_network_2', '',       c_type='string')
-        self.path_to_csv_net3         = self.parse('fullpath_to_csv_network_3', '',       c_type='string')
-        self.path_to_csv_net4         = self.parse('fullpath_to_csv_network_4', '',       c_type='string')
+        self.path_to_NOMAD	         = self.parse('fullpath_to_NOMAD',             '',       c_type='string')
+        self.path_to_NOMAD_param      = self.parse('fullpath_to_NOMAD_param',       '',       c_type='string')
+        self.path_to_output_folder    = self.parse('path_of_output_folder',         '',       c_type='string')
+        self.path_to_inpx_file_1      = self.parse('fullpath_to_inpx_file_1',       '',       c_type='string')
+        self.path_to_inpx_file_2      = self.parse('fullpath_to_inpx_file_2',       '',       c_type='string')
+        self.path_to_inpx_file_3      = self.parse('fullpath_to_inpx_file_3',       '',       c_type='string')
+        self.path_to_inpx_file_4      = self.parse('fullpath_to_inpx_file_4',       '',       c_type='string')
+        self.path_to_video_data_1     = self.parse('fullpath_to_video_data_1',      '',       c_type='string')
+        self.path_to_video_data_2     = self.parse('fullpath_to_video_data_2',      '',       c_type='string')
+        self.path_to_video_data_3     = self.parse('fullpath_to_video_data_3',      '',       c_type='string')
+        self.path_to_video_data_4     = self.parse('fullpath_to_video_data_4',      '',       c_type='string')
+        self.path_to_csv_net1         = self.parse('fullpath_to_csv_network_1',     '',       c_type='string')
+        self.path_to_csv_net2         = self.parse('fullpath_to_csv_network_2',     '',       c_type='string')
+        self.path_to_csv_net3         = self.parse('fullpath_to_csv_network_3',     '',       c_type='string')
+        self.path_to_csv_net4         = self.parse('fullpath_to_csv_network_4',     '',       c_type='string')
         
         if(not os.path.isfile(config_name)):
             print('Notice: No default configuration found. Creating new ' + str(config_name))

@@ -87,54 +87,38 @@ def runVissimForCalibrationAnalysis(network, inputs):
     else:
         d_stat = []
         rejected_files = []
-        
+        #import pdb;pdb.set_trace()
         #treating the outputs
-        inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
+        inputs = [final_inpx_path, False, network[0].corridors, outputs.Derived_data(), config]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         if len(file_list) > 1:
             commands = workers.FalseCommands()
             packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, commands, defineNbrProcess = 2)
-            #define.createWorkers([f for f in os.listdir(outputspath) if f.endswith('fzp')], outputs.treatVissimOutputs, inputs, commands)
 
-            flow = packedStatsLists[0][0]; oppLCcount = packedStatsLists[0][1]; manLCcount = packedStatsLists[0][2]; forFMgap = packedStatsLists[0][3]; oppLCagap = packedStatsLists[0][4]; oppLCbgap = packedStatsLists[0][5]; manLCagap = packedStatsLists[0][6]; manLCbgap = packedStatsLists[0][7]; forSpeeds = packedStatsLists[0][8]
+            vissim_data = packedStatsLists[0]
 
             for stat in xrange(1,len(packedStatsLists)):
-                outputs.SingleValueStats.concat(flow, packedStatsLists[stat][0])
-                outputs.SingleValueStats.concat(oppLCcount, packedStatsLists[stat][1])
-                outputs.SingleValueStats.concat(manLCcount, packedStatsLists[stat][2])
-                outputs.Stats.concat(forFMgap, packedStatsLists[stat][3])
-                outputs.Stats.concat(oppLCagap, packedStatsLists[stat][4])
-                outputs.Stats.concat(oppLCbgap, packedStatsLists[stat][5])
-                outputs.Stats.concat(manLCagap, packedStatsLists[stat][6])
-                outputs.Stats.concat(manLCbgap, packedStatsLists[stat][7])
-                outputs.Stats.concat(forSpeeds, packedStatsLists[stat][8])
+                outputs.Derived_data.concat(vissim_data, packedStatsLists[stat])
+
         else:
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds = outputs.treatVissimOutputs(file_list, inputs)
+            vissim_data = outputs.treatVissimOutputs(file_list, inputs)
         
         if config.ks_switch:
             #verifying the validity of the distributions
             if config.output_forward_gaps:
-                if len(forFMgap.distributions) > 1:
-                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(forFMgap), config.ks_threshold)
+                if len(vissim_data.forFMgap.distributions) > 1:
+                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
                 else:
                     rejected = []
                     
             if config.output_lane_change:
-                if len(oppLCbgap.distributions) > 1:
-                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                if len(vissim_data.oppLCbgap.distributions) > 1:
+                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
                 else:
                     rejected = []
                     
             #adjustment
-            flow.popList(rejected) 
-            oppLCcount.popList(rejected) 
-            manLCcount.popList(rejected) 
-            forFMgap.pop_dist_list(rejected)        
-            oppLCagap.pop_dist_list(rejected)
-            oppLCbgap.pop_dist_list(rejected)
-            manLCagap.pop_dist_list(rejected)
-            manLCbgap.pop_dist_list(rejected)
-            forSpeeds.pop_dist_list(rejected)
+            vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds'], rejected)
     
             #memorizing bad files
             for r in reversed(rejected):
@@ -147,7 +131,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
             first_seed = parameters[1]
             new_seed = first_seed + goal*parameters[5]
             
-            while len(forFMgap.distributions) < goal and retry <= total_retries:
+            while len(vissim_data.forFMgap.distributions) < goal and retry <= total_retries:
                 #fixing vissim parameters            
                 nbr_run_this_try = len(rejected)
                 parameters[2] = nbr_run_this_try  #number of rerun
@@ -158,44 +142,26 @@ def runVissimForCalibrationAnalysis(network, inputs):
             
                 if simulated is True:
                     #treating the outputs
-                    inputs = [final_inpx_path, config.sim_steps, config.warm_up_time, False, network[0].corridors]
+                    inputs = [final_inpx_path, False, network[0].corridors, vissim_data, config]
                     file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-                    new_flow, new_oppLCcount, new_manLCcount, new_forwFMgap, new_oppLCagap, new_oppLCbgap, new_manLCagap, new_manLCbgap, new_forSpeeds = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
-                    
-                    outputs.SingleValueStats.concat(flow, new_flow)
-                    outputs.SingleValueStats.concat(oppLCcount, new_oppLCcount)
-                    outputs.SingleValueStats.concat(manLCcount, new_manLCcount)
-                    outputs.Stats.concat(forFMgap, new_forwFMgap)
-                    outputs.Stats.concat(oppLCagap, new_oppLCagap)
-                    outputs.Stats.concat(oppLCbgap, new_oppLCbgap)
-                    outputs.Stats.concat(manLCagap, new_manLCagap)
-                    outputs.Stats.concat(manLCbgap, new_manLCbgap)
-                    outputs.Stats.concat(forSpeeds, new_forSpeeds)                   
+                    vissim_data = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
                     
                     #verifying the validity of the distributions
                     if config.output_forward_gaps:
-                        if len(forFMgap.distributions) > 1:
-                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(forFMgap), config.ks_threshold)
+                        if len(vissim_data.forFMgap.distributions) > 1:
+                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
                         else:
                             rejected = []
                             
                     if config.output_lane_change:
-                        if len(oppLCbgap.distributions) > 1:
-                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                        if len(vissim_data.oppLCbgap.distributions) > 1:
+                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
                         else:
                             rejected = []
                             
                     #adjustment
-                    flow.popList(rejected) 
-                    oppLCcount.popList(rejected) 
-                    manLCcount.popList(rejected) 
-                    forFMgap.pop_dist_list(rejected)        
-                    oppLCagap.pop_dist_list(rejected)
-                    oppLCbgap.pop_dist_list(rejected)
-                    manLCagap.pop_dist_list(rejected)
-                    manLCbgap.pop_dist_list(rejected)
-                    forSpeeds.pop_dist_list(rejected)
-                    
+                    vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds'], rejected)
+
                     #memorizing bad files
                     for r in reversed(rejected):
                         rejected_files.append(file_list[r]) 
@@ -228,17 +194,19 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
         seed_nums = outputs.extract_num_from_fzp_list(file_list)
                     
-        non_dist_data = [oppLCcount, manLCcount, flow]
-        dist_data = [forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forSpeeds]
+        non_dist_data = [vissim_data.oppLCcount, vissim_data.manLCcount, vissim_data.flow]
+        dist_data = [vissim_data.forFMgap, vissim_data.oppLCagap, vissim_data.oppLCbgap, vissim_data.manLCagap, vissim_data.manLCbgap, vissim_data.forSpeeds]
         
         #setting video values
         for traj in network[0].traj_paths:
             
             #loading video data            
-            video_data_list = write.load_traj(traj)          
-            if video_data_list[0] == 'TrajVersionError':
+            video_data = write.load_traj(traj)          
+            if video_data == 'TrajVersionError':
                 network[0].addVideoComparison(['TrajVersionError'])
-            else:          
+            else:
+                non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
+                dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
                 #starting the building of the secondary values outputs
                 #for the first 3 variables, which are intergers, we use:
                 #                       PE = (M-V)/V
@@ -249,8 +217,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #to which we will add a ' * '
                 secondary_values = []
                 for d in xrange(len(non_dist_data)):
-                    if video_data_list[d] != 0:
-                        secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-video_data_list[d])/video_data_list[d]])
+                    if non_dist_video_data[d].mean != 0:
+                        secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-non_dist_video_data[d].mean)/non_dist_video_data[d].mean])
                     else:
                         if non_dist_data[d].mean is not None and non_dist_data[d].mean != 0:                            
                             secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])                           
@@ -258,8 +226,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                             secondary_values.append(['0.00', '0.00*'])
        
                 #comparing video_values with output values
-                video_dist_data = video_data_list[3:]
-                secondary_values += calibTools.checkCorrespondanceOfOutputs(video_dist_data, dist_data, parameters[0], config.fps)
+                secondary_values += calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
 
                 #adding video comparison data to the network                   
                 network[0].addVideoComparison(secondary_values)
@@ -274,14 +241,14 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         d_stat.append(['inf', c0, c1, c2])
                     else:
                         d_stat.append([secondary_values[4], c0, c1, c2])
-                    write.plot_dists(point_folderpath, video_data_list[4], dist_data[0], secondary_values[4], parameters[0], config.fps)
+                    write.plot_dists(point_folderpath, dist_video_data[4], dist_data[0], secondary_values[4], parameters[0], config.fps)
                         
                 if config.output_lane_change:
                     if secondary_values[6] == 'DNE':        #using the before gap to calibrate
                         d_stat.append(['inf', c0, c1, c2])
                     else:
                         d_stat.append([secondary_values[6], c0, c1, c2])
-                    write.plot_dists(point_folderpath, video_data_list[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
+                    write.plot_dists(point_folderpath, dist_video_data[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
         
         vissim.stopVissim(Vissim)
         return d_stat, network[0], seed_nums
@@ -322,7 +289,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         print 'Starting the first 10 runs'
     
     if commands.mode:  #this serves to bypass Vissim while testing the code
-        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
+        Outputs = outputs.generateRandomOutputs(parameters)
     else:
         Vissim = vissim.startVissim()
         if Vissim == 'StartError':
@@ -346,67 +313,45 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
                 else:
                     #output treatment
                     if commands.multi is True:
-                        inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
+                        inputs = [outputspath, commands.verbose, corridors, outputs.Derived_data(), config]
                         results = workers.createWorkers([f for f in os.listdir(outputspath) if f.endswith('fzp')], outputs.treatVissimOutputs, inputs, commands)            
                         
+                        Outputs = results[0]
                         #building the old_data            
                         for i in range(len(results)):
-                            if i == 0:
-                                flow            = results[i][0]
-                                oppLCcount      = results[i][1]
-                                manLCcount      = results[i][2]
-                                forFMgap        = results[i][3]
-                                oppLCagap       = results[i][4]
-                                oppLCbgap       = results[i][5]
-                                manLCagap       = results[i][6]
-                                manLCbgap       = results[i][7]
-                                forward_speeds  = results[i][8]                  
-                                                   
-                            else:
-                                flow.addMany(                     results[i][0] )
-                                oppLCcount.addMany(               results[i][1] )
-                                manLCcount.addMany(               results[i][2] )
-                                forFMgap.add_many_dist_list(      results[i][3] )
-                                oppLCagap.add_many_dist_list(     results[i][4] )
-                                oppLCbgap.add_many_dist_list(     results[i][5] )
-                                manLCagap.add_many_dist_list(     results[i][6] )
-                                manLCbgap.add_many_dist_list(     results[i][7] )
-                                forward_speeds.add_many_dist_list(results[i][8] ) 
+                            outputs.Derived_data.concat(Outputs, results[i])
 
                     else:
-                        inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                        flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith('fzp')], inputs)
+                        inputs = [outputspath, commands.verbose, corridors, outputs.Derived_data(), config]
+                        Outputs = outputs.treatVissimOutputs([f for f in os.listdir(outputspath) if f.endswith('fzp')], inputs)
        
     #Student t-test to find the min number of runs
     t_student = t.ppf(0.975,9)
     err = config.desired_pct_error/100
 
-    N1 = ( t_student * forFMgap.cumul_all.std / (err * forFMgap.cumul_all.mean) )**2
-    N2 = ( t_student * oppLCagap.cumul_all.std / (err * oppLCagap.cumul_all.mean) )**2
-    N3 = ( t_student * oppLCbgap.cumul_all.std / (err * oppLCbgap.cumul_all.mean)  )**2
-    N4 = ( t_student * manLCagap.cumul_all.std / (err * manLCagap.cumul_all.mean)  )**2
-    N5 = ( t_student * manLCbgap.cumul_all.std / (err * manLCbgap.cumul_all.mean)  )**2
+    N1 = ( t_student * Outputs.forFMgap.cumul_all.std / (err * Outputs.forFMgap.cumul_all.mean) )**2
+    N2 = ( t_student * Outputs.oppLCagap.cumul_all.std / (err * Outputs.oppLCagap.cumul_all.mean) )**2
+    N3 = ( t_student * Outputs.oppLCbgap.cumul_all.std / (err * Outputs.oppLCbgap.cumul_all.mean)  )**2
+    N4 = ( t_student * Outputs.manLCagap.cumul_all.std / (err * Outputs.manLCagap.cumul_all.mean)  )**2
+    N5 = ( t_student * Outputs.manLCbgap.cumul_all.std / (err * Outputs.manLCbgap.cumul_all.mean)  )**2
     
     #if all variables are to be statisticaly significant to 95% confidance, they must all pass the test, thus N1...N5 must be < than the number of runs
     N =  max(N1, N2, N3, N4, N5)    
     
     #std confidence intervals             
-    SCI1 = [forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 ,  forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
-    SCI2 = [oppLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]   
-    SCI3 = [oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
-    SCI4 = [manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
-    SCI5 = [manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI1 = [Outputs.forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 ,  Outputs.forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI2 = [Outputs.oppLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.oppLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]   
+    SCI3 = [Outputs.oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI4 = [Outputs.manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+    SCI5 = [Outputs.manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
     
     text.append(['Nbr_itt','Student-t','Std1','Mean1','N1','Std2','Mean2','N2','Std3','Mean3','N3','Std4','Mean4','N4','Std5','Mean5','N5','N','SCI1max','SCI1min','SCI2max','SCI2min','SCI3max','SCI3min','SCI4max','SCI4min','SCI5max','SCI5min'])
-    text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])    
+    text.append([iterrations_ran, t_student, Outputs.forFMgap.cumul_all.std,Outputs.forFMgap.cumul_all.mean, N1, Outputs.oppLCagap.cumul_all.std, Outputs.oppLCagap.cumul_all.mean, N2, Outputs.oppLCbgap.cumul_all.std, Outputs.oppLCbgap.cumul_all.mean, N3, Outputs.manLCagap.cumul_all.std, Outputs.manLCagap.cumul_all.mean, N4, Outputs.manLCbgap.cumul_all.std, Outputs.manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])    
     
     while N > iterrations_ran and iterrations_ran < max_itt:
         
         if commands.verbose is True:
             print 'Starting the ' + str(iterrations_ran + 1) + 'th iteration'        
-        
-        #building the old_data
-        old_data   = [flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds]        
         
         #incrementing needed parameters                
         parameters[1] = first_seed + iterrations_ran    #need to increment the starting Rand Seed by the number of it. already ran
@@ -415,7 +360,7 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
         
         #calling vissim
         if commands.mode:  #this serves to bypass Vissim while testing the code
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(parameters)
+            Outputs = outputs.generateRandomOutputs(parameters)
         else:
             
             #Initialize the new Vissim simulation
@@ -430,27 +375,27 @@ def statistical_ana(concat_variables, default_values, filename, InpxPath, InpxNa
             file_to_run = ['Statistical_test_' + str(iterrations_ran).zfill(3) + '.fzp']            
 
             #output treatment
-            inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, old_data]
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs(file_to_run, inputs)
+            inputs = [outputspath, config.sim_steps, config.warm_up_time, commands.verbose, corridors, Outputs, config]
+            Outputs = outputs.treatVissimOutputs(file_to_run, inputs)
         
         #generating the needed means and std
         t_student = t.ppf(0.975, iterrations_ran -1)
-        N1 = ( t_student * forFMgap.cumul_all.std / (err * forFMgap.cumul_all.mean) )**2
-        N2 = ( t_student * oppLCagap.cumul_all.std / (err * oppLCagap.cumul_all.mean) )**2
-        N3 = ( t_student * oppLCbgap.cumul_all.std / (err * oppLCbgap.cumul_all.mean)  )**2
-        N4 = ( t_student * manLCagap.cumul_all.std / (err * manLCagap.cumul_all.mean)  )**2
-        N5 = ( t_student * manLCbgap.cumul_all.std / (err * manLCbgap.cumul_all.mean)  )**2
+        N1 = ( t_student * Outputs.forFMgap.cumul_all.std / (err * Outputs.forFMgap.cumul_all.mean) )**2
+        N2 = ( t_student * Outputs.oppLCagap.cumul_all.std / (err * Outputs.oppLCagap.cumul_all.mean) )**2
+        N3 = ( t_student * Outputs.oppLCbgap.cumul_all.std / (err * Outputs.oppLCbgap.cumul_all.mean)  )**2
+        N4 = ( t_student * Outputs.manLCagap.cumul_all.std / (err * Outputs.manLCagap.cumul_all.mean)  )**2
+        N5 = ( t_student * Outputs.manLCbgap.cumul_all.std / (err * Outputs.manLCbgap.cumul_all.mean)  )**2
         
         N =  max(N1, N2, N3, N4, N5)        
         
         #std confidence intervals             
-        SCI1 = [forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 ,  forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
-        SCI2 = [oppLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]   
-        SCI3 = [oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
-        SCI4 = [manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
-        SCI5 = [manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI1 = [Outputs.forFMgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 ,  Outputs.forFMgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI2 = [Outputs.oppLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.oppLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]   
+        SCI3 = [Outputs.oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.oppLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI4 = [Outputs.manLCagap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.manLCagap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
+        SCI5 = [Outputs.manLCbgap.cumul_all.std*((N-1)/chi2.ppf(1-0.05/2,N-1))**0.5 , Outputs.manLCbgap.cumul_all.std*((N-1)/chi2.ppf(0.05/2,N-1))**0.5 ]
         
-        text.append([iterrations_ran, t_student, forFMgap.cumul_all.std,forFMgap.cumul_all.mean, N1, oppLCagap.cumul_all.std, oppLCagap.cumul_all.mean, N2, oppLCbgap.cumul_all.std, oppLCbgap.cumul_all.mean, N3, manLCagap.cumul_all.std, manLCagap.cumul_all.mean, N4, manLCbgap.cumul_all.std, manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])     
+        text.append([iterrations_ran, t_student, Outputs.forFMgap.cumul_all.std,Outputs.forFMgap.cumul_all.mean, N1, Outputs.oppLCagap.cumul_all.std, Outputs.oppLCagap.cumul_all.mean, N2, Outputs.oppLCbgap.cumul_all.std, Outputs.oppLCbgap.cumul_all.mean, N3, Outputs.manLCagap.cumul_all.std, Outputs.manLCagap.cumul_all.mean, N4, Outputs.manLCbgap.cumul_all.std, Outputs.manLCbgap.cumul_all.mean, N5, N, SCI1, SCI2, SCI3, SCI4, SCI5])     
         
     if iterrations_ran == max_itt and commands.verbose is True:
         print 'Maximum number of iterations reached - Stoping calculations and generating report'
@@ -603,14 +548,14 @@ def monteCarlo_vissim(valuesVector, inputs):
     
     return out_valuesVector
             
-def monteCarlo_outputs(valuesVector, inputs):
-    parameters     = inputs [0]
-    sim_parameters = inputs [1]
-    outputspath    = inputs [2]
-    config         = inputs [3]
-    commands       = inputs [4]
-    corridors      = inputs [5]
-    InpxName       = inputs [6]
+def monteCarlo_outputs(valuesVector, other_inputs):
+    parameters     = other_inputs [0]
+    sim_parameters = other_inputs [1]
+    outputspath    = other_inputs [2]
+    config         = other_inputs [3]
+    commands       = other_inputs [4]
+    corridors      = other_inputs [5]
+    InpxName       = other_inputs [6]
 
     concat_variables = [parameters[i].vissim_name for i in xrange(len(parameters))]
     lowerbound = valuesVector[0][2]
@@ -628,14 +573,14 @@ def monteCarlo_outputs(valuesVector, inputs):
 
     for value in xrange(len(valuesVector)):
         if commands.mode:
-            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters, rand_seed_shake = value + lowerbound)
+            Outputs = outputs.generateRandomOutputs(sim_parameters, rand_seed_shake = value + lowerbound)
             success = True
         else:
             if os.path.isdir(valuesVector[value][1]):
                 if [f for f in os.listdir(valuesVector[value][1]) if f.endswith('fzp')] != []:                
                     #output treatment
-                    inputs = [valuesVector[value][1], config.sim_steps, config.warm_up_time, commands.verbose, corridors]
-                    flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith('fzp')], inputs)
+                    inputs = [valuesVector[value][1], commands.verbose, corridors, outputs.Derived_data(), config]
+                    Outputs = outputs.treatVissimOutputs([f for f in os.listdir(valuesVector[value][1]) if f.endswith('fzp')], inputs)
                     success = True
                 else:
                     success = False
@@ -644,13 +589,13 @@ def monteCarlo_outputs(valuesVector, inputs):
                 
         #writing to file
         if success == True:
-            text.append([value+lowerbound, valuesVector[value][0],flow.mean,oppLCcount.mean,manLCcount.mean,
-                         forFMgap.cumul_all.mean,  forFMgap.cumul_all.firstQuart,  forFMgap.cumul_all.median,  forFMgap.cumul_all.thirdQuart,  forFMgap.cumul_all.std,  
-                         oppLCagap.cumul_all.mean, oppLCagap.cumul_all.firstQuart, oppLCagap.cumul_all.median, oppLCagap.cumul_all.thirdQuart, oppLCagap.cumul_all.std,
-                         oppLCbgap.cumul_all.mean, oppLCbgap.cumul_all.firstQuart, oppLCbgap.cumul_all.median, oppLCbgap.cumul_all.thirdQuart, oppLCbgap.cumul_all.std,
-                         manLCagap.cumul_all.mean, manLCagap.cumul_all.firstQuart, manLCagap.cumul_all.median, manLCagap.cumul_all.thirdQuart, manLCagap.cumul_all.std,
-                         manLCbgap.cumul_all.mean, manLCbgap.cumul_all.firstQuart, manLCbgap.cumul_all.median, manLCbgap.cumul_all.thirdQuart, manLCbgap.cumul_all.std,       
-                         forward_speeds.cumul_all.mean, forward_speeds.cumul_all.firstQuart, forward_speeds.cumul_all.median, forward_speeds.cumul_all.thirdQuart, forward_speeds.cumul_all.std]) 
+            text.append([value+lowerbound, valuesVector[value][0],Outputs.flow.mean,Outputs.oppLCcount.mean,Outputs.manLCcount.mean,
+                         Outputs.forFMgap.cumul_all.mean,  Outputs.forFMgap.cumul_all.firstQuart,  Outputs.forFMgap.cumul_all.median,  Outputs.forFMgap.cumul_all.thirdQuart,  Outputs.forFMgap.cumul_all.std,  
+                         Outputs.oppLCagap.cumul_all.mean, Outputs.oppLCagap.cumul_all.firstQuart, Outputs.oppLCagap.cumul_all.median, Outputs.oppLCagap.cumul_all.thirdQuart, Outputs.oppLCagap.cumul_all.std,
+                         Outputs.oppLCbgap.cumul_all.mean, Outputs.oppLCbgap.cumul_all.firstQuart, Outputs.oppLCbgap.cumul_all.median, Outputs.oppLCbgap.cumul_all.thirdQuart, Outputs.oppLCbgap.cumul_all.std,
+                         Outputs.manLCagap.cumul_all.mean, Outputs.manLCagap.cumul_all.firstQuart, Outputs.manLCagap.cumul_all.median, Outputs.manLCagap.cumul_all.thirdQuart, Outputs.manLCagap.cumul_all.std,
+                         Outputs.manLCbgap.cumul_all.mean, Outputs.manLCbgap.cumul_all.firstQuart, Outputs.manLCbgap.cumul_all.median, Outputs.manLCbgap.cumul_all.thirdQuart, Outputs.manLCbgap.cumul_all.std,       
+                         Outputs.forSpeeds.cumul_all.mean, Outputs.forSpeeds.cumul_all.firstQuart, Outputs.forSpeeds.cumul_all.median, Outputs.forSpeeds.cumul_all.thirdQuart, Outputs.forSpeeds.cumul_all.std]) 
         
         else:
             #printing the exception in the csv file
@@ -673,15 +618,7 @@ def monteCarlo_outputs(valuesVector, inputs):
     ##dumping serialised data
     with open(os.path.join(outputspath.strip(os.sep+'outputs'),'traj_files', trajfilename), 'wb') as output:
         pickle.dump(configure.Version(), output, protocol=2)
-        pickle.dump(oppLCcount, output, protocol=2)
-        pickle.dump(manLCcount, output, protocol=2)
-        pickle.dump(flow, output, protocol=2)
-        pickle.dump(forFMgap, output, protocol=2)
-        pickle.dump(oppLCagap, output, protocol=2)
-        pickle.dump(oppLCbgap, output, protocol=2)
-        pickle.dump(manLCagap, output, protocol=2)
-        pickle.dump(manLCbgap, output, protocol=2)
-        pickle.dump(forward_speeds, output, protocol=2)
+        pickle.dump(Outputs, output, protocol=2)
     
     return text
 
@@ -785,7 +722,7 @@ def OAT_sensitivity(values, inputs, default = False):
                     rand_seed_shake = 100*points_array.index(point)+value
                 else:
                     rand_seed_shake = 0
-                flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.generateRandomOutputs(sim_parameters, rand_seed_shake)
+                Outputs = outputs.generateRandomOutputs(sim_parameters, rand_seed_shake)
             
             else:
                 #Vissim starting and loading network block
@@ -822,78 +759,78 @@ def OAT_sensitivity(values, inputs, default = False):
                             continue
                         else:
                             #output treatment
-                            inputs = [folderpath, config.sim_steps, config.warm_up_time, verbose, corridors]
-                            flow, oppLCcount, manLCcount, forFMgap, oppLCagap, oppLCbgap, manLCagap, manLCbgap, forward_speeds = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith('fzp')], inputs)
+                            inputs = [folderpath, verbose, corridors, outputs.Derived_data(), config]
+                            Outputs = outputs.treatVissimOutputs([f for f in os.listdir(folderpath) if f.endswith('fzp')], inputs)
                             #print '*** Output treatment completed *** Runtime: ' + str(time.clock())
                             
             
             if default is True:
                 firstrun_results = []
-                firstrun_results = createFirstRun_results(firstrun_results, forFMgap)
-                firstrun_results = createFirstRun_results(firstrun_results, oppLCagap)
-                firstrun_results = createFirstRun_results(firstrun_results, oppLCbgap)
-                firstrun_results = createFirstRun_results(firstrun_results, manLCagap)
-                firstrun_results = createFirstRun_results(firstrun_results, manLCbgap)
-                firstrun_results.append(float(flow.mean))
-                firstrun_results.append(float(oppLCcount.mean))
-                firstrun_results.append(float(manLCcount.mean))
-                firstrun_results = createFirstRun_results(firstrun_results, forward_speeds)
+                firstrun_results = createFirstRun_results(firstrun_results, Outputs.forFMgap)
+                firstrun_results = createFirstRun_results(firstrun_results, Outputs.oppLCagap)
+                firstrun_results = createFirstRun_results(firstrun_results, Outputs.oppLCbgap)
+                firstrun_results = createFirstRun_results(firstrun_results, Outputs.manLCagap)
+                firstrun_results = createFirstRun_results(firstrun_results, Outputs.manLCbgap)
+                firstrun_results.append(float(Outputs.flow.mean))
+                firstrun_results.append(float(Outputs.oppLCcount.mean))
+                firstrun_results.append(float(Outputs.manLCcount.mean))
+                firstrun_results = createFirstRun_results(firstrun_results, Outputs.forSpeeds)
                 
             else:
-                delta_mean_fgap           = createDelta(firstrun_results[0], forFMgap.cumul_all.mean)
-                delta_firstQuart_fgap     = createDelta(firstrun_results[1], forFMgap.cumul_all.firstQuart)
-                delta_median_fgaps        = createDelta(firstrun_results[2], forFMgap.cumul_all.median)
-                delta_thirdQuart_fgaps    = createDelta(firstrun_results[3], forFMgap.cumul_all.thirdQuart)
-                delta_std_fgaps           = createDelta(firstrun_results[4], forFMgap.cumul_all.std)                
+                delta_mean_fgap           = createDelta(firstrun_results[0], Outputs.forFMgap.cumul_all.mean)
+                delta_firstQuart_fgap     = createDelta(firstrun_results[1], Outputs.forFMgap.cumul_all.firstQuart)
+                delta_median_fgaps        = createDelta(firstrun_results[2], Outputs.forFMgap.cumul_all.median)
+                delta_thirdQuart_fgaps    = createDelta(firstrun_results[3], Outputs.forFMgap.cumul_all.thirdQuart)
+                delta_std_fgaps           = createDelta(firstrun_results[4], Outputs.forFMgap.cumul_all.std)                
                 
-                delta_mean_Aoppgap        = createDelta(firstrun_results[5], oppLCagap.cumul_all.mean)
-                delta_firstQuart_Aoppgap  = createDelta(firstrun_results[6], oppLCagap.cumul_all.firstQuart)
-                delta_median_Aoppgap      = createDelta(firstrun_results[7], oppLCagap.cumul_all.median)
-                delta_thirdQuart_Aoppgap  = createDelta(firstrun_results[8], oppLCagap.cumul_all.thirdQuart)
-                delta_std_Aoppgap         = createDelta(firstrun_results[9], oppLCagap.cumul_all.std)
+                delta_mean_Aoppgap        = createDelta(firstrun_results[5], Outputs.oppLCagap.cumul_all.mean)
+                delta_firstQuart_Aoppgap  = createDelta(firstrun_results[6], Outputs.oppLCagap.cumul_all.firstQuart)
+                delta_median_Aoppgap      = createDelta(firstrun_results[7], Outputs.oppLCagap.cumul_all.median)
+                delta_thirdQuart_Aoppgap  = createDelta(firstrun_results[8], Outputs.oppLCagap.cumul_all.thirdQuart)
+                delta_std_Aoppgap         = createDelta(firstrun_results[9], Outputs.oppLCagap.cumul_all.std)
                 
-                delta_mean_Boppgap        = createDelta(firstrun_results[10], oppLCbgap.cumul_all.mean)
-                delta_firstQuart_Boppgap  = createDelta(firstrun_results[11], oppLCbgap.cumul_all.firstQuart)
-                delta_median_Boppgap      = createDelta(firstrun_results[12], oppLCbgap.cumul_all.median)
-                delta_thirdQuart_Boppgap  = createDelta(firstrun_results[13], oppLCbgap.cumul_all.thirdQuart)
-                delta_std_Boppgap         = createDelta(firstrun_results[14], oppLCbgap.cumul_all.std)
+                delta_mean_Boppgap        = createDelta(firstrun_results[10], Outputs.oppLCbgap.cumul_all.mean)
+                delta_firstQuart_Boppgap  = createDelta(firstrun_results[11], Outputs.oppLCbgap.cumul_all.firstQuart)
+                delta_median_Boppgap      = createDelta(firstrun_results[12], Outputs.oppLCbgap.cumul_all.median)
+                delta_thirdQuart_Boppgap  = createDelta(firstrun_results[13], Outputs.oppLCbgap.cumul_all.thirdQuart)
+                delta_std_Boppgap         = createDelta(firstrun_results[14], Outputs.oppLCbgap.cumul_all.std)
                 
-                delta_mean_Amangap        = createDelta(firstrun_results[15], manLCagap.cumul_all.mean)
-                delta_firstQuart_Amangap  = createDelta(firstrun_results[16], manLCagap.cumul_all.firstQuart)
-                delta_median_Amangap      = createDelta(firstrun_results[17], manLCagap.cumul_all.median)
-                delta_thirdQuart_Amangap  = createDelta(firstrun_results[18], manLCagap.cumul_all.thirdQuart)
-                delta_std_Amangap         = createDelta(firstrun_results[19], manLCagap.cumul_all.std)
+                delta_mean_Amangap        = createDelta(firstrun_results[15], Outputs.manLCagap.cumul_all.mean)
+                delta_firstQuart_Amangap  = createDelta(firstrun_results[16], Outputs.manLCagap.cumul_all.firstQuart)
+                delta_median_Amangap      = createDelta(firstrun_results[17], Outputs.manLCagap.cumul_all.median)
+                delta_thirdQuart_Amangap  = createDelta(firstrun_results[18], Outputs.manLCagap.cumul_all.thirdQuart)
+                delta_std_Amangap         = createDelta(firstrun_results[19], Outputs.manLCagap.cumul_all.std)
                 
-                delta_mean_Bmangap        = createDelta(firstrun_results[20], manLCbgap.cumul_all.mean)
-                delta_firstQuart_Bmangap  = createDelta(firstrun_results[21], manLCbgap.cumul_all.firstQuart)
-                delta_median_Bmangap      = createDelta(firstrun_results[22], manLCbgap.cumul_all.median)
-                delta_thirdQuart_Bmangap  = createDelta(firstrun_results[23], manLCbgap.cumul_all.thirdQuart)
-                delta_std_Bmangap         = createDelta(firstrun_results[24], manLCbgap.cumul_all.std)
+                delta_mean_Bmangap        = createDelta(firstrun_results[20], Outputs.manLCbgap.cumul_all.mean)
+                delta_firstQuart_Bmangap  = createDelta(firstrun_results[21], Outputs.manLCbgap.cumul_all.firstQuart)
+                delta_median_Bmangap      = createDelta(firstrun_results[22], Outputs.manLCbgap.cumul_all.median)
+                delta_thirdQuart_Bmangap  = createDelta(firstrun_results[23], Outputs.manLCbgap.cumul_all.thirdQuart)
+                delta_std_Bmangap         = createDelta(firstrun_results[24], Outputs.manLCbgap.cumul_all.std)
                 
                 if firstrun_results[25] != 0:
-                    delta_flow = (flow.mean - firstrun_results[25])/firstrun_results[25]
+                    delta_flow = (Outputs.flow.mean - firstrun_results[25])/firstrun_results[25]
                 else:
                     delta_flow = '---'
                 
                 if firstrun_results[26] != 0:
-                    delta_oppLCcount = (oppLCcount.mean - firstrun_results[26])/firstrun_results[26]
+                    delta_oppLCcount = (Outputs.oppLCcount.mean - firstrun_results[26])/firstrun_results[26]
                 else:
                     delta_oppLCcount = '---'
                     
                 if firstrun_results[27] != 0:
-                    delta_manLCcount = (manLCcount.mean - firstrun_results[27])/firstrun_results[27]
+                    delta_manLCcount = (Outputs.manLCcount.mean - firstrun_results[27])/firstrun_results[27]
                 else:
                     delta_manLCcount = '---'                    
                 
-                delta_mean_Speeds         = createDelta(firstrun_results[28], forward_speeds.cumul_all.mean)
-                delta_firstQuart_Speeds   = createDelta(firstrun_results[29], forward_speeds.cumul_all.firstQuart)
-                delta_median_Speeds       = createDelta(firstrun_results[30], forward_speeds.cumul_all.median)
-                delta_thirdQuart_Speeds   = createDelta(firstrun_results[31], forward_speeds.cumul_all.thirdQuart)
-                delta_std_Speeds          = createDelta(firstrun_results[32], forward_speeds.cumul_all.std)
+                delta_mean_Speeds         = createDelta(firstrun_results[28], Outputs.forSpeeds.cumul_all.mean)
+                delta_firstQuart_Speeds   = createDelta(firstrun_results[29], Outputs.forSpeeds.cumul_all.firstQuart)
+                delta_median_Speeds       = createDelta(firstrun_results[30], Outputs.forSpeeds.cumul_all.median)
+                delta_thirdQuart_Speeds   = createDelta(firstrun_results[31], Outputs.forSpeeds.cumul_all.thirdQuart)
+                delta_std_Speeds          = createDelta(firstrun_results[32], Outputs.forSpeeds.cumul_all.std)
                             
             #printing graphs
             if commands.vis_save:
-                variables = [forFMgap,oppLCagap,oppLCbgap,manLCagap,manLCbgap]
+                variables = [Outputs.forFMgap,Outputs.oppLCagap,Outputs.oppLCbgap,Outputs.manLCagap,Outputs.manLCbgap]
                 variables_name = ['Forward_gaps','Opportunistic_lane_change_after_gaps','Opportunistic_lane_change_before_gaps','Mandatory_lane_change_after_gaps','Mandatory_lane_change_before_gaps']
                 for var in xrange(len(variables)):
                     if default is True:
@@ -907,22 +844,22 @@ def OAT_sensitivity(values, inputs, default = False):
                     
             #writing to file
             if default is True:
-                text.append(['Default_values', corrected_values, flow.mean, '---',  oppLCcount.mean, '---', manLCcount.mean, '---',
-                             forFMgap.cumul_all.mean,  '---', forFMgap.cumul_all.firstQuart,  '---', forFMgap.cumul_all.median,  '---', forFMgap.cumul_all.thirdQuart,  '---', forFMgap.cumul_all.std,  '---',
-                             oppLCagap.cumul_all.mean, '---', oppLCagap.cumul_all.firstQuart, '---', oppLCagap.cumul_all.median, '---', oppLCagap.cumul_all.thirdQuart, '---', oppLCagap.cumul_all.std, '---',
-                             oppLCbgap.cumul_all.mean, '---', oppLCbgap.cumul_all.firstQuart, '---', oppLCbgap.cumul_all.median, '---', oppLCbgap.cumul_all.thirdQuart, '---', oppLCbgap.cumul_all.std, '---',
-                             manLCagap.cumul_all.mean, '---', manLCagap.cumul_all.firstQuart, '---', manLCagap.cumul_all.median, '---', manLCagap.cumul_all.thirdQuart, '---', manLCagap.cumul_all.std, '---',
-                             manLCbgap.cumul_all.mean, '---', manLCbgap.cumul_all.firstQuart, '---', manLCbgap.cumul_all.median, '---', manLCbgap.cumul_all.thirdQuart, '---', manLCbgap.cumul_all.std, '---',
-                             forward_speeds.cumul_all.mean, '---', forward_speeds.cumul_all.firstQuart, '---', forward_speeds.cumul_all.median, '---', forward_speeds.cumul_all.thirdQuart, '---', forward_speeds.cumul_all.std, '---'])       
+                text.append(['Default_values', corrected_values, Outputs.flow.mean, '---',  Outputs.oppLCcount.mean, '---', Outputs.manLCcount.mean, '---',
+                             Outputs.forFMgap.cumul_all.mean,  '---', Outputs.forFMgap.cumul_all.firstQuart,  '---', Outputs.forFMgap.cumul_all.median,  '---', Outputs.forFMgap.cumul_all.thirdQuart,  '---', Outputs.forFMgap.cumul_all.std,  '---',
+                             Outputs.oppLCagap.cumul_all.mean, '---', Outputs.oppLCagap.cumul_all.firstQuart, '---', Outputs.oppLCagap.cumul_all.median, '---', Outputs.oppLCagap.cumul_all.thirdQuart, '---', Outputs.oppLCagap.cumul_all.std, '---',
+                             Outputs.oppLCbgap.cumul_all.mean, '---', Outputs.oppLCbgap.cumul_all.firstQuart, '---', Outputs.oppLCbgap.cumul_all.median, '---', Outputs.oppLCbgap.cumul_all.thirdQuart, '---', Outputs.oppLCbgap.cumul_all.std, '---',
+                             Outputs.manLCagap.cumul_all.mean, '---', Outputs.manLCagap.cumul_all.firstQuart, '---', Outputs.manLCagap.cumul_all.median, '---', Outputs.manLCagap.cumul_all.thirdQuart, '---', Outputs.manLCagap.cumul_all.std, '---',
+                             Outputs.manLCbgap.cumul_all.mean, '---', Outputs.manLCbgap.cumul_all.firstQuart, '---', Outputs.manLCbgap.cumul_all.median, '---', Outputs.manLCbgap.cumul_all.thirdQuart, '---', Outputs.manLCbgap.cumul_all.std, '---',
+                             Outputs.forSpeeds.cumul_all.mean, '---', Outputs.forSpeeds.cumul_all.firstQuart, '---', Outputs.forSpeeds.cumul_all.median, '---', Outputs.forSpeeds.cumul_all.thirdQuart, '---', Outputs.forSpeeds.cumul_all.std, '---'])       
 
             else:
-                text.append([value_name, corrected_values, flow.mean, delta_flow, oppLCcount.mean, delta_oppLCcount, manLCcount.mean, delta_manLCcount,
-                             forFMgap.cumul_all.mean,  delta_mean_fgap,    forFMgap.cumul_all.firstQuart,  delta_firstQuart_fgap,    forFMgap.cumul_all.median,  delta_median_fgaps,   forFMgap.cumul_all.thirdQuart,  delta_thirdQuart_fgaps,   forFMgap.cumul_all.std,  delta_std_fgaps,
-                             oppLCagap.cumul_all.mean, delta_mean_Aoppgap, oppLCagap.cumul_all.firstQuart, delta_firstQuart_Aoppgap, oppLCagap.cumul_all.median, delta_median_Aoppgap, oppLCagap.cumul_all.thirdQuart, delta_thirdQuart_Aoppgap, oppLCagap.cumul_all.std, delta_std_Aoppgap,
-                             oppLCbgap.cumul_all.mean, delta_mean_Boppgap, oppLCbgap.cumul_all.firstQuart, delta_firstQuart_Boppgap, oppLCbgap.cumul_all.median, delta_median_Boppgap, oppLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Boppgap, oppLCbgap.cumul_all.std, delta_std_Boppgap,
-                             manLCagap.cumul_all.mean, delta_mean_Amangap, manLCagap.cumul_all.firstQuart, delta_firstQuart_Amangap, manLCagap.cumul_all.median, delta_median_Amangap, manLCagap.cumul_all.thirdQuart, delta_thirdQuart_Amangap, manLCagap.cumul_all.std, delta_std_Amangap,
-                             manLCbgap.cumul_all.mean, delta_mean_Bmangap, manLCbgap.cumul_all.firstQuart, delta_firstQuart_Bmangap, manLCbgap.cumul_all.median, delta_median_Bmangap, manLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Bmangap, manLCbgap.cumul_all.std, delta_std_Bmangap,       
-                             forward_speeds.cumul_all.mean, delta_mean_Speeds, forward_speeds.cumul_all.firstQuart, delta_firstQuart_Speeds, forward_speeds.cumul_all.median, delta_median_Speeds, forward_speeds.cumul_all.thirdQuart, delta_thirdQuart_Speeds, forward_speeds.cumul_all.std, delta_std_Speeds]) 
+                text.append([value_name, corrected_values, Outputs.flow.mean, delta_flow, Outputs.oppLCcount.mean, delta_oppLCcount, Outputs.manLCcount.mean, delta_manLCcount,
+                             Outputs.forFMgap.cumul_all.mean,  delta_mean_fgap,    Outputs.forFMgap.cumul_all.firstQuart,  delta_firstQuart_fgap,    Outputs.forFMgap.cumul_all.median,  delta_median_fgaps,   Outputs.forFMgap.cumul_all.thirdQuart,  delta_thirdQuart_fgaps,   Outputs.forFMgap.cumul_all.std,  delta_std_fgaps,
+                             Outputs.oppLCagap.cumul_all.mean, delta_mean_Aoppgap, Outputs.oppLCagap.cumul_all.firstQuart, delta_firstQuart_Aoppgap, Outputs.oppLCagap.cumul_all.median, delta_median_Aoppgap, Outputs.oppLCagap.cumul_all.thirdQuart, delta_thirdQuart_Aoppgap, Outputs.oppLCagap.cumul_all.std, delta_std_Aoppgap,
+                             Outputs.oppLCbgap.cumul_all.mean, delta_mean_Boppgap, Outputs.oppLCbgap.cumul_all.firstQuart, delta_firstQuart_Boppgap, Outputs.oppLCbgap.cumul_all.median, delta_median_Boppgap, Outputs.oppLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Boppgap, Outputs.oppLCbgap.cumul_all.std, delta_std_Boppgap,
+                             Outputs.manLCagap.cumul_all.mean, delta_mean_Amangap, Outputs.manLCagap.cumul_all.firstQuart, delta_firstQuart_Amangap, Outputs.manLCagap.cumul_all.median, delta_median_Amangap, Outputs.manLCagap.cumul_all.thirdQuart, delta_thirdQuart_Amangap, Outputs.manLCagap.cumul_all.std, delta_std_Amangap,
+                             Outputs.manLCbgap.cumul_all.mean, delta_mean_Bmangap, Outputs.manLCbgap.cumul_all.firstQuart, delta_firstQuart_Bmangap, Outputs.manLCbgap.cumul_all.median, delta_median_Bmangap, Outputs.manLCbgap.cumul_all.thirdQuart, delta_thirdQuart_Bmangap, Outputs.manLCbgap.cumul_all.std, delta_std_Bmangap,       
+                             Outputs.forSpeeds.cumul_all.mean, delta_mean_Speeds,  Outputs.forSpeeds.cumul_all.firstQuart, delta_firstQuart_Speeds,  Outputs.forSpeeds.cumul_all.median, delta_median_Speeds,  Outputs.forSpeeds.cumul_all.thirdQuart, delta_thirdQuart_Speeds,  Outputs.forSpeeds.cumul_all.std, delta_std_Speeds]) 
                          
         #breaking the outer loop because the default only needs to be ran once
         if default is True:

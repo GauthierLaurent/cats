@@ -62,7 +62,7 @@ def main():
     
     #determining vissim, video, and corridor lists
     networks = calibTools.Network.buildNetworkObjects(config)      
-        
+
     #generating the raw variables contained in the csv
     variables = csvParse.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
 
@@ -100,7 +100,7 @@ def main():
         #looking for version errors in the traj files
         for traj in net.traj_paths:
             video_data_list = write.load_traj(traj)
-            if video_data_list[0] == 'TrajVersionError':
+            if video_data_list == 'TrajVersionError':
                 print 'traj file ' +str(traj.split(os.sep)[-1]) + 'yielded incorect version number'
                 running = vissim.isVissimRunning(True)
                 return
@@ -128,7 +128,8 @@ def main():
     write.write_calib(working_path, parameters, variables, networks)
 		
     #creating an history file for calib.py
-    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, networks)    
+    variable_names = [i.name for i in variables if i.include is True]
+    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks)    
     
     #launching NOMADS
     try:
