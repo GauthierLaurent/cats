@@ -75,6 +75,17 @@ def ToOneList(*args):
         else:
             out.append(arg)
     return out
+    
+def addLists(P, Q, direction='left'):
+    A, B = sorted([P, Q], key=len)
+
+    if direction is 'right':
+        for i, x in enumerate(reversed(A), 1):
+            B[-i] += x            
+    else:
+        for i, x in enumerate(A):
+            B[i] += x    
+    return B
 
 ##################
 # Variable tools
