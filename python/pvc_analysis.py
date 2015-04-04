@@ -44,9 +44,9 @@ def runVissimForCalibrationAnalysis(network, inputs):
         #if we are treating more than one network, than we subdivide the point folder into network folders
         if not os.path.isdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])):
             os.mkdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0]))
-        
+
         final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])
-        shutil.copy(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1]),os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]))    
+        shutil.move(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1]),os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]))    
 
     else:
         final_inpx_path = copy.deepcopy(point_folderpath)
@@ -60,7 +60,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
     if isinstance(Vissim, str):           
         for traj in network[0].traj_paths:        
             network[0].addVideoComparison(['StartError'])
-            return False, network[0]
+            return False, network[0], ['N/A' for i in xrange(parameters[2])]
 
     #load the network
     load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]), err_file=True)    
@@ -69,7 +69,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
     if load is not True:
         for traj in network[0].traj_paths:        
             network[0].addVideoComparison(['LoadNetError'])
-            return False, network[0]
+            return False, network[0], ['N/A' for i in xrange(parameters[2])]
     
     values = []
     for var in variables:
@@ -82,7 +82,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
         for traj in network[0].traj_paths:
             network[0].addVideoComparison(['SimulationError'])
             vissim.stopVissim(Vissim)
-        return False, network[0]
+        return False, network[0], ['N/A' for i in xrange(parameters[2])]
              
     else:
         d_stat = []
@@ -91,7 +91,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
         #treating the outputs
         inputs = [final_inpx_path, False, network[0].corridors, outputs.Derived_data(), config]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-        if len(file_list) > 1:
+        if len(file_list) > 1 and multi_networks is False:
             commands = workers.FalseCommands()
             packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, commands, defineNbrProcess = 2)
 
@@ -224,7 +224,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                             secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])                           
                         else:
                             secondary_values.append(['0.00', '0.00*'])
-       
+
                 #comparing video_values with output values
                 secondary_values += calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
 
@@ -236,19 +236,30 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 c0, c1, c2 = outputs.convert_errors_to_constraints(config, num, dp, a0)
 
                 #determining main p_value
+                #
+                #at this point, secondary_value looks like:
+                #    [[oppLCgap, oppLCgap_delta], [manLCgap, manLCgap_delta], [flow, flow_delta], ...
+                #         0-0          0-1            1-0          1-1         2-0      2-1
+                #           
+                #      forFMgap, forFMgap_KS_d, oppLCagap, oppLCagap_KS_d, oppLCbgap, oppLCbgap_KS_d, ...
+                #         3            4              5          6              7          8
+                # 
+                #      manLCagap, manLCagap_KS_d, manLCbgap, manLCbgap_KS_d, speeds, speeds_KS_d]
+                #         9           10             11         12             13         14
+                #
                 if config.output_forward_gaps:
                     if secondary_values[4] == 'DNE':
                         d_stat.append(['inf', c0, c1, c2])
                     else:
                         d_stat.append([secondary_values[4], c0, c1, c2])
-                    write.plot_dists(point_folderpath, dist_video_data[4], dist_data[0], secondary_values[4], parameters[0], config.fps)
+                    write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
                         
                 if config.output_lane_change:
-                    if secondary_values[6] == 'DNE':        #using the before gap to calibrate
+                    if secondary_values[8] == 'DNE':        #using the before gap to calibrate
                         d_stat.append(['inf', c0, c1, c2])
                     else:
-                        d_stat.append([secondary_values[6], c0, c1, c2])
-                    write.plot_dists(point_folderpath, dist_video_data[6], dist_data[1], secondary_values[6], parameters[0], config.fps)
+                        d_stat.append([secondary_values[8], c0, c1, c2])
+                    write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
         
         vissim.stopVissim(Vissim)
         return d_stat, network[0], seed_nums

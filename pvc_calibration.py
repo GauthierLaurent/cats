@@ -60,8 +60,8 @@ def main():
         increments = random.randint(1,10)
     parameters = [config.sim_steps, first_seed, config.nbr_runs, Sim_lenght, sim_cores, increments]
     
-    #determining vissim, video, and corridor lists
-    networks = calibTools.Network.buildNetworkObjects(config)      
+    #determining vissim, video, and corridor lists    
+    networks = calibTools.Network.buildNetworkObjects(config)     
 
     #generating the raw variables contained in the csv
     variables = csvParse.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')

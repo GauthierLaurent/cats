@@ -32,7 +32,6 @@ def main(argv):
     import pvc_configure as configure
     import pvc_csvParse  as csvParse
     import pvc_analysis  as analysis
-    import pvc_vissim    as vissim
     import pvc_outputs   as outputs
 
     config = configure.Config('calib.cfg')
@@ -93,10 +92,6 @@ def main(argv):
     #move all inpx files to the point folder
     for net in networks:
         shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
-  
-    #adding vissim instances to each network
-    for net in networks:
-        net.addVissim(vissim.startVissim())
         
     #pass data to vissim and simulate
     if len(networks) == 1:
@@ -117,25 +112,46 @@ def main(argv):
     else:
         ##run the analysis through workers -- separate with networks
         commands = workers.FalseCommands()
-        inputs = [config, variables, parameters, point_folderpath, True]
-        for net in networks:
-            packed_outputs = workers.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, min(len(networks),4))
+        inputs = [config, variables, parameters, point_folderpath, True]       
+        packed_outputs = workers.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, defineNbrProcess = min(len(networks),4))
         
         d_stat = []
         networks = []
         seed_num_list = []
         
         for unpacked in packed_outputs:
-            d_stat.append(unpacked[0])
             networks.append(unpacked[1])
-            seed_num_list.append(unpacked[2])
+            
+            if isinstance(unpacked[0], bool):
+                d_stat.append(unpacked[0])
+            else:
+                for t in xrange(len(unpacked[1].traj_paths)): #traj
+                    d_stat.append(unpacked[0][t])       
+        
+        #ordering by network number
+        net_order = []
+        for i in xrange(len(networks)):
+            if networks[i].inpx_path == config.path_to_inpx_file_1: net_order.append(1)
+            if networks[i].inpx_path == config.path_to_inpx_file_2: net_order.append(2)
+            if networks[i].inpx_path == config.path_to_inpx_file_3: net_order.append(3)
+            if networks[i].inpx_path == config.path_to_inpx_file_4: net_order.append(4)
 
+        net_order, d_stat, networks, seed_num_list = mathTools.sortManyLists(net_order, d_stat, networks, seed_num_list)
+                
         if mathTools.isbool(d_stat):
-            seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
+            seeds = []
+            for j in xrange(len(seed_num_list)):
+                if seed_num_list[j][0] == 'N/A':
+                    seeds += seed_num_list[j] + ['|']
+                else:
+                    seeds += [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
+                if j < len(seed_num_list)-1:
+                    seeds += ['|']
+                    
             write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt') 
             return 1
         else:
-            fout = outputs.sort_fout_and_const(d_stat)
+            fout = outputs.sort_fout_and_const(d_stat)[0]
             seeds = []
             for j in xrange(len(seed_num_list)):
                 seeds += [store[0]+(i-1)*store[1] for i in seed_num_list[j]]
@@ -144,7 +160,7 @@ def main(argv):
 
     #write to history
     write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
-    
+
     #output for NOMAD
     print '{} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3]) 
     return 0

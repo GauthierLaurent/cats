@@ -181,7 +181,8 @@ class History:
                     hist.write('Network_'+str(net)+'_Video_'+str(comp)+'\t')
                     for i in xrange(18):
                         hist.write('\t')
-                    hist.write('|\n')
+            hist.write('|\n')
+            
             #2nd line:
             hist.write('#\t|\t')
             for net in xrange(len(networks)):
@@ -979,7 +980,7 @@ def plot_qt(time_serie, gaps_serie, dirname, video_name, corridor, fps, min_time
     plt.close(fig)    
     return
 
-def plot_dists(dirname, video_data, vissim_data, fout, simulationStepsPerTimeUnit, fps, normalized=True):
+def plot_dists(dirname, video_name, video_data, vissim_data, fout, simulationStepsPerTimeUnit, fps, seed_nums, normalized=True):
     try:    
         fig, ax = plt.subplots(2, 1, squeeze=True)
         video_p_list  = [i/float(fps) for i in video_data.cumul_all.raw if i/fps < 60]
@@ -996,12 +997,12 @@ def plot_dists(dirname, video_data, vissim_data, fout, simulationStepsPerTimeUni
         for j in xrange(len(vissim_data.distributions)):
             dist_p_list = [i/float(simulationStepsPerTimeUnit) for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 60]
             if len(dist_p_list) > 0:
-                ax[1].hist(dist_p_list, normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(j+1))
+                ax[1].hist(dist_p_list, normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(seed_nums[j]))
         ax[1].legend(loc='best', frameon=False)
         ax[1].set_title('Comparison of all Vissim data')
     
         plt.subplots_adjust(hspace=0.3)
-        plt.savefig(os.path.join(dirname, 'Video and Vissim distributions'))
+        plt.savefig(os.path.join(dirname, 'Video and Vissim distributions for '+str(video_name)))
         plt.clf()
         plt.close(fig)    
     except:

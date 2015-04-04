@@ -38,7 +38,7 @@ def myfloor(x, base=5):
 
 ##################
 # Lists tools
-##################    
+##################      
 def sort2lists(list1,list2,ascending_order=True):
     '''Sorts list2 according to the sorting of the content of list1
        list1 must contain values that can be sorted while
@@ -57,6 +57,32 @@ def sort2lists(list1,list2,ascending_order=True):
         
     return sorted_list1, sorted_list2
 
+def sortManyLists(reference, *lists, **kwargs):
+
+    if 'ascending_order' in kwargs:
+        ascending_order=kwargs['ascending_order']
+    else:
+        ascending_order=True
+
+    indexes = range(len(reference))
+    indexes.sort(key=reference.__getitem__)
+
+    out = []
+
+    if ascending_order is True:    
+        out.append(map(reference.__getitem__, indexes))
+
+        for list_i in lists:
+            out.append(map(list_i.__getitem__, indexes))
+            
+    if ascending_order is False:    
+        out.append(map(reference.__getitem__, indexes), reversed(indexes))
+
+        for list_i in lists:
+            out.append(map(list_i.__getitem__, indexes), reversed(indexes))
+            
+    return out
+    
 def intoList(out, mylist):
     '''unpack list of list into the list given in out'''
     for i in mylist:

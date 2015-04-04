@@ -116,7 +116,7 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
         
     else:
         nbr_pro = max(defineNbrProcess, np.ceil(float(defineChunkSize)/len(total_number_of_tasks)))
-    
+
     ##breaking into chunks without 'None' values
     if variables_names == []:
         processed_chunks = cleanChunks(len_chunks, total_number_of_tasks)
@@ -132,7 +132,7 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
                '    ### Spliting the inputs into subgroups ### \n'
                'Number of subgroups: '+ str(len(processed_chunks)) + '\n'
                )
-    
+
     #Assigning tasks
     if commands.multi_test is False:
         results_async = [pool.apply_async(function, [processed_chunks[i], inputs]) for i in range(len(processed_chunks))]
@@ -147,7 +147,8 @@ def createWorkers(total_number_of_tasks, function, inputs, commands, minChunkSiz
         #to test if there is a problem inside the called function
         for i in range(len(processed_chunks)):
             print function(processed_chunks[i], inputs)
-            import pdb;pdb.set_trace()   
+            import pdb;pdb.set_trace()
+
 
 def cpuPerVissimInstance():
     '''calculates the number of vissim process to spawn depending on the amount of
