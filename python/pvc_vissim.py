@@ -166,37 +166,65 @@ def weidemannCheck(model, parameters):
     return output
     
 #######   Under developpement  ############
+class linkTo:
+    def __init__(self, linked_variable, relation):
+        self.vissim_name = linked_variable
+        self.relation    = relation
+
 class vissimParameters:
-    def __init__(self,vissim_name,vissim_min, vissim_max, vissim_default, param_type):
+    def __init__(self,vissim_name,vissim_min, vissim_max, vissim_default, param_type, value_type):
         self.vissim_name    = vissim_name
         self.vissim_min     = vissim_min
         self.vissim_max     = vissim_max
         self.vissim_default = vissim_default
         self.param_type     = param_type
+        self.ValueType      = value_type
+        
+    def set_link(self, linked_variable, relation):
+        #relation = 'greater' or 'lower'
+        self.linkedTo = linkTo(linked_variable, relation)
         
 def vissimDictionnary():
     values = {}
     
     #Wiedemann 74
-    values.append(vissimParameters('W74ax',      0.0,   None,    2.0,   'DrivingBehaviors'))
-    values.append(vissimParameters('W74bxAdd',   0.0,   None,    2.0,   'DrivingBehaviors'))
-    values.append(vissimParameters('W74bxMult',  0.0,   None,    3.0,   'DrivingBehaviors'))
+    values['W74ax']     = vissimParameters('W74ax',      0.0,   None,    2.0,   'DrivingBehaviors', 'R')
+    values['W74bxAdd']  = vissimParameters('W74bxAdd',   0.0,   None,    2.0,   'DrivingBehaviors', 'R')
+    values['W74bxMult'] = vissimParameters('W74bxMult',  0.0,   None,    3.0,   'DrivingBehaviors', 'R')
     
     #Wiedemann 99
-    values.append(vissimParameters('W99cc0',     0.0,   None,    1.5,   'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc1',    None,   None,    0.9,   'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc2',     0.0,   None,    4.0,   'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc3',    None,   None,   -8.0,   'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc4',    None,   None,   -0.35,  'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc5',    None,   None,    0.35,  'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc6',    None,   None,   11.44,  'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc7',    None,   None,    0.25,  'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc8',    None,   None,    3.5 ,  'DrivingBehaviors'))
-    values.append(vissimParameters('W99cc9',    None,   None,    1.5 ,  'DrivingBehaviors'))
+    values['W99cc0']    = vissimParameters('W99cc0',     0.0,   None,    1.5,   'DrivingBehaviors', 'R')
+    values['W99cc1']    = vissimParameters('W99cc1',    None,   None,    0.9,   'DrivingBehaviors', 'R')
+    values['W99cc2']    = vissimParameters('W99cc2',     0.0,   None,    4.0,   'DrivingBehaviors', 'R')
+    values['W99cc3']    = vissimParameters('W99cc3',    None,   None,   -8.0,   'DrivingBehaviors', 'R')
+    values['W99cc4']    = vissimParameters('W99cc4',    None,   None,   -0.35,  'DrivingBehaviors', 'R')
+    values['W99cc5']    = vissimParameters('W99cc5',    None,   None,    0.35,  'DrivingBehaviors', 'R')
+    values['W99cc6']    = vissimParameters('W99cc6',    None,   None,   11.44,  'DrivingBehaviors', 'R')
+    values['W99cc7']    = vissimParameters('W99cc7',    None,   None,    0.25,  'DrivingBehaviors', 'R')
+    values['W99cc8']    = vissimParameters('W99cc8',    None,   None,    3.5 ,  'DrivingBehaviors', 'R')
+    values['W99cc9']    = vissimParameters('W99cc9',    None,   None,    1.5 ,  'DrivingBehaviors', 'R')
     
     #general following behavior
+    values['LookAheadDistMin']   = vissimParameters('LookAheadDistMin',    0.0,   999999,    0.0,  'DrivingBehaviors',  'R'); values['LookAheadDistMin'].set_link('LookAheadDistMax','lower')
+    values['LookAheadDistMax']   = vissimParameters('LookAheadDistMax',    0.0,   999999,  250.0,  'DrivingBehaviors',  'R'); values['LookAheadDistMax'].set_link('LookAheadDistMin','greater')
+    values['ObsrvdVehs']         = vissimParameters('ObsrvdVehs',          0.0,   999999,    2.0,  'DrivingBehaviors',  'I')
+    values['LookBackDistMin']    = vissimParameters('LookBackDistMin',     0.0,   999999,    0.0,  'DrivingBehaviors',  'R'); values['LookBackDistMin'].set_link('LookBackDistMax','lower')
+    values['LookBackDistMax']    = vissimParameters('LookBackDistMax',     0.0,   999999,  150.0,  'DrivingBehaviors',  'R'); values['LookBackDistMax'].set_link('LookBackDistMin','greater')
     
     #general lane change
+    values['MaxDecelOwn']        = vissimParameters('MaxDecelOwn',       -10.0,  -0.02,    -4.0,  'DrivingBehaviors',  'R')
+    values['DecelRedDistOwn']    = vissimParameters('DecelRedDistOwn',     0.0,   None,   100.0,  'DrivingBehaviors',  'R')
+    values['AccDecelOwn']        = vissimParameters('AccDecelOwn',       -10.0,   -1.0,    -1.0,  'DrivingBehaviors',  'R')
+    values['MaxDecelTrail']      = vissimParameters('MaxDecelTrail',     -10.0,  -0.02,    -3.0,  'DrivingBehaviors',  'R')
+    values['DecelRedDistTrail']  = vissimParameters('DecelRedDistTrail',   0.0,   None,   100.0,  'DrivingBehaviors',  'R')
+    values['AccDecelTrail']      = vissimParameters('AccDecelTrail',     -10.0,   -1.0,    -1.0,  'DrivingBehaviors',  'R')
+    values['DiffusTm']           = vissimParameters('DiffusTm',           None,   None,    60.0,  'DrivingBehaviors',  'R')
+    values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,     0.5,  'DrivingBehaviors',  'R')
+    values['SafDistFactLnChg']   = vissimParameters('SafDistFactLnChg',   None,   None,     0.6,  'DrivingBehaviors',  'R')
+    values['CoopLnChg']          = vissimParameters('CoopLnChg',          None,   None,    False, 'DrivingBehaviors',  'B')
+    values['CoopLnChgSpeedDiff'] = vissimParameters('CoopLnChgSpeedDiff', None,   None,     3.0,  'DrivingBehaviors',  'R')
+    values['CoopLnChgCollTm']    = vissimParameters('CoopLnChgCollTm',    None,   None,    10.0,  'DrivingBehaviors',  'R')
+    values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,    -3.0,  'DrivingBehaviors',  'R')
     
-    
+    return values
     
