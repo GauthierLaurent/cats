@@ -382,7 +382,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
     if diagnosis is True:
         pass
     else:
-
+        print '\n' 
         if commands.video_all_once:
             for k in reversed(xrange(1,len(Outputs_list))):
                 outputs.Derived_data.concat(Outputs[0],Outputs_list[k])
@@ -487,7 +487,7 @@ def main(argv):
             
         turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, maxSpeed, commands)
                 
-        print ' == Processing for ' + str(config.inpx_name) + ' done <<'
+        print '\n == Processing for ' + str(config.inpx_name) + ' done <<'
         
         
     elif commands.analysis == 'trace':
