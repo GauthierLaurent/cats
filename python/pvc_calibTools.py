@@ -72,7 +72,7 @@ def filter_dist_with_ks(dist_list, treshold):
 
     return rejected
     
-def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsPerTimeUnit,fps):
+def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
     '''Test a range of values with the kolmolgorov-Smirnov test'''
 
     D_statistic_list = []
@@ -89,6 +89,15 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsP
             D_statistic_list.append('DNE')  #value (delta)
     
     return D_statistic_list
+    
+def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
+    
+    if len(video_value) > 0 and len(calculated_value) > 0:
+        D_statistic, p_value = ks_twosamp([p/float(simulationStepsPerTimeUnit) for p in video_value], [p/float(fps) for p in calculated_value])
+    else:
+        D_statistic = 'DNE'
+
+    return D_statistic
    
 ################################ 
 #        Network Calibration class       

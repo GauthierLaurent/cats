@@ -4,7 +4,7 @@ Created on Tue Mar 03 16:30:51 2015
 
 @author: Laurent
 """
-import math
+import math, random
 
 ##################
 # Vectors tools
@@ -129,3 +129,47 @@ def isallbool(lists):
         if isinstance(element,bool) is False:
             return False
     return True
+
+
+class RandError:   
+    def __init__(self, text):
+        print text
+        
+class PvcRandom:
+    
+    def randGaussRange(lowBound, highBound, n):
+        '''generates a random normal variate distribution with mu and sigma randomly
+           chosen between lowBound and highBound then retrict the distribution to those
+           bounds'''
+        out = []    
+        mu = random.uniform(lowBound, highBound)
+        sigma = random.uniform(0, (mu - lowBound) )
+        while len(out) < n:
+            num = (random.normalvariate(mu, sigma))
+            if num < highBound and num > lowBound:
+                out.append(num)
+            
+        return out    
+
+    def randUniformRange(lowBound, highBound, n, vartype = float):
+        '''generates a random uniform distribution between lowBound and highBound
+           with a single appearance of any numbers'''
+        
+        #if highBound - lowBound < n and vartype is int:
+            #raise RandError('not enough space to allow for unique intergers')
+            
+        out = []            
+        while len(out) < n:
+            
+            if vartype is float:
+                test = random.uniform(lowBound, highBound)
+            elif vartype is int:
+                test = random.randint(lowBound, highBound)
+                
+            if test not in out or (highBound - lowBound < n and vartype is int):
+                out.append(test)
+        
+        return out
+
+
+           
