@@ -711,7 +711,7 @@ def false_fzp(case,dirname,filename):
 def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUptime):
     '''first checks for the compatibility of the given fzp, then process it'''
     case = check_fzp_content(dirname,filename)
-    
+
     if case == 1:        
         objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit)
 
@@ -798,6 +798,7 @@ def treat_Single_VissimOutput(filename, inputs):
                         lanes[str(lane)][0] = s
                     elif s > lanes[str(lane)][1]:
                         lanes[str(lane)][1] = s
+
 
     #lane change count by type       
     oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)

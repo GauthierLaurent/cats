@@ -231,7 +231,7 @@ class Config:
         
         if(not os.path.isfile(config_name)):
             print('Notice: No default configuration found. Creating new ' + str(config_name))
-            self.write()      
+            self.write(config_name)      
        
     def write(self,config_name):
         with open(config_name, 'w') as new_file:
@@ -287,10 +287,10 @@ class Config:
                            'fullpath_to_inpx_file_2   = ' + self.path_to_inpx_file_2+'\n'
                            'fullpath_to_inpx_file_3   = ' + self.path_to_inpx_file_3+'\n'
                            'fullpath_to_inpx_file_4   = ' + self.path_to_inpx_file_4+'\n'
-                           'fullpath_to_video_data_1  = ' + self.path_to_video_data_1+'\n'
-                           'fullpath_to_video_data_2  = ' + self.path_to_video_data_2+'\n'
-                           'fullpath_to_video_data_3  = ' + self.path_to_video_data_3+'\n'
-                           'fullpath_to_video_data_4  = ' + self.path_to_video_data_4+'\n'
+                           'fullpath_to_video_data_1  = ' + str(self.path_to_video_data_1)+'\n'
+                           'fullpath_to_video_data_2  = ' + str(self.path_to_video_data_2)+'\n'
+                           'fullpath_to_video_data_3  = ' + str(self.path_to_video_data_3)+'\n'
+                           'fullpath_to_video_data_4  = ' + str(self.path_to_video_data_4)+'\n'
                            'fullpath_to_csv_network_1 = ' + self.path_to_csv_net1+'\n'
                            'fullpath_to_csv_network_2 = ' + self.path_to_csv_net2+'\n'
                            'fullpath_to_csv_network_3 = ' + self.path_to_csv_net3+'\n'
