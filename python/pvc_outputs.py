@@ -517,6 +517,15 @@ def laneChange(objects, corridors):
                 
     return oppObjDict, manObjDict, laneDict
 
+def calculate_jam_constraint(objects, config):
+    jam = 0        
+    for o in objects:
+        boolarray = np.asarray(o.curvilinearVelocities.getXCoordinates()) == 0
+        nbr_zeros = np.count_nonzero(boolarray)
+        if nbr_zeros > config.jam_calcu_thresh:
+            jam += 1
+    return jam
+
 def read_error_file(dirname,filename):
     '''reads an error file and returns the number of
             deceleration is positive errors

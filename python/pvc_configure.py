@@ -202,6 +202,8 @@ class Config:
         self.num_const_thresh         = self.parse('Vehic_gen_err_constraint',     '10',     c_type='float')
         self.dp_const_thresh          = self.parse('Decel_gen_err_constraint',     '0',      c_type='float')
         self.a0_const_thresh          = self.parse('Accel_gen_err_constraint',     '0',      c_type='float')
+        self.jam_const_thresh         = self.parse('Jam_constraint_threshold',     '0',      c_type='float')
+        self.jam_calcu_thresh         = self.parse('Jam_calculation_threshold',    '5',      c_type='float')        
         self.cmp_man_lcgaps           = self.parse('Compute_mandatory_LC_gaps',    'True',   c_type='bool')
         self.cmp_opp_lcgaps           = self.parse('Compute_opportunistic_LC_gaps','True',   c_type='bool')
         self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'True',   c_type='bool')
