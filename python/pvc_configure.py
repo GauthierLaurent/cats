@@ -274,6 +274,8 @@ class Config:
                            'Vehic_gen_err_constraint  = ' + str(self.num_const_thresh)+'\n'
                            'Decel_gen_err_constraint  = ' + str(self.dp_const_thresh)+'\n'
                            'Accel_gen_err_constraint  = ' + str(self.a0_const_thresh)+'\n'
+                           'Jam_constraint_threshold  = ' + str(self.jam_const_thresh)+'\n'
+                           'Jam_calculation_threshold = ' + str(self.jam_calcu_thresh)+'\n'
                            '\n'        
                            '[Networks]\n'
                            'active_network_1          = ' + str(self.active_network_1)+'\n'

@@ -180,6 +180,7 @@ class Derived_data:
         self.manLCagap  = Stats([])
         self.manLCbgap  = Stats([])
         self.forSpeeds  = Stats([])
+        self.constraint = SingleValueStats([])
     
     def addLanes(self):
         self.flow.lane = []
@@ -265,6 +266,102 @@ class Derived_data:
                 else:
                     for c in xrange(len(outputs2.flow.lane)):
                         outputs1.editLaneCount(c, outputs2.flow.lane[c])
+
+##################
+# Constraints
+##################
+def calculate_jam_constraint(objects, config):
+    '''From the fzp, calculates if a jam occurs'''
+    jam = 0        
+    for o in objects:
+        boolarray = np.asarray(o.curvilinearVelocities.getXCoordinates()) == 0
+        nbr_zeros = np.count_nonzero(boolarray)
+        if nbr_zeros > config.jam_calcu_thresh:
+            jam += 1
+    return jam
+
+def read_error_file(dirname,filename):
+    '''reads an error file and returns the number of
+            deceleration is positive errors
+            accelaration is zero errors
+            the total number of vehicules that could not be generated
+    '''
+    case_dp = 0     #deceleration is positive
+    case_a0 = 0     #acceleration is zero
+    num = 0         #number of vehicles to generate
+    with open(os.path.join(dirname,filename),'r') as err:
+        for line in err:
+            
+            if 'The expected trajectory of vehicle' in line and 'cannot be determined' in line:
+                if 'expected deceleration is positive' in line:
+                    case_dp += 1
+                if 'expected acceleration is zero' in line:
+                    case_a0 += 1
+                    
+            if 'Vehicle input' in line and 'could not be finished completely' in line:
+                num += float(line.strip().split('remain: ')[-1].split(' ')[0])
+                
+    return num, case_dp, case_a0
+
+def search_folder_for_error_files(dirname, fzpname = None):
+    '''search a directory and returns the mean value, for every fzp files, of
+            deceleration is positive errors
+            accelaration is zero errors
+            the total number of vehicules that could not be generated
+    '''
+    filenames = [f for f in os.listdir(dirname) if f.endswith('err')]
+    fzp_files = [f for f in os.listdir(dirname) if f.endswith('fzp')]
+    
+    if len(fzp_files) > 0:
+        num_list = []; dp_list = []; a0_list = []
+        for filename in filenames:       
+            num, dp, a0 = read_error_file(dirname,filename)
+            num_list.append(num); dp_list.append(dp); a0_list.append(a0)
+        
+        if len(filenames) < len(fzp_files):
+            for i in xrange(len(fzp_files)-len(filenames)):
+                num_list.append(0); dp_list.append(0); a0_list.append(0)
+        
+        return max(num_list), max(dp_list), max(a0_list)
+    else:
+        return float('nan'), float('nan'), float('nan')
+
+def convert_errors_to_constraints(config, num, dp, a0):
+    '''converts num, dp and a0 errors into constraint values
+       
+       values are reduced by the tolerance threshold, allowing the use of
+       EB, PB or PEB constraint handling strategies
+    '''
+    C_0 = num - config.num_const_thresh
+    C_1 = dp - config.dp_const_thresh
+    C_2 = a0 - config.a0_const_thresh
+        
+    return C_0, C_1, C_2
+
+def sort_fout_and_const(fout_lists):
+    '''sort many outputs f1, f2, f3, etc. to keep the worst one
+       if all fi respect the constraints, then fi are sorted to give worst fout
+       if not all fi respect constraint, the first one to not respect it is returned
+    '''
+
+    valids = []    
+    #check constraints:
+    for l in fout_lists:
+        if np.all(np.asarray(l[1:]) <= 0):      #all constraints are <= 0
+            valids.append(fout_lists.index(l))
+
+    #sort valids
+    if len(valids) == len(fout_lists):
+        to_conserve = fout_lists[valids[0]]
+        for i in valids:
+            if fout_lists[i][0] > to_conserve[0]:
+                to_conserve = fout_lists[i]
+
+        return to_conserve
+    else:
+        for i in xrange(len(fout_lists)):
+            if i not in valids:
+                return fout_lists[i]  #constains [fout, C_0, C_1, ...]
                         
 ##################
 # Output treatment tools
@@ -307,9 +404,9 @@ def laneChangeGaps(listDict, laneDict, objects):
     for obj in listDict.keys():
         
         for change in range(len(listDict[obj])):
-            lane = listDict[obj][change][1]                                                     #Dict[i][1] = lane after lane change
-            stepNum = objects[obj].getFirstInstant()+listDict[obj][change][2]                   #Dict[i][2] = position of the lane change in the objects list 
-            s = objects[obj].curvilinearPositions.getXCoordinates()[listDict[obj][change][2]]
+            lane = listDict[obj][change][2]                                                     #Dict[i][1] = lane after lane change
+            stepNum = listDict[obj][change][4]                                                  #Dict[i][2] = time of the lane change 
+            s = objects[obj].curvilinearPositions.getXCoordinates()[listDict[obj][change][3]]
 				
             #determining the gap
             instants = []
@@ -334,12 +431,12 @@ def laneChangeGaps(listDict, laneDict, objects):
 
     return agaps, bgaps
 
-def appendDicts(candidate, dictionnary, position_before, position_after, frame_after):
+def appendDicts(candidate, dictionnary, vissim_number, lane_before, lane_after, trajectory_pos, exact_time, position):
     '''adds {candidate: position_before, position_after, frame_after} to dictionnary'''
     if candidate not in dictionnary:       
-        dictionnary[candidate] = [[position_before,position_after,frame_after]]
+        dictionnary[candidate] = [[vissim_number,lane_before,lane_after,trajectory_pos,exact_time,position]]
     else:
-        dictionnary[candidate].append([position_before,position_after,frame_after])
+        dictionnary[candidate].append([vissim_number,lane_before,lane_after,trajectory_pos,exact_time,position])
         
     return dictionnary
     
@@ -479,7 +576,7 @@ def calculate_laneChange(objects, corridors, data_type):
                 #all turns are added as 'opp'
                 for co in reversed(xrange(len(LC_positions))):
                     for i in reversed(LC_positions[co]):
-                        oppObjDict = appendDicts(objects.index(o), oppObjDict, o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1)
+                        oppObjDict = appendDicts(objects.index(o), oppObjDict, o.getNum(), o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1, i+1+o.getFirstInstant(), o.curvilinearPositions.getXCoordinates()[i+1])
             else:
                 for co in reversed(xrange(len(LC_positions))):
                     for i in reversed(LC_positions[co]):
@@ -501,9 +598,9 @@ def calculate_laneChange(objects, corridors, data_type):
                         LC_type_list.append(LC_type)                   
                         
                         if LC_type == 'opp':
-                            oppObjDict = appendDicts(objects.index(o), oppObjDict, o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1)
+                            oppObjDict = appendDicts(objects.index(o), oppObjDict, o.getNum(), o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1, i+1+o.getFirstInstant(), o.curvilinearPositions.getXCoordinates()[i+1])
                         else:
-                            manObjDict = appendDicts(objects.index(o), manObjDict, o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1)
+                            manObjDict = appendDicts(objects.index(o), manObjDict, o.getNum(), o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1, i+1+o.getFirstInstant(), o.curvilinearPositions.getXCoordinates()[i+1])
 
     return laneDict, oppObjDict, manObjDict
     
@@ -516,98 +613,6 @@ def laneChange(objects, corridors):
         laneDict, oppObjDict, manObjDict = calculate_laneChange(objects, corridors, 'video')
                 
     return oppObjDict, manObjDict, laneDict
-
-def calculate_jam_constraint(objects, config):
-    jam = 0        
-    for o in objects:
-        boolarray = np.asarray(o.curvilinearVelocities.getXCoordinates()) == 0
-        nbr_zeros = np.count_nonzero(boolarray)
-        if nbr_zeros > config.jam_calcu_thresh:
-            jam += 1
-    return jam
-
-def read_error_file(dirname,filename):
-    '''reads an error file and returns the number of
-            deceleration is positive errors
-            accelaration is zero errors
-            the total number of vehicules that could not be generated
-    '''
-    case_dp = 0     #deceleration is positive
-    case_a0 = 0     #acceleration is zero
-    num = 0         #number of vehicles to generate
-    with open(os.path.join(dirname,filename),'r') as err:
-        for line in err:
-            
-            if 'The expected trajectory of vehicle' in line and 'cannot be determined' in line:
-                if 'expected deceleration is positive' in line:
-                    case_dp += 1
-                if 'expected acceleration is zero' in line:
-                    case_a0 += 1
-                    
-            if 'Vehicle input' in line and 'could not be finished completely' in line:
-                num += float(line.strip().split('remain: ')[-1].split(' ')[0])
-                
-    return num, case_dp, case_a0
-
-def search_folder_for_error_files(dirname):
-    '''search a directory and returns the mean value, for every fzp files, of
-            deceleration is positive errors
-            accelaration is zero errors
-            the total number of vehicules that could not be generated
-    '''
-    filenames = [f for f in os.listdir(dirname) if f.endswith('err')]
-    fzp_files = [f for f in os.listdir(dirname) if f.endswith('fzp')]
-    
-    if len(fzp_files) > 0:
-        num_list = []; dp_list = []; a0_list = []
-        for filename in filenames:       
-            num, dp, a0 = read_error_file(dirname,filename)
-            num_list.append(num); dp_list.append(dp); a0_list.append(a0)
-        
-        if len(filenames) < len(fzp_files):
-            for i in xrange(len(fzp_files)-len(filenames)):
-                num_list.append(0); dp_list.append(0); a0_list.append(0)
-        
-        return max(num_list), max(dp_list), max(a0_list)
-    else:
-        return float('nan'), float('nan'), float('nan')
-
-def convert_errors_to_constraints(config, num, dp, a0):
-    '''converts num, dp and a0 errors into constraint values
-       
-       values are reduced by the tolerance threshold, allowing the use of
-       EB, PB or PEB constraint handling strategies
-    '''
-    C_0 = num - config.num_const_thresh
-    C_1 = dp - config.dp_const_thresh
-    C_2 = a0 - config.a0_const_thresh
-        
-    return C_0, C_1, C_2
-
-def sort_fout_and_const(fout_lists):
-    '''sort many outputs f1, f2, f3, etc. to keep the worst one
-       if all fi respect the constraints, then fi are sorted to give worst fout
-       if not all fi respect constraint, the first one to not respect it is returned
-    '''
-
-    valids = []    
-    #check constraints:
-    for l in fout_lists:
-        if np.all(np.asarray(l[1:]) <= 0):      #all constraints are <= 0
-            valids.append(fout_lists.index(l))
-
-    #sort valids
-    if len(valids) == len(fout_lists):
-        to_conserve = fout_lists[valids[0]]
-        for i in valids:
-            if fout_lists[i][0] > to_conserve[0]:
-                to_conserve = fout_lists[i]
-
-        return to_conserve
-    else:
-        for i in xrange(len(fout_lists)):
-            if i not in valids:
-                return fout_lists[i]  #constains [fout, C_0, C_1, ...]
 
 def extract_num_from_fzp_name(filename):
     '''returns the numerical component of a vissim fzp file'''
@@ -717,16 +722,16 @@ def false_fzp(case,dirname,filename):
                 
     return 'temp_reordered_'+filename
 
-def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUptime):
+def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUptime, **kwarg):
     '''first checks for the compatibility of the given fzp, then process it'''
     case = check_fzp_content(dirname,filename)
 
     if case == 1:        
-        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit)
+        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit, **kwarg)
 
     elif case ==2 or case == 3:
         temp_fzp = false_fzp(case,dirname,filename)
-        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, temp_fzp), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit)
+        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, temp_fzp), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit, **kwarg)
         
         os.remove(os.path.join(dirname,temp_fzp))
 
@@ -811,7 +816,10 @@ def treat_Single_VissimOutput(filename, inputs):
 
     #lane change count by type       
     oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
-      
+    
+    #jam constraint
+    outputs.addSingleOutput('constraint', config.jam_const_thresh - calculate_jam_constraint(objects, config), filename)    
+
     if verbose:
         print ' == Lane change compilation done ==  |' + str(time.clock())
     
