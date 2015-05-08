@@ -981,32 +981,61 @@ def plot_qt(time_serie, gaps_serie, dirname, video_name, corridor, fps, min_time
     return
 
 def plot_dists(dirname, video_name, video_data, vissim_data, fout, simulationStepsPerTimeUnit, fps, seed_nums, normalized=True):
+    
+    #graph 1: vissim individual dist --> vissim concat dist    
     try:    
-        fig, ax = plt.subplots(2, 1, squeeze=True)
+        fig1, ax1 = plt.subplots(2, 1, squeeze=True)
         video_p_list  = [i/float(fps) for i in video_data.cumul_all.raw if i/fps < 60]
         vissim_p_list = [i/float(simulationStepsPerTimeUnit) for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 60]
         if len(video_p_list) > 0:
-            ax[0].hist(video_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'b', alpha=0.6, label='video data')
+            ax1[0].hist(video_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'b', alpha=0.6, label='video data')
         if len(vissim_p_list) > 0:
-            ax[0].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
-        ax[0].legend(loc='best', frameon=False)
-        ax[0].set_title('Comparison of Vissim data and Video data\n'+r'$f_{out}$'+' = ' + str(round(fout,4)))
+            ax1[0].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
+        ax1[0].legend(loc='best', frameon=False)
+        ax1[0].set_title('Comparison of Vissim data and Video data\n'+r'$f_{out}$'+' = ' + str(round(fout,4)))
     
         if len(vissim_p_list) > 0:
-            ax[1].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')    
+            ax1[1].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')    
         for j in xrange(len(vissim_data.distributions)):
             dist_p_list = [i/float(simulationStepsPerTimeUnit) for i in vissim_data.distributions[j].raw if i/simulationStepsPerTimeUnit < 60]
             if len(dist_p_list) > 0:
-                ax[1].hist(dist_p_list, normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(seed_nums[j]))
-        ax[1].legend(loc='best', frameon=False)
-        ax[1].set_title('Comparison of all Vissim data')
+                ax1[1].hist(dist_p_list, normed=normalized, histtype='stepfilled', bins = 100, alpha=0.4, label='vissim data - run #'+str(seed_nums[j]))
+        ax1[1].legend(loc='best', frameon=False)
+        ax1[1].set_title('Comparison of all Vissim data')
     
+        plt.subplots_adjust(hspace=0.3)
+        plt.savefig(os.path.join(dirname, 'Vissim distributions for '+str(video_name)))
+        plt.clf()
+        plt.close(fig1)    
+    except:
+        traceback.print_exc(file=open(os.path.join(dirname, 'Vissim_graphic.err'),'w'))
+                
+    #graph 2: vissim concat vs video / vissim concat cumulative vs video cumulative
+    try:
+        fig2, ax2 = plt.subplots(2, 1, squeeze=True)
+        video_p_list  = [i/float(fps) for i in video_data.cumul_all.raw if i/fps < 60]
+        vissim_p_list = [i/float(simulationStepsPerTimeUnit) for i in vissim_data.cumul_all.raw if i/simulationStepsPerTimeUnit < 60]
+        if len(video_p_list) > 0:
+            ax2[0].hist(video_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'b', alpha=0.6, label='video data')
+        if len(vissim_p_list) > 0:
+            ax2[0].hist(vissim_p_list, normed=normalized, histtype='stepfilled', bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
+        ax2[0].legend(loc='best', frameon=False)
+        ax2[0].set_title('Comparison of Vissim data and Video data\n'+r'$f_{out}$'+' = ' + str(round(fout,4)))
+
+        if len(video_p_list) > 0:
+            ax2[0].hist(video_p_list, normed=normalized, histtype='step', cumulative=True, bins = 100, color = 'b', alpha=0.6, label='video data')
+        if len(vissim_p_list) > 0:
+            ax2[0].hist(vissim_p_list, normed=normalized, histtype='step', cumulative=True, bins = 100, color = 'r', alpha=0.6, label='vissim concat data')
+        ax2[0].legend(loc='best', frameon=False)
+        ax2[0].set_title('Comparison of cumulative distributions\n'+r'$f_{out}$'+' = ' + str(round(fout,4)))
+
         plt.subplots_adjust(hspace=0.3)
         plt.savefig(os.path.join(dirname, 'Video and Vissim distributions for '+str(video_name)))
         plt.clf()
-        plt.close(fig)    
+        plt.close(fig2)
     except:
-        traceback.print_exc(file=open(os.path.join(dirname, 'Graphic.err'),'w'))
+        traceback.print_exc(file=open(os.path.join(dirname, 'Vissim&Video_graphic.err'),'w'))        
+        
     
 ##################
 # Drawing tools
