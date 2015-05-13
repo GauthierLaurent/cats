@@ -8,12 +8,13 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Libraries
 ##################
 ##natives
-import os, sys
+import os, sys, StringIO
 import numpy as np
 import random, time
 
 ##internals
 import pvc_mathTools as mathTools
+import pvc_workers   as workers
 
 ##################
 # Import Traffic Intelligence
@@ -34,28 +35,28 @@ def dist(x):
         stats = [1./l]*len(x)
     else:
         stats = [np.sum(xx==i)/l for i in nlist]
-    cumul = np.cumsum(stats)      
+    cumul = np.cumsum(stats)
     return cumul,nlist
-    
+
 class Sublvl:
     def __init__(self, raw):
         if raw != []:
             cumul,nlist  = dist(raw)
-            self.raw        = raw        
+            self.raw        = raw
             self.value      = nlist
             self.cumul      = cumul
         else:
-            self.raw        = []       
+            self.raw        = []
             self.value      = None
             self.cumul      = None
         self.computeStats()
-        
+
     def addFileName(self,filename):
         self.filename = filename
-        
+
     def getPercentile(self, percent):
         return np.percentile(self.raw, percent)
-        
+
     def computeStats(self):
         if self.raw != []:
             self.mean       = np.mean(self.raw)
@@ -71,10 +72,10 @@ class Sublvl:
             self.thirdQuart = None
             self.var        = None
             self.std        = None
-            
+
     def getStats(self):
         return self.mean, self.firstQuart, self.median, self.thirdQuart, self.var, self.std
-                   
+
 class Stats:
     def __init__(self, raw):
         self.distributions  = []
@@ -82,21 +83,21 @@ class Stats:
         if raw != []:
             for l in raw:
                 self.distributions.append(Sublvl(l))
-            self.regen_cumul_all()                                
+            self.regen_cumul_all()
         else:
             self.cumul_all = Sublvl(raw)
-    
+
     def add_one_dist_list(self, raw):
         '''adds a raw data list to the distributions'''
         self.distributions.append(Sublvl(raw))
         self.regen_cumul_all()
-        
+
     def add_many_dist_list(self, raw_list):
         '''needs a list of raw data list'''
         for raw in raw_list:
             self.distributions.append(Sublvl(raw))
         self.regen_cumul_all()
-        
+
     def pop_dist_list(self, mylist):
         '''mylist must refer to the indexes of the list of distributions to pop'''
         if len(mylist) > 0:
@@ -104,7 +105,7 @@ class Stats:
                 if len(self.distributions) >= i:
                     self.distributions.pop(i)
             self.regen_cumul_all()
-        
+
     def regen_cumul_all(self):
         '''recalculates the cumum_all distribution'''
         allvalues = []
@@ -121,23 +122,23 @@ class Stats:
                 stats1.add_one_dist_list(dist.raw)
                 if hasattr(dist,'filename'):
                     stats1.distributions[-1].addFileName(dist.filename)
-        
+
 class SingleValueStats:
     def __init__(self,raw):
         self.raw = raw
         self.recalculate()
-        
+
     def addOne(self,number):
         self.raw.append(number)
         self.raw.sort()
         self.recalculate()
-        
+
     def addMany(self,mylist):
         for i in mylist:
             self.raw.append(i)
         self.raw.sort()
         self.recalculate()
-        
+
     def popList(self,mylist):
         '''mylist must refer to the indexes of the numbers to pop'''
         if len(mylist) > 0:
@@ -145,7 +146,7 @@ class SingleValueStats:
                 if len(self.raw) >= i:
                     self.raw.pop(i)
             self.recalculate()
-        
+
     def recalculate(self):
         '''calculates usfull data'''
         if self.raw != []:
@@ -169,6 +170,57 @@ class SingleValueStats:
             new_raw += stat.raw
         stats1.addMany(new_raw)
 
+class FileConstraint:
+    def __init__(self):
+        self.constraints = []
+
+    def addCi(self,ci):
+        self.constraints += [ci]
+
+    def addFilename(self,filename):
+        self.filename = filename
+
+class Constraints:
+    def __init__(self):
+        self.master = []
+        self.files = []
+
+    def getFilenames(self):
+        return [f.filename for f in self.files]
+
+    def addCi(self,ci,filename):
+
+        if filename in self.getFilenames():
+            self.files[self.getFilenames().index(filename)].addCi(ci)
+        else:
+            self.files += [FileConstraint()]
+            self.files[-1].addFilename(filename)
+            self.files[-1].addCi(ci)
+        self.regenMaster()
+
+    def regenMaster(self):
+        array = [f.constraints for f in self.files]
+        if isinstance(map(None, *array)[0],tuple):
+            self.master = [max(row) for row in map(None, *array)]
+        else:
+            self.master = [row for row in map(None, *array)]
+
+    def popOne(self, i):
+        self.files.pop(i)
+        self.regenMaster()
+
+    def popMany(self, ilist):
+        for i in reversed(ilist):
+            self.popOne(i)
+
+    @classmethod
+    def concat(cls, const1, *consts):
+        '''concanate all the distributions of the constraints class variables into the first one'''
+        for const in consts:
+            for FileConst in const.files:
+                for ci in FileConst.constraints:
+                    const1.addCi(ci, FileConst.filename)
+
 class Derived_data:
     def __init__(self):
         self.flow       = SingleValueStats([])
@@ -180,26 +232,26 @@ class Derived_data:
         self.manLCagap  = Stats([])
         self.manLCbgap  = Stats([])
         self.forSpeeds  = Stats([])
-        self.constraint = SingleValueStats([])
-    
+        self.constraint = Constraints()
+
     def addLanes(self):
         self.flow.lane = []
-        
+
     def editLaneCount(self, lane_num, count):
         if not hasattr(self.flow,'lane'):
             self.addLanes()
 
         if not isinstance(count, list):
             count = [count]
-            
-        if lane_num < len(self.flow.lane):                
+
+        if lane_num < len(self.flow.lane):
             self.flow.lane[lane_num] = SingleValueStats(count)
         else:
             pad = float('NaN')
             for l in xrange(len(self.flow.lane),lane_num-1):
                 self.flow.lane.append(pad)
             self.flow.lane.append(SingleValueStats(count))
-            
+
     def getLaneCounts(self):
         if hasattr(self.flow,'lane'):
             out = []
@@ -209,56 +261,65 @@ class Derived_data:
                 else:
                     out.append(self.flow.lane[c])
             return out
-            
+
     def addSingleOutput(self, attr_name, value, filename):
         '''adds the value and the filename to the attribute given'''
         if isinstance(getattr(self, attr_name),SingleValueStats):
             getattr(self, attr_name).addOne(value)
-            
+
         if isinstance(getattr(self, attr_name),Stats):
             getattr(self, attr_name).add_one_dist_list(value)
             getattr(getattr(self, attr_name),'distributions')[-1].addFileName(filename)
-    
+
+        if isinstance(getattr(self, attr_name),Constraints):
+            getattr(self, attr_name).addCi(value, filename)
+
     def addManyOutputs(self, output_list):
-        '''calls addSingleOutput() for each output in output_list        
+        '''calls addSingleOutput() for each output in output_list
            output_list = [attr_name, value, filename]'''
         for output in output_list:
-            self.addSingleOutput(self, output[0], output[1], output[2])            
-    
+            self.addSingleOutput(self, output[0], output[1], output[2])
+
     def popSingleOutputList(self, attr_name, index_list):
         if isinstance(getattr(self, attr_name),SingleValueStats):
             getattr(self, attr_name).popList(index_list)
-            
+
         if isinstance(getattr(self, attr_name),Stats):
             getattr(self, attr_name).pop_dist_list(index_list)
-            
+
+        if isinstance(getattr(self, attr_name),Constraints):
+            getattr(self, attr_name).popMany(index_list)
+
     def popManyOutputList(self, output_list, index_list):
-        '''calls popSingleOutputList() for each output in output_list        
+        '''calls popSingleOutputList() for each output in output_list
            output_list = [attr_name, index_list]'''
         for output in output_list:
-            self.popSingleOutputList(output, index_list)            
-        
-    def getFilenames(self):         
+            self.popSingleOutputList(output, index_list)
+
+    def getFilenames(self):
             filenames = []
             for attr in [attr for attr in dir(self) if callable(attr) is False and '__' not in attr and 'get' not in attr and 'add' not in attr and 'edit' not in attr]:
-                if isinstance(getattr(self, attr),Stats):                
-                    try:                    
+                if isinstance(getattr(self, attr),Stats):
+                    try:
                         filenames += [getattr(f,'filename') for f in getattr(self, attr).distributions if getattr(f,'filename') not in filenames]
                     except:
                         pass
             return filenames
-    
-    @classmethod        
+
+    @classmethod
     def concat(cls, outputs1, outputs2):
         for attr in [attr for attr in dir(outputs2) if callable(attr) is False and '__' not in attr and 'Get' not in attr and 'add' not in attr]:
-            
+
             if isinstance(getattr(outputs2, attr),SingleValueStats):
                 SingleValueStats.concat(getattr(outputs1,attr),getattr(outputs2,attr))
-                
+
             if isinstance(getattr(outputs2, attr),Stats):
                 Stats.concat(getattr(outputs1,attr),getattr(outputs2,attr))
 
-        if hasattr(outputs2.flow,'lane'):                
+            if isinstance(getattr(outputs2, attr),Constraints):
+                Constraints.concat(getattr(outputs1,attr),getattr(outputs2,attr))
+
+        if hasattr(outputs2.flow,'lane'):
                 if hasattr(outputs1.flow,'lane'):
                     concat_lanes = mathTools.addLists(outputs2.flow.lane, outputs2.flow.lane)
                     for c in xrange(len(concat_lanes)):
@@ -270,9 +331,56 @@ class Derived_data:
 ##################
 # Constraints
 ##################
+def smartCountCollisionsVissim(dirname, filename, config, lanes = 'all', collisionTimeDifference = 0.2):
+    '''splits the fzp in smaller fzp files to prevent overflow errors when invoking moving.countCollisionsVissim'''
+    #check for lenght
+    temp_file_lines = []
+    header = []
+    with open(os.path.join(dirname,filename),'r') as fzp:
+        for line in fzp:
+            if line.startswith('$'):
+                header += line
+            else:
+                temp_file_lines += line
+
+    #treating small enough files
+    if len(temp_file_lines) <= config.fzp_lines_collisions:
+        nCollisions = storage.countCollisionsVissim(os.path.join(dirname,filename), lanes = lanes, collisionTimeDifference = 0.2)
+
+    else:
+        nCollisions = 0
+
+        #creating temp fzp files
+        chunks = workers.cleanChunks(config.fzp_lines_collisions, temp_file_lines)
+        for c in xrange(len(chunks)):
+            tmp = ''
+            for line in header:
+                tmp += line
+            for line in chunks[c]:
+                tmp += line
+
+            nCollisions += storage.countCollisionsVissim(StringIO.StringIO(tmp), lanes = lanes, collisionTimeDifference = 0.2)
+
+
+            #with open(os.path.join(dirname, str(os.getpid())+'_tmp_'+filename.strip('.fzp')+'_'+str(c)+'.fzp'),'w') as tmp:
+            #    for line in header:
+            #        tmp.write(line)
+            #    for line in chunks[c]:
+            #        tmp.write(line)
+
+        #tmp_files = [f for f in os.listdir(os.path.join(dirname)) if str(os.getpid()) in f and 'tmp' in f and f.endswith('.fzp')]
+
+        #for tmp_fzp in tmp_files:
+        #    nCollisions += storage.countCollisionsVissim(os.path.join(dirname,tmp_fzp), lanes = lanes, collisionTimeDifference = 0.2)
+
+        #for temp_fzp in reversed(tmp_files):
+        #    os.remove(os.path.join(dirname,tmp_fzp))
+
+    return nCollisions
+
 def calculate_jam_constraint(objects, config):
     '''From the fzp, calculates if a jam occurs'''
-    jam = 0        
+    jam = 0
     for o in objects:
         boolarray = np.asarray(o.curvilinearVelocities.getXCoordinates()) == 0
         nbr_zeros = np.count_nonzero(boolarray)
@@ -291,16 +399,16 @@ def read_error_file(dirname,filename):
     num = 0         #number of vehicles to generate
     with open(os.path.join(dirname,filename),'r') as err:
         for line in err:
-            
+
             if 'The expected trajectory of vehicle' in line and 'cannot be determined' in line:
                 if 'expected deceleration is positive' in line:
                     case_dp += 1
                 if 'expected acceleration is zero' in line:
                     case_a0 += 1
-                    
+
             if 'Vehicle input' in line and 'could not be finished completely' in line:
                 num += float(line.strip().split('remain: ')[-1].split(' ')[0])
-                
+
     return num, case_dp, case_a0
 
 def search_folder_for_error_files(dirname, fzpname = None):
@@ -311,31 +419,31 @@ def search_folder_for_error_files(dirname, fzpname = None):
     '''
     filenames = [f for f in os.listdir(dirname) if f.endswith('err')]
     fzp_files = [f for f in os.listdir(dirname) if f.endswith('fzp')]
-    
+
     if len(fzp_files) > 0:
         num_list = []; dp_list = []; a0_list = []
-        for filename in filenames:       
+        for filename in filenames:
             num, dp, a0 = read_error_file(dirname,filename)
             num_list.append(num); dp_list.append(dp); a0_list.append(a0)
-        
+
         if len(filenames) < len(fzp_files):
             for i in xrange(len(fzp_files)-len(filenames)):
                 num_list.append(0); dp_list.append(0); a0_list.append(0)
-        
+
         return max(num_list), max(dp_list), max(a0_list)
     else:
         return float('nan'), float('nan'), float('nan')
 
 def convert_errors_to_constraints(config, num, dp, a0):
     '''converts num, dp and a0 errors into constraint values
-       
+
        values are reduced by the tolerance threshold, allowing the use of
        EB, PB or PEB constraint handling strategies
     '''
     C_0 = num - config.num_const_thresh
     C_1 = dp - config.dp_const_thresh
     C_2 = a0 - config.a0_const_thresh
-        
+
     return C_0, C_1, C_2
 
 def sort_fout_and_const(fout_lists):
@@ -344,7 +452,7 @@ def sort_fout_and_const(fout_lists):
        if not all fi respect constraint, the first one to not respect it is returned
     '''
 
-    valids = []    
+    valids = []
     #check constraints:
     for l in fout_lists:
         if np.all(np.asarray(l[1:]) <= 0):      #all constraints are <= 0
@@ -362,7 +470,7 @@ def sort_fout_and_const(fout_lists):
         for i in xrange(len(fout_lists)):
             if i not in valids:
                 return fout_lists[i]  #constains [fout, C_0, C_1, ...]
-                        
+
 ##################
 # Output treatment tools
 ##################
@@ -370,20 +478,20 @@ def calculateInstants(objects, s, lane):
     instants = []
     speeds = []
     for o in objects:
-        t = o.curvilinearPositions.getIntersections(s, lane)      
-        if t != []:            
+        t = o.curvilinearPositions.getIntersections(s, lane)
+        if t != []:
             instants.append(o.getFirstInstant()+t[0])
             speeds.append(o.curvilinearVelocities.getXCoordinates()[int(np.floor(t[0]))])
-    instants.sort()          
+    instants.sort()
     return instants, speeds
 
 def calculateGaps(sorted_instants):
     x = np.asarray(sorted_instants)
     return list(x[1:]-x[:-1])
-    
+
 def forwardGaps(objects, s, lane):
     '''Calculates all gaps on a given lane and for a given point s'''
-    
+
     instants, speeds = calculateInstants(objects, s, lane)
     gaps = calculateGaps(instants)
     #for g in reversed(xrange(len(gaps))):
@@ -398,16 +506,16 @@ def laneChangeGaps(listDict, laneDict, objects):
           changing vehicule
         - bgaps reprensent the gap present before the insertion of the lane
           changing vehicule'''
-    
+
     x = []  #agaps construction variable
     y = []  #bgaps construction variable
     for obj in listDict.keys():
-        
+
         for change in range(len(listDict[obj])):
             lane = listDict[obj][change][2]                                                     #Dict[i][1] = lane after lane change
-            stepNum = listDict[obj][change][4]                                                  #Dict[i][2] = time of the lane change 
+            stepNum = listDict[obj][change][4]                                                  #Dict[i][2] = time of the lane change
             s = objects[obj].curvilinearPositions.getXCoordinates()[listDict[obj][change][3]]
-				
+
             #determining the gap
             instants = []
             for candidate in laneDict[lane]:
@@ -416,14 +524,14 @@ def laneChangeGaps(listDict, laneDict, objects):
                     if t != []:
                         #if objects[candidate].getFirstInstant()+t[0] > stepNum:
                         instants.append(objects[candidate].getFirstInstant()+t[0] - stepNum)
-	
-            instants.sort() 
-            if instants != []: 
+
+            instants.sort()
+            if instants != []:
                 for i in range(len(instants)):
                     if instants[i] > 0:
                         x.append(instants[i])
                         y.append(instants[i] - instants[i -1])
-                        
+
                         break
 
     agaps = np.asarray(x)
@@ -433,13 +541,13 @@ def laneChangeGaps(listDict, laneDict, objects):
 
 def appendDicts(candidate, dictionnary, vissim_number, lane_before, lane_after, trajectory_pos, exact_time, position):
     '''adds {candidate: position_before, position_after, frame_after} to dictionnary'''
-    if candidate not in dictionnary:       
+    if candidate not in dictionnary:
         dictionnary[candidate] = [[vissim_number,lane_before,lane_after,trajectory_pos,exact_time,position]]
     else:
         dictionnary[candidate].append([vissim_number,lane_before,lane_after,trajectory_pos,exact_time,position])
-        
+
     return dictionnary
-    
+
 def start_is_same_corridor_as_end(single_object, corridors, data_type):
     '''checks data to determine if the start corridor  is the same as the end corridor'''
     first_appeareance = None
@@ -455,15 +563,15 @@ def start_is_same_corridor_as_end(single_object, corridors, data_type):
 
 def find_all_LC(single_object, to_eval, link_corr_dict, data_type):
     '''iterates over the lanes taken by an object and checks for lane changes
-    
+
        for vissim, it is considered that a link change is not a lane change
-       
+
        returns a list of observed changes perr corridor (list of list):
            [corridor{0}_LC_list, corridor{1}_LC_list, ...]
-           
+
            with corridor{i}_LC_list = [LC{0}, LC{1}, ...]
-           
-           and LC{i} the occuring position in o.curvilinearPositions.lanes    
+
+           and LC{i} the occuring position in o.curvilinearPositions.lanes
     '''
 
     LC_positions = []
@@ -472,7 +580,7 @@ def find_all_LC(single_object, to_eval, link_corr_dict, data_type):
     current_corr = None
     #itterating over lanes
     for i in (xrange(len(single_object.curvilinearPositions.lanes)-1)):
-        
+
         if data_type == 'vissim':
             O_lane = int(single_object.curvilinearPositions.lanes[i].split('_')[1])
             D_lane = int(single_object.curvilinearPositions.lanes[i+1].split('_')[1])
@@ -481,20 +589,20 @@ def find_all_LC(single_object, to_eval, link_corr_dict, data_type):
             O_lane = int(single_object.curvilinearPositions.lanes[i])
             D_lane = int(single_object.curvilinearPositions.lanes[i+1])
             O_link = int(single_object.curvilinearPositions.lanes[i])
-        
+
         if data_type == 'vissim':
             if int(single_object.curvilinearPositions.lanes[i].split('_')[0]) != int(single_object.curvilinearPositions.lanes[i+1].split('_')[0]):
                 continue
-            
+
         #keeping only LC which origine is in an evaluated link
         if int(O_link) in to_eval:
             #if current_link is None, we never yet saw a valid point. Thus, we need to set the current working corridor the the present corridor
             if current_corr is None:
                 current_corr = link_corr_dict[O_link]
-            
+
             #if we observe a lane change:
             if O_lane != D_lane:
-                
+
                 #if the corridor of the observed point is the same as the current working corridor
                 if current_corr == link_corr_dict[O_link]:
                     #simple append
@@ -506,22 +614,22 @@ def find_all_LC(single_object, to_eval, link_corr_dict, data_type):
                     current_corr = link_corr_dict[O_link]
     #end of the loop: adding the last corridor we worked on
     LC_positions.append(LC_on_this_corr)
-        
+
     return LC_positions
-    
+
 def LC_is_toward_exit(lane1,lane2,exits):
     '''checks if a LC is in the same direction as the exit direction given for the corridor'''
     if int(lane2) > int(lane1):
         turn = 'g'
     else:
         turn = 'r'
-    return turn == exits                
+    return turn == exits
 
 def caractLC(previous, lane1, lane2, exits):
     '''finds if a LC is considered opportunist ('opp') or mandatory ('man')
-    
+
        only for case: start corridor != end corridor'''
-    if LC_is_toward_exit(lane1,lane2,exits):                        
+    if LC_is_toward_exit(lane1,lane2,exits):
         #if the LC is the last LC of the corridor, and finishes at the rightmost,
         #it is set as 'man', if it finisheds in lans > 1, then 'opp'
         #  --> the last one of the last corridor is actually undefined if on lane 1,
@@ -529,7 +637,7 @@ def caractLC(previous, lane1, lane2, exits):
         #      corridor is already adressed by the first 'if'
         if previous == None:
             if int(lane2) > 1:
-                return 'opp'                               
+                return 'opp'
             else:
                 return 'man'
         else:
@@ -543,14 +651,14 @@ def caractLC(previous, lane1, lane2, exits):
 
 def calculate_laneChange(objects, corridors, data_type):
     '''Sorts mandatory and opportunistic lane changes'''
-    #Dictionaries    
+    #Dictionaries
     oppObjDict = {}
     manObjDict = {}
     link_exits = {}
     link_corr  = {}
     laneDict = {}
-    
-    to_eval = []    
+
+    to_eval = []
     for j in xrange(len(corridors)):
         to_eval += corridors[j].to_eval
         for l in corridors[j].to_eval:
@@ -558,15 +666,15 @@ def calculate_laneChange(objects, corridors, data_type):
                 link_exits[l] = corridors[j].direction
             if l not in link_corr:
                 link_corr[l] = j
-    
+
     for o in objects:
-        
+
         #building the lane dictionnary
         for i in set(o.curvilinearPositions.lanes):
             if i not in laneDict: laneDict[i] = []
-            if objects.index(o) not in laneDict[i]: laneDict[i].append(objects.index(o))        
-        
-        #getting all lane changes in the trajectory            
+            if objects.index(o) not in laneDict[i]: laneDict[i].append(objects.index(o))
+
+        #getting all lane changes in the trajectory
         LC_positions = find_all_LC(o, to_eval, link_corr, data_type)
         LC_type_list = []
         #if there is at least one LC
@@ -588,30 +696,30 @@ def calculate_laneChange(objects, corridors, data_type):
                             lane1 = o.curvilinearPositions.lanes[i]
                             lane2 = o.curvilinearPositions.lanes[i+1]
                             exits = link_exits[int(o.curvilinearPositions.lanes[i])]
-                            
+
                         if LC_positions[co].index(i) == len(LC_positions[co])-1:
                             previous = None
                         else:
                             previous = LC_type_list[-1]
-                            
+
                         LC_type = caractLC(previous, lane1, lane2, exits)
-                        LC_type_list.append(LC_type)                   
-                        
+                        LC_type_list.append(LC_type)
+
                         if LC_type == 'opp':
                             oppObjDict = appendDicts(objects.index(o), oppObjDict, o.getNum(), o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1, i+1+o.getFirstInstant(), o.curvilinearPositions.getXCoordinates()[i+1])
                         else:
                             manObjDict = appendDicts(objects.index(o), manObjDict, o.getNum(), o.curvilinearPositions.lanes[i], o.curvilinearPositions.lanes[i+1], i+1, i+1+o.getFirstInstant(), o.curvilinearPositions.getXCoordinates()[i+1])
 
     return laneDict, oppObjDict, manObjDict
-    
+
 def laneChange(objects, corridors):
-    '''classifies the lane changes between vissim and video data then passes to the calculating function'''                 
+    '''classifies the lane changes between vissim and video data then passes to the calculating function'''
     #Vissim data
     if isinstance(objects[0].curvilinearPositions.lanes[0],str):
         laneDict, oppObjDict, manObjDict = calculate_laneChange(objects, corridors, 'vissim')
     else:
         laneDict, oppObjDict, manObjDict = calculate_laneChange(objects, corridors, 'video')
-                
+
     return oppObjDict, manObjDict, laneDict
 
 def extract_num_from_fzp_name(filename):
@@ -624,10 +732,10 @@ def extract_num_from_fzp_list(filenames):
     for filename in filenames:
         num_list.append(extract_num_from_fzp_name(filename))
     return num_list
-    
+
 def check_fzp_content(dirname,filename):
     '''classifies a fzp file according to the column headers
-    
+
        case 1: everything is in place where traffic intelligence expects it
        case 2: every needed information is provided, but not in the right order
        case 3: the poslat information is missing, it will be assumed to be 0.5 everywhere
@@ -637,18 +745,18 @@ def check_fzp_content(dirname,filename):
     with open(os.path.join(dirname,filename)) as fzp:
         for i in xrange(1):
             fzp.readline()
-        
+
         for line in fzp:
             if '$' not in line:
                 pass
             else:
                 header_line = line.strip().strip('$').lower().split(';')
                 break
-    
+
     #classifying with available columns
     if 'vehicle:simsec' in header_line[0] and 'no' in header_line[1] and 'lane\\link\\no' in header_line[2] and 'lane\\index' in header_line[3] and 'pos'in header_line[4] and 'poslat' in header_line[5]:
         case = 1
-    elif 'vehicle:simsec' in header_line and 'no' in header_line and 'lane\\link\\no' in header_line and 'lane\\index' in header_line and 'pos'in header_line:       
+    elif 'vehicle:simsec' in header_line and 'no' in header_line and 'lane\\link\\no' in header_line and 'lane\\index' in header_line and 'pos'in header_line:
         if 'poslat' in header_line:
             case = 2
         else:
@@ -672,18 +780,18 @@ def check_fzp_content(dirname,filename):
         sys.exit()
 
     return case
-    
+
 def false_fzp(case,dirname,filename):
     '''Reorders Case 2 and Case 3 fzp files with required information by the
        traffic intelligence function
-       
+
        Returns the name of the temporary file created
-    
+
        information on .fzp files can be found in section 10.8.2.1 of the manual'''
-    
+
     false_fzp = ''
     with open(os.path.join(dirname,filename),'r') as fzp:
-        #skip header        
+        #skip header
         for i in xrange(1):
             false_fzp += fzp.readline()
 
@@ -694,7 +802,7 @@ def false_fzp(case,dirname,filename):
             else:
                 false_fzp += line
                 break
-        
+
         #reorder the file
         order = line.strip().strip('$').lower().split(';')
         for line in fzp:
@@ -706,80 +814,80 @@ def false_fzp(case,dirname,filename):
                 line_build += line_infos[order.index('lane\\link\\no')] + ';'
                 line_build += line_infos[order.index('lane\\index')] + ';'
                 line_build += line_infos[order.index('pos')] + ';'
-                
+
                 if case == 2:
                     line_build += line_infos[order.index('poslat')]
                 elif case == 3:
                     line_build += '0.5'
-                
+
                 line_build += '\n'
-                
+
                 false_fzp += line_build
-                
+
     with open(os.path.join(dirname,'temp_reordered_'+filename),'w') as temp_fzp:
         for line in false_fzp:
             temp_fzp.write(line)
-                
+
     return 'temp_reordered_'+filename
 
 def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUptime, **kwarg):
     '''first checks for the compatibility of the given fzp, then process it'''
     case = check_fzp_content(dirname,filename)
 
-    if case == 1:        
+    if case == 1:
         objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit, **kwarg)
 
     elif case ==2 or case == 3:
         temp_fzp = false_fzp(case,dirname,filename)
         objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, temp_fzp), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit, **kwarg)
-        
+
         os.remove(os.path.join(dirname,temp_fzp))
 
-    return objects   
-    
+    return objects
+
 def randomGaussRange(low, high, n):
-    out = []    
+    out = []
     mu = random.uniform(low, high)
     sigma = random.uniform(0, (mu - low) )
     while len(out) < n:
         num = (random.normalvariate(mu, sigma))
         if num < high and num > low:
             out.append(num)
-        
+
     return out
 
 def generateRandomOutputs(parameters, rand_seed_shake, outputs):
     '''This fonction serves to bypass everything produced by Vissim to gain
        speed while testing the code'''
     RandSeed = parameters[1]
-    NumRuns = parameters[2]   
-        
+    NumRuns = parameters[2]
+
     for i in range(NumRuns):
         random.seed(RandSeed + i + rand_seed_shake)
-        outputs.addSingleOutput('flow',       random.uniform(2,30),       'random_gen')        
+        outputs.addSingleOutput('flow',       random.uniform(2,30),       'random_gen')
         outputs.addSingleOutput('oppLCcount', random.uniform(2,30),       'random_gen')
-        outputs.addSingleOutput('manLCcount', random.uniform(1200,2000),  'random_gen')        
-        outputs.addSingleOutput('forFMgap',   randomGaussRange(1,20,100), 'random_gen') 
-        outputs.addSingleOutput('forSpeeds',  randomGaussRange(1,20,100), 'random_gen')        
-        outputs.addSingleOutput('manLCagap',  randomGaussRange(1,20,100), 'random_gen') 
+        outputs.addSingleOutput('manLCcount', random.uniform(1200,2000),  'random_gen')
+        outputs.addSingleOutput('forFMgap',   randomGaussRange(1,20,100), 'random_gen')
+        outputs.addSingleOutput('forSpeeds',  randomGaussRange(1,20,100), 'random_gen')
+        outputs.addSingleOutput('manLCagap',  randomGaussRange(1,20,100), 'random_gen')
         outputs.addSingleOutput('manLCagap',  randomGaussRange(5,10,100), 'random_gen')
-        outputs.addSingleOutput('oppLCagap',  randomGaussRange(7,10,100), 'random_gen') 
         outputs.addSingleOutput('oppLCagap',  randomGaussRange(7,10,100), 'random_gen')
-    
+        outputs.addSingleOutput('oppLCagap',  randomGaussRange(7,10,100), 'random_gen')
+
     return outputs
 
 def treatVissimOutputs(files, inputs):
     '''Treat outputs in the given folder '''
-    
+
     for filename in files:
         outputs = treat_Single_VissimOutput(filename, inputs)
         inputs[3] = outputs
-        
+
     return outputs
 
 def treat_Single_VissimOutput(filename, inputs):
     '''Treat outputs in the given folder '''
-    
+
     folderpath                 = inputs[0]
     verbose                    = inputs[1]
     corridors                  = inputs[2]
@@ -787,16 +895,16 @@ def treat_Single_VissimOutput(filename, inputs):
     config                     = inputs[4]
 
     if verbose:
-        print ' === Starting calculations for ' + filename + ' ===  |'    
+        print ' === Starting calculations for ' + filename + ' ===  |'
 
     objects = readTrajectoryFromFZP(folderpath, filename, config.sim_steps,  config.warm_up_time)
     outputs.addSingleOutput('flow', len(objects), filename)
-    
+
     #lane building block
     to_eval = []
     for j in xrange(len(corridors)):
         to_eval += corridors[j].to_eval
-   
+
     lanes = {}
     for o in objects:
         o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
@@ -814,35 +922,48 @@ def treat_Single_VissimOutput(filename, inputs):
                         lanes[str(lane)][1] = s
 
 
-    #lane change count by type       
+    #lane change count by type
     oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
-    
-    #jam constraint
-    outputs.addSingleOutput('constraint', config.jam_const_thresh - calculate_jam_constraint(objects, config), filename)    
 
     if verbose:
         print ' == Lane change compilation done ==  |' + str(time.clock())
-    
+
+    #constraint
+    outputs.addSingleOutput('constraint', smartCountCollisionsVissim(folderpath, filename, config, lanes = to_eval), filename)
+
+    if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
+        num, dp, a0 = read_error_file(folderpath, filename.strip('.fzp')+'.err')
+        C_1, C_2, C_3 = convert_errors_to_constraints(config, num, dp, a0)
+    else:
+        C_1 = 0; C_2 = 0; C_3 = 0
+
+    outputs.addSingleOutput('constraint', C_1, filename)
+    outputs.addSingleOutput('constraint', C_2, filename)
+    outputs.addSingleOutput('constraint', C_3, filename)
+
+    if verbose:
+        print ' == Constraints calculations done ==  |' + str(time.clock())
+
     outputs.addSingleOutput('oppLCcount', sum([len(oppObjDict[i]) for i in oppObjDict]), filename)
     outputs.addSingleOutput('manLCcount', sum([len(manObjDict[i]) for i in manObjDict]), filename)
-  
+
     if config.cmp_for_gaps:
         raw_forward_gaps = []
-        raw_forward_speeds = []  
+        raw_forward_speeds = []
         #forward gap analysis
-        for index,lane in enumerate(lanes):  
+        for index,lane in enumerate(lanes):
             s = (0.5*lanes[str(lane)][1]-0.5*lanes[str(lane)][0])
             raw_gaps, raw_speeds = forwardGaps(objects, s, lane)
             if raw_gaps != []: raw_forward_gaps += list(raw_gaps)
             if raw_speeds != []: raw_forward_speeds += list(raw_speeds)
             if verbose:
                 print ' == Forward gaps calculation done for lane ' + str(index +1) + '/' + str(len(lanes)) + ' ==  |' + str(time.clock()) + ' | ' + str(len(raw_gaps))
-        outputs.addSingleOutput('forFMgap', raw_forward_gaps, filename) 
+        outputs.addSingleOutput('forFMgap', raw_forward_gaps, filename)
         outputs.addSingleOutput('forSpeeds', raw_forward_speeds, filename)
 
-    if config.cmp_man_lcgaps:    
+    if config.cmp_man_lcgaps:
         raw_man_LC_agaps    = []
-        raw_man_LC_bgaps    = []            
+        raw_man_LC_bgaps    = []
 
         #mandatory lane change gaps
         agaps, bgaps = laneChangeGaps(manObjDict, laneDict, objects)
@@ -850,7 +971,7 @@ def treat_Single_VissimOutput(filename, inputs):
         if bgaps.any(): raw_man_LC_bgaps = bgaps.tolist()
         if verbose:
             print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
-        outputs.addSingleOutput('manLCagap', raw_man_LC_agaps, filename) 
+        outputs.addSingleOutput('manLCagap', raw_man_LC_agaps, filename)
         outputs.addSingleOutput('manLCagap', raw_man_LC_bgaps, filename)
 
     if config.cmp_opp_lcgaps:
@@ -863,10 +984,10 @@ def treat_Single_VissimOutput(filename, inputs):
         if bgaps.any(): raw_man_LC_bgaps = bgaps.tolist()
         if verbose:
             print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
-        outputs.addSingleOutput('oppLCagap', raw_opp_LC_agaps, filename) 
+        outputs.addSingleOutput('oppLCagap', raw_opp_LC_agaps, filename)
         outputs.addSingleOutput('oppLCagap', raw_opp_LC_bgaps, filename)
-    
-    if verbose:     
+
+    if verbose:
         print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
-        
+
     return outputs
