@@ -7,7 +7,7 @@ Created on Thu Jul 03 11:28:53 2014
 
 #this will be used to verify if the serialised data is still matching the data processsed by pcvtools
 
-        
+
 ##################
 # Import Libraries
 ##################
@@ -51,10 +51,10 @@ def treat_stats_list(stats_list):
 def filter_dist_with_ks(dist_list, treshold):
     '''filter a list of distribution with the Komolgorov-Smirnov test to
        keep only the distributions with the d value lower than threshold.
-       
+
        returns a concatenated distribution and the list of indexes of the
        rejected distributions
-       
+
        IMPORTANT: does not support stat list as input
     '''
 
@@ -71,36 +71,35 @@ def filter_dist_with_ks(dist_list, treshold):
             rejected.append(i)
 
     return rejected
-    
+
 def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
     '''Test a range of values with the kolmolgorov-Smirnov test'''
 
     D_statistic_list = []
     p_value_list = []
-
     for i in range(len(calculated_value)):
         if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
-            D_statistic, p_value = ks_twosamp([p/float(simulationStepsPerTimeUnit) for p in video_value[i].cumul_all.raw], [p/float(fps) for p in calculated_value[i].cumul_all.raw])
+            D_statistic, p_value = ks_twosamp([p/float(fps) for p in video_value[i].cumul_all.raw], [p/float(simulationStepsPerTimeUnit) for p in calculated_value[i].cumul_all.raw])
             D_statistic_list.append(calculated_value[i].cumul_all.mean)     #value (mean)
             D_statistic_list.append(D_statistic)                            #value (delta)
             p_value_list.append(p_value)
         else:
             D_statistic_list.append('0.00') #value (mean)
             D_statistic_list.append('DNE')  #value (delta)
-    
+
     return D_statistic_list
-    
+
 def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
-    
+
     if len(video_value) > 0 and len(calculated_value) > 0:
         D_statistic, p_value = ks_twosamp([p/float(simulationStepsPerTimeUnit) for p in video_value], [p/float(fps) for p in calculated_value])
     else:
         D_statistic = 'DNE'
 
     return D_statistic
-   
-################################ 
-#        Network Calibration class       
+
+################################
+#        Network Calibration class
 ################################
 class Network:
     def __init__(self,inpx_path,traj_path_list):
@@ -109,46 +108,46 @@ class Network:
         if isinstance(traj_path_list, list):
             self.traj_paths = traj_path_list
         else:
-            self.traj_paths = [traj_path_list] 
-        
+            self.traj_paths = [traj_path_list]
+
     def addtraj(self,traj):
         self.traj_paths = self.traj_paths + [traj]
-                       
+
     def addCorridor(self, corridor):
         if isinstance(corridor,list):
             self.corridors = corridor
         else:
             self.corridors = [corridor]
-        
+
     def addVissim(self, vissim):
         self.vissim = vissim
-        
+
     def addVideoComparison(self,data_list):
         try:
             self.videoComparison.append(data_list)
         except:
-            self.videoComparison = [data_list]        
-    
-    @staticmethod  
+            self.videoComparison = [data_list]
+
+    @staticmethod
     def buildNetworkObjects(config):
-        
+
         actv_network_list = [attr for attr in dir(config) if 'active_network'     in attr]
-        path_to_inpx_list = [attr for attr in dir(config) if 'path_to_inpx_file'  in attr]        
+        path_to_inpx_list = [attr for attr in dir(config) if 'path_to_inpx_file'  in attr]
         path_to_csv__list = [attr for attr in dir(config) if 'path_to_csv_net'    in attr]
         path_to_vid__list = [attr for attr in dir(config) if 'path_to_video_data' in attr]
-        
+
         inpx_list = {}
-        for i in xrange(len(actv_network_list)):            
+        for i in xrange(len(actv_network_list)):
             if getattr(config,actv_network_list[i]):
                 if getattr(config,path_to_inpx_list[i]).split(os.sep)[-1] not in inpx_list:
                     inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]] = Network(getattr(config,path_to_inpx_list[i]),getattr(config,path_to_vid__list[i]))
-                    VissimCorridors = csvParse.extractCorridorsFromCSV(getattr(config,path_to_inpx_list[i]).strip(getattr(config,path_to_csv__list[i]).split(os.sep)[-1]), getattr(config,path_to_inpx_list[i]).split(os.sep)[-1], 'vissim')                    
+                    VissimCorridors = csvParse.extractCorridorsFromCSV(getattr(config,path_to_inpx_list[i]).strip(getattr(config,path_to_csv__list[i]).split(os.sep)[-1]), getattr(config,path_to_inpx_list[i]).split(os.sep)[-1], 'vissim')
                     inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]].addCorridor(VissimCorridors)
                 else:
-                    inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]].addtraj(getattr(config,path_to_vid__list[i]))    
-        
+                    inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]].addtraj(getattr(config,path_to_vid__list[i]))
+
         return inpx_list.values()
-                
+
 ##################
 # Sampling tools
 ##################
@@ -178,10 +177,10 @@ def genMCsample(variables, n):
 
 def choose_xn(n,m):
     '''chooses n points with m dimensions'''
-    possibility_mat = []    
-    for i in xrange(m):        
+    possibility_mat = []
+    for i in xrange(m):
         possibility_mat.append(range(n))
-        
+
     points = []
     for i in xrange(n):
         point = []
@@ -190,28 +189,28 @@ def choose_xn(n,m):
             point.append(possibility_mat[j][coord])
             possibility_mat[j].pop(coord)
         points.append(point)
-        
+
     return points
-    
+
 def boolTable(n):
     out = []
     for args in product(*repeat((True, False),n)):
         out.append(list(args))
     return out
-    
+
 def genLHCsample(variables,n):
     '''generates a Latin Hypercube sample of n points per non boolean dimension
-       
+
        variables can be either boolean or real number values
-       
+
        returns all combinations of real values (nxn matrix) for the True and False
        possibility of each boolean variable
-        
+
        total number of points returned = ( len(real variables) )*(  2 ** len(bool variables) )
-    '''        
+    '''
     real_dim = []
     disc_dim = []
-    
+
     #classification of boolean and nonboolean variables
     ranges = []
     for var in xrange(len(variables)):
@@ -220,11 +219,11 @@ def genLHCsample(variables,n):
             disc_dim.append(var)
         else:
             real_dim.append(var)
-    
+
     #subdivision of the ranges of each nonboolean variable
     cut_ranges =  []
     for i in real_dim:
-        this_one_range = []   
+        this_one_range = []
         for j in xrange(n):
             this_one_range.append([ranges[i][0] + j * (ranges[i][1]-ranges[i][0])/float(n), ranges[i][0] + (j+1) * (ranges[i][1]-ranges[i][0])/float(n)])
         cut_ranges.append(this_one_range)
@@ -238,7 +237,7 @@ def genLHCsample(variables,n):
         point = []
         for k in xrange(len(real_dim)):
             point.append(random.uniform(cut_ranges[k][mat[m][k]][0],cut_ranges[k][mat[m][k]][1]))
-        real_mat.append(point)   
+        real_mat.append(point)
 
     #bool values combinations enumeration
     bool_mat = boolTable(len(disc_dim))
@@ -249,7 +248,7 @@ def genLHCsample(variables,n):
     for i in xrange(len(bool_mat)):
         semi_mat = []
         for k in xrange(len(real_mat)):
-            point = []                
+            point = []
             for m in xrange(len(variables)):
                 if m in disc_dim:
                     point.append(bool_mat[i][disc_dim.index(m)])
@@ -259,5 +258,4 @@ def genLHCsample(variables,n):
         final_mat += semi_mat
 
     return final_mat
-            
-    
+
