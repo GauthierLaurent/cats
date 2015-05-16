@@ -18,7 +18,7 @@ print would give NOMAD an erronous result of the called point
 ################################
 #        Native dependencies
 ################################
-import os, sys, multiprocessing, shutil, random
+import os, sys, multiprocessing, shutil, random, traceback
 
 ################################
 #        Main
@@ -95,6 +95,23 @@ def main(argv):
     #pass data to vissim and simulate
 
     if len(networks) == 1:
+
+        '''
+        #TEST NEEDS TO BE OUT OF TRY/EXCEPT
+        ##run the analysis
+        parameters[4] = multiprocessing.cpu_count() - 1
+        inputs = [config, variables, parameters, point_folderpath, False]
+        unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
+
+        if mathTools.isbool(list(unpacked_outputs)):
+            print 'end crashed'
+            import pdb;pdb.set_trace()
+        else:
+            fout = outputs.sort_fout_and_const(unpacked_outputs[0])
+            print fout
+            import pdb;pdb.set_trace()
+        #'''
+
         try:
             ##run the analysis
             parameters[4] = multiprocessing.cpu_count() - 1
@@ -103,7 +120,7 @@ def main(argv):
 
             if mathTools.isbool(list(unpacked_outputs)):
                 seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
-                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
+                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
                 return 1
             else:
                 fout = outputs.sort_fout_and_const(unpacked_outputs[0])
@@ -114,19 +131,18 @@ def main(argv):
             for net in networks:
                 net.addVideoComparison([sys.exc_info()[0]])
 
-            seeds = []
-            for j in xrange(parameters[2]):
-                seeds += [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
-                if j < parameters[2]-1:
-                    seeds += ['|']
+            seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)] + ['|']
 
-            fout = ['inf', 1, 1, 1]
+            fout = ['inf', 1, 1, 1, 1]
 
-            write.History.write_history(last_num, seeds, nomad_points, networks, os.getcwd(), 'calib_history.txt')
+            write.History.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
 
             with open('run_'+str(last_num)+'.err','w') as err:
-                err.write(sys.exc[0]+'\n')
-                err.write(sys.exc[1])
+                err.write(traceback.format_exc())
+
+
+            print '{} {} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3], fout[4])
+            return 1
 
     else:
         try:
@@ -168,7 +184,7 @@ def main(argv):
                     if j < len(seed_num_list)-1:
                         seeds += ['|']
 
-                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
+                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
                 return 1
             else:
                 fout = outputs.sort_fout_and_const(d_stat)[0]
@@ -187,9 +203,12 @@ def main(argv):
                 if j < parameters[2]-1:
                     seeds += ['|']
             #might need to be bigger???
-            fout = ['inf', 1, 1, 1]
+            fout = ['inf', 1, 1, 1, 1]
 
-            write.write_history(last_num, seeds, nomad_points, networks, os.getcwd(), 'calib_history.txt')
+            write.write_history(last_num, seeds, nomad_points, networks, os.getcwd(), ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'calib_history.txt')
+
+            print '{} {} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3], fout[4])
+            return 1
 
     #write to history
     write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')

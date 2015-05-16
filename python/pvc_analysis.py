@@ -92,8 +92,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
         inputs = [final_inpx_path, False, network[0].corridors, outputs.Derived_data(), config]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         if len(file_list) > 1 and multi_networks is False:
-            commands = workers.FalseCommands()
-            packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, commands, defineNbrProcess = config.nbr_process)
+            packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, workers.FalseCommands(), defineNbrProcess = config.nbr_process)
 
             vissim_data = packedStatsLists[0]
 

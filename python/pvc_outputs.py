@@ -894,7 +894,7 @@ def treat_Single_VissimOutput(filename, inputs):
     if verbose:
         print ' === Starting calculations for ' + filename + ' ===  |'
 
-    objects = readTrajectoryFromFZP(folderpath, filename, config.sim_steps,  config.warm_up_time)
+    objects = storage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), config.sim_steps, nObjects = -1, warmUpLastInstant = config.warm_up_time, usePandas = True)
     outputs.addSingleOutput('flow', len(objects), filename)
 
     #lane building block
@@ -926,7 +926,7 @@ def treat_Single_VissimOutput(filename, inputs):
         print ' == Lane change compilation done ==  |' + str(time.clock())
 
     #constraint
-    outputs.addSingleOutput('constraint', smartCountCollisionsVissim(folderpath, filename, config, lanes = to_eval), filename)
+    outputs.addSingleOutput('constraint', smartCountCollisionsVissim(folderpath, filename, config.fzp_lines_collisions), filename)
 
     if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
         num, dp, a0 = read_error_file(folderpath, filename.strip('.fzp')+'.err')
