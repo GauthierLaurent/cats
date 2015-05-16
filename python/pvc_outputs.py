@@ -331,8 +331,17 @@ class Derived_data:
 ##################
 # Constraints
 ##################
-def smartCountCollisionsVissim(dirname, filename, config, lanes = 'all', collisionTimeDifference = 0.2):
-    '''splits the fzp in smaller fzp files to prevent overflow errors when invoking moving.countCollisionsVissim'''
+def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collisionTimeDifference = 0.2):
+    '''Splits the fzp in smaller fzp files to prevent overflow errors when invoking
+       moving.countCollisionsVissim
+
+       If the default number of lines provided by maxLines results in a MemoryError,
+       the function will automatically reduce the number of lines until it reaches a
+       point were it works
+
+       The act of cutting the file skew the exact count of the number of collisions
+       and the result should not be used for a PB or PEB calibration constraint
+    '''
     #check for lenght
     temp_file_lines = []
     header = []
@@ -343,15 +352,13 @@ def smartCountCollisionsVissim(dirname, filename, config, lanes = 'all', collisi
             else:
                 temp_file_lines += line
 
-    #treating small enough files
-    if len(temp_file_lines) <= config.fzp_lines_collisions:
-        nCollisions = storage.countCollisionsVissim(os.path.join(dirname,filename), lanes = lanes, collisionTimeDifference = 0.2)
-
-    else:
-        nCollisions = 0
+    nCollisions = 0
+    #the while loop is used because for some files, the designated default lines is still too high
+    test_again = True
+    while test_again is True:
 
         #creating temp fzp files
-        chunks = workers.cleanChunks(config.fzp_lines_collisions, temp_file_lines)
+        chunks = workers.cleanChunks(maxLines, temp_file_lines)
         for c in xrange(len(chunks)):
             tmp = ''
             for line in header:
@@ -359,22 +366,12 @@ def smartCountCollisionsVissim(dirname, filename, config, lanes = 'all', collisi
             for line in chunks[c]:
                 tmp += line
 
-            nCollisions += storage.countCollisionsVissim(StringIO.StringIO(tmp), lanes = lanes, collisionTimeDifference = 0.2)
-
-
-            #with open(os.path.join(dirname, str(os.getpid())+'_tmp_'+filename.strip('.fzp')+'_'+str(c)+'.fzp'),'w') as tmp:
-            #    for line in header:
-            #        tmp.write(line)
-            #    for line in chunks[c]:
-            #        tmp.write(line)
-
-        #tmp_files = [f for f in os.listdir(os.path.join(dirname)) if str(os.getpid()) in f and 'tmp' in f and f.endswith('.fzp')]
-
-        #for tmp_fzp in tmp_files:
-        #    nCollisions += storage.countCollisionsVissim(os.path.join(dirname,tmp_fzp), lanes = lanes, collisionTimeDifference = 0.2)
-
-        #for temp_fzp in reversed(tmp_files):
-        #    os.remove(os.path.join(dirname,tmp_fzp))
+            try:
+                nCollisions +=  storage.countCollisionsVissim(StringIO.StringIO(tmp), lanes = lanes, collisionTimeDifference = 0.2)
+                test_again = False
+            except:
+                maxLines += - 100000
+                test_again = True
 
     return nCollisions
 
