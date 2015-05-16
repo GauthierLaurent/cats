@@ -292,9 +292,9 @@ class NOMAD:
                         'BB_EXE        \'$python calib.py\'                      # blackbox program\n'
                         'BB_INPUT_TYPE  (' + IT + ')\n')
             if biobj is False:
-                param.write('BB_OUTPUT_TYPE OBJ EB EB EB\n')
+                param.write('BB_OUTPUT_TYPE OBJ EB EB EB EB\n')
             else:
-                param.write('BB_OUTPUT_TYPE OBJ OBJ EB EB EB\n')
+                param.write('BB_OUTPUT_TYPE OBJ OBJ EB EB EB EB\n')
             param.write('\n'
                         'X0             (' + X0 + ')    # starting point\n'
                         '\n'
@@ -356,10 +356,10 @@ class NOMAD:
                     flag[5] = 0
                     objcount = current_lines[l].count('OBJ')
                     EBcount = current_lines[l].count('EB')
-                    if biobj is False and (objcount != 1 or EBcount != 3):
+                    if biobj is False and (objcount != 1 or EBcount != 4):
                         flag[1] = 1
 
-                    if biobj is True and (objcount != 2 or EBcount != 3):
+                    if biobj is True and (objcount != 2 or EBcount != 4):
                         flag[1] = 1
 
                 elif 'BB_EXE' in current_lines[l]:
@@ -467,9 +467,9 @@ class NOMAD:
                 for l in xrange(len(current_lines)):
                     if 'BB_OUTPUT_TYPE' in current_lines[l]:
                         if biobj is False:
-                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ EB EB EB\n'
+                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ EB EB EB EB\n'
                         if biobj is True:
-                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ EB EB EB\n'
+                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ EB EB EB EB\n'
 
             #correcting x0, lower_bounds and upper_bounds lines
             if flag[0] == 1:
