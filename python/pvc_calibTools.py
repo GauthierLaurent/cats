@@ -29,8 +29,11 @@ def ks_matrix(dist_list):
     for i in xrange(len(dist_list)):
         line_i = []
         for j in xrange(len(dist_list)):
-            d_v, p_v = ks_twosamp(dist_list[i],dist_list[j])
-            line_i.append(d_v)
+            if dist_list[i] == [] or dist_list[j] == []:
+                line_i.append(1)
+            else:
+                d_v, p_v = ks_twosamp(dist_list[i],dist_list[j])
+                line_i.append(d_v)
         matrix.append(line_i)
     return matrix
 
