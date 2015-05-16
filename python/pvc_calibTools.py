@@ -80,18 +80,26 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsP
 
     D_statistic_list = []
     p_value_list = []
+    mean_list =[]
     for i in range(len(calculated_value)):
         if len(video_value[i].cumul_all.raw) > 0 and len(calculated_value[i].cumul_all.raw) > 0:
             D_statistic, p_value = ks_twosamp([p/float(fps) for p in video_value[i].cumul_all.raw], [p/float(simulationStepsPerTimeUnit) for p in calculated_value[i].cumul_all.raw])
-            D_statistic_list.append(calculated_value[i].cumul_all.mean)     #value (mean)
+            mean_list.append(calculated_value[i].cumul_all.mean)     #value (mean)
             D_statistic_list.append(D_statistic)                            #value (delta)
             p_value_list.append(p_value)
         else:
-            D_statistic_list.append('0.00') #value (mean)
+            mean_list.append('0.00') #value (mean)
             D_statistic_list.append('DNE')  #value (delta)
 
-    return D_statistic_list
+    return mean_list, D_statistic_list
 
+def buildReportList(mean_list, d_stat_list):
+    reportList = []    
+    for i in xrange(len(mean_list)):
+        reportList.append(mean_list[i])
+        reportList.append(d_stat_list[i])
+    return reportList
+        
 def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
 
     if len(video_value) > 0 and len(calculated_value) > 0:

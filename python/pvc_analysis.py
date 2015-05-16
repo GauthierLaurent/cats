@@ -225,8 +225,9 @@ def runVissimForCalibrationAnalysis(network, inputs):
                             secondary_values.append(['0.00', '0.00*'])
 
                 #comparing video_values with output values
-                secondary_values += calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
-
+                mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
+                secondary_values += calibTools.buildReportList(mean_list, d_stat_list)                
+                
                 #adding video comparison data to the network
                 network[0].addVideoComparison(secondary_values)
 
