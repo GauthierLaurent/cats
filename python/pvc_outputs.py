@@ -173,9 +173,14 @@ class SingleValueStats:
 class FileConstraint:
     def __init__(self):
         self.constraints = []
+        self.names = []
 
-    def addCi(self,ci):
-        self.constraints += [ci]
+    def addCi(self,ci,name):
+        if name not in self.names:
+            self.constraints += [ci]
+            self.names += [name]
+        else:
+            self.constraints[self.names.index(name)] = ci
 
     def addFilename(self,filename):
         self.filename = filename
@@ -184,19 +189,25 @@ class Constraints:
     def __init__(self):
         self.master = []
         self.files = []
+        self.actives = ActiveConstraints()
 
     def getFilenames(self):
         return [f.filename for f in self.files]
 
-    def addCi(self,ci,filename):
-
-        if filename in self.getFilenames():
-            self.files[self.getFilenames().index(filename)].addCi(ci)
-        else:
-            self.files += [FileConstraint()]
-            self.files[-1].addFilename(filename)
-            self.files[-1].addCi(ci)
-        self.regenMaster()
+    def addCi(self,name,value,filename):
+        if name in self.actives.getActiveNames():        
+            if value is None:
+                ci = 0
+            else:
+                ci = self.actives.calculateConstraint(name, value)
+    
+            if filename in self.getFilenames():
+                self.files[self.getFilenames().index(filename)].addCi(ci,name)
+            else:
+                self.files += [FileConstraint()]
+                self.files[-1].addFilename(filename)
+                self.files[-1].addCi(ci,name)
+            self.regenMaster()
 
     def regenMaster(self):
         array = [f.constraints for f in self.files]
@@ -270,9 +281,9 @@ class Derived_data:
         if isinstance(getattr(self, attr_name),Stats):
             getattr(self, attr_name).add_one_dist_list(value)
             getattr(getattr(self, attr_name),'distributions')[-1].addFileName(filename)
-
-        if isinstance(getattr(self, attr_name),Constraints):
-            getattr(self, attr_name).addCi(value, filename)
+            
+    def addConstraintValue(self, constraintName, value, filename):
+        self.constraint.addCi(constraintName, value, filename)
 
     def addManyOutputs(self, output_list):
         '''calls addSingleOutput() for each output in output_list
@@ -295,6 +306,12 @@ class Derived_data:
            output_list = [attr_name, index_list]'''
         for output in output_list:
             self.popSingleOutputList(output, index_list)
+
+    def getConstraints(self):
+        return self.constraint.master
+        
+    def getActiveConstraintNames(self):        
+        return self.constraint.actives.getActiveNames()
 
     def getFilenames(self):
             filenames = []
@@ -327,10 +344,68 @@ class Derived_data:
                 else:
                     for c in xrange(len(outputs2.flow.lane)):
                         outputs1.editLaneCount(c, outputs2.flow.lane[c])
+    
+    def activateConstraints(self,config):
+        self.constraint.actives.activate(config)
+        
+##################
+### Constraints
+##################
+class ActiveConstraints:
 
-##################
-# Constraints
-##################
+    def __init__(self, config = None):
+        self.numActive = 0
+        self.activeList = []
+        self.tresholdList = []
+        self.typeList = []
+        self.nameList = []
+        
+        if config is not None:
+            self.activate(config)
+    
+    def activate(self,config):        
+        self.activeList.append(config.collis_constraint[0])
+        self.activeList.append(config.nonGen_constraint[0])
+        self.activeList.append(config.decelp_constraint[0])
+        self.activeList.append(config.accel0_constraint[0])
+        
+        self.tresholdList.append(config.collis_constraint[1])
+        self.tresholdList.append(config.nonGen_constraint[1])
+        self.tresholdList.append(config.decelp_constraint[1])
+        self.tresholdList.append(config.accel0_constraint[1])
+        
+        self.typeList.append(config.collis_constraint[2])
+        self.typeList.append(config.nonGen_constraint[2])
+        self.typeList.append(config.decelp_constraint[2])
+        self.typeList.append(config.accel0_constraint[2])
+        
+        self.nameList.append('collisions')
+        self.nameList.append('nonGen')
+        self.nameList.append('deceleration')
+        self.nameList.append('acceleration')
+
+    def getActiveNames(self):
+        return [self.nameList[i] for i in xrange(len(self.nameList)) if self.activeList[i]]
+        
+    def getInfoByName(self,name,key = None):
+        '''If key is provided, returns the value of constraint "name" for the
+           specific sublist "key".
+           Otherwise, returns a list of the values of each sublist for "name"'''        
+        if key is None:
+            return [self.activeList[self.nameList.index(name)], self.tresholdList[self.nameList.index(name)], self.typeList[self.nameList.index(name)]]
+            
+        else:
+            return getattr(self, key)[self.nameList.index(name)]
+            
+    def calculateConstraint(self, name, value):
+        '''converts num, dp and a0 errors into constraint values'''
+        return value - self.tresholdList[self.nameList.index(name)]
+    
+    @staticmethod    
+    def getConstraintsTypes(config):
+        tmp = ActiveConstraints(config)
+        return tmp.typeList
+    
 def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collisionTimeDifference = 0.2):
     '''Splits the fzp in smaller fzp files to prevent overflow errors when invoking
        moving.countCollisionsVissim
@@ -375,13 +450,13 @@ def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collis
 
     return nCollisions
 
-def calculate_jam_constraint(objects, config):
+def calculate_jam_constraint(objects, threshold):
     '''From the fzp, calculates if a jam occurs'''
     jam = 0
     for o in objects:
         boolarray = np.asarray(o.curvilinearVelocities.getXCoordinates()) == 0
         nbr_zeros = np.count_nonzero(boolarray)
-        if nbr_zeros > config.jam_calcu_thresh:
+        if nbr_zeros > threshold:
             jam += 1
     return jam
 
@@ -926,17 +1001,17 @@ def treat_Single_VissimOutput(filename, inputs):
         print ' == Lane change compilation done ==  |' + str(time.clock())
 
     #constraint
-    outputs.addSingleOutput('constraint', smartCountCollisionsVissim(folderpath, filename, config.fzp_lines_collisions), filename)
+    outputs.addSingleOutput('constraint', 'collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
 
     if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
         num, dp, a0 = read_error_file(folderpath, filename.strip('.fzp')+'.err')
         C_1, C_2, C_3 = convert_errors_to_constraints(config, num, dp, a0)
     else:
-        C_1 = 0; C_2 = 0; C_3 = 0
+        num = None; dp = None; a0 = None
 
-    outputs.addSingleOutput('constraint', C_1, filename)
-    outputs.addSingleOutput('constraint', C_2, filename)
-    outputs.addSingleOutput('constraint', C_3, filename)
+    outputs.addSingleOutput('constraint', 'nonGen', num, filename)
+    outputs.addSingleOutput('constraint', 'deceleration', dp, filename)
+    outputs.addSingleOutput('constraint', 'acceleration', a0, filename)
 
     if verbose:
         print ' == Constraints calculations done ==  |' + str(time.clock())

@@ -257,7 +257,7 @@ class NOMAD:
         return points
 
     @staticmethod
-    def create_NOMAD_params(filepath, variables, starting_point = [], biobj = False):
+    def create_NOMAD_params(filepath, variables, constraint_types, starting_point = [], biobj = False):
         '''Writes a default parameter file... no fancy options included'''
         num_dim = str(len(variables))
         X0 = ' '
@@ -286,15 +286,19 @@ class NOMAD:
                 else:
                     IT += 'B '
 
+        constraints = ''
+        for c in constraint_types: constraints += ' ' + c
+        constraints += '\n'        
+
         with open(filepath,'w') as param:
             param.write('DIMENSION      '+num_dim+'					                  # number of variables\n'
                         '\n'
                         'BB_EXE        \'$python calib.py\'                      # blackbox program\n'
                         'BB_INPUT_TYPE  (' + IT + ')\n')
-            if biobj is False:
-                param.write('BB_OUTPUT_TYPE OBJ EB EB EB EB\n')
+            if biobj is False:                
+                param.write('BB_OUTPUT_TYPE OBJ' +constraints+'\n')
             else:
-                param.write('BB_OUTPUT_TYPE OBJ OBJ EB EB EB EB\n')
+                param.write('BB_OUTPUT_TYPE OBJ OBJ'+constraints+'\n')
             param.write('\n'
                         'X0             (' + X0 + ')    # starting point\n'
                         '\n'
@@ -318,7 +322,7 @@ class NOMAD:
             return '\n'
 
     @staticmethod
-    def verify_params(filepath, variables, starting_point = [], biobj = False):
+    def verify_params(filepath, variables, constraint_types, starting_point = [], biobj = False):
         '''verifies the param file for Dimensions, X0, LB, and UB lenght
            Sets X0 as default parameters unless a point is specified as a list
            in starting_point'''
@@ -356,10 +360,12 @@ class NOMAD:
                     flag[5] = 0
                     objcount = current_lines[l].count('OBJ')
                     EBcount = current_lines[l].count('EB')
-                    if biobj is False and (objcount != 1 or EBcount != 4):
+                    PBcount = current_lines[l].count('PB')
+                    PEBcount = current_lines[l].count('PEB')
+                    if biobj is False and (objcount != 1 or EBcount != constraint_types.count('EB') or PBcount != constraint_types.count('PB') or PEBcount != constraint_types.count('PEB')):
                         flag[1] = 1
 
-                    if biobj is True and (objcount != 2 or EBcount != 4):
+                    if biobj is True and (objcount != 2 or EBcount != constraint_types.count('EB') or PBcount != constraint_types.count('PB') or PEBcount != constraint_types.count('PEB')):
                         flag[1] = 1
 
                 elif 'BB_EXE' in current_lines[l]:
@@ -467,10 +473,15 @@ class NOMAD:
                 for l in xrange(len(current_lines)):
                     if 'BB_OUTPUT_TYPE' in current_lines[l]:
                         if biobj is False:
-                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ EB EB EB EB\n'
+                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ'
+                            for c in constraint_types: current_lines[l] += ' ' + c
+                            current_lines[l] += '\n'
+                            
                         if biobj is True:
-                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ EB EB EB EB\n'
-
+                            current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ'
+                            for c in constraint_types: current_lines[l] += ' ' + c
+                            current_lines[l] += '\n'
+                            
             #correcting x0, lower_bounds and upper_bounds lines
             if flag[0] == 1:
                 X0 = ' '
@@ -514,7 +525,7 @@ class NOMAD:
                     new.write(line)
         else:
             print 'No parameter file found for NOMAD at the specified path. Creating default parameter file'
-            NOMAD.create_NOMAD_params(filepath, variables, starting_point, biobj)
+            NOMAD.create_NOMAD_params(filepath, variables, constraint_types, starting_point, biobj)
 
     @staticmethod
     def set_BB_path(filepath, BB_fullpath):

@@ -152,7 +152,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         else:
                             rejected = []
 
-                    if config.output_lane_change:
+                    if config.output_lane_change_gap:
                         if len(vissim_data.oppLCbgap.distributions) > 1:
                             rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
                         else:

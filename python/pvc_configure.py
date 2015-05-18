@@ -78,6 +78,7 @@ def list1D(item, i_type='int'):
     if(len(item) > 0):
         if(i_type == 'float'):  return [float(x) for x in item]
         elif(i_type == 'bool'): return [str2bool(x) for x in item]
+        elif(i_type == 'BIS'): return [str2bool(item[0]),int(item[1]),item[2]]
         elif(i_type == 'int'):
             if(len(list(set(item))) != len(item)): allowDuplicates = True
             else:                                  allowDuplicates = False
@@ -197,20 +198,24 @@ class Config:
         self.desired_pct_error        = self.parse('desired_pct_error',    '20' ,     c_type='float')
 
         self.section = 'Calibration'
-        self.fzp_lines_collisions     = self.parse('max_fzp_len_for_collisions',   '6000000',c_type='int')
-        self.output_forward_gaps      = self.parse('output_forward_gaps',          'True',   c_type='bool')
-        self.output_lane_change       = self.parse('output_lane_change',           'False',  c_type='bool')
+        self.output_forward_gaps      = self.parse('calib_forward_gaps',           'True',   c_type='bool')
+        self.output_lane_change_gaps  = self.parse('calib_lane_change_gaps',       'False',  c_type='bool')
+        self.output_lane_change_count = self.parse('calib_lane_change_count',      'False',  c_type='bool')
         self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',      '',       c_type='string')
         self.ks_threshold             = self.parse('ks_threshold',                 '0.3',    c_type='float')    #may want to check out that treshold
         self.ks_switch                = self.parse('reject_vissim_dist',           'False',  c_type='bool')
-        self.num_const_thresh         = self.parse('Vehic_gen_err_constraint',     '10',     c_type='float')
-        self.dp_const_thresh          = self.parse('Decel_gen_err_constraint',     '0',      c_type='float')
-        self.a0_const_thresh          = self.parse('Accel_gen_err_constraint',     '0',      c_type='float')
         self.jam_const_thresh         = self.parse('Jam_constraint_threshold',     '0',      c_type='float')
         self.jam_calcu_thresh         = self.parse('Jam_calculation_threshold',    '5',      c_type='float')
         self.cmp_man_lcgaps           = self.parse('Compute_mandatory_LC_gaps',    'True',   c_type='bool')
         self.cmp_opp_lcgaps           = self.parse('Compute_opportunistic_LC_gaps','True',   c_type='bool')
         self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'True',   c_type='bool')
+        
+        self.fzp_maxLines             = self.parse('MaxLine_for_collisions_calc', '6000000', c_type='int')
+        self.collis_constraint        = self.parse('Collisions_constraint',       '[True, 0, EB]',  c_type='BIS')
+        self.nonGen_constraint        = self.parse('Vehic_nongen_constraint',     '[True, 10, EB]', c_type='BIS')
+        self.decelp_constraint        = self.parse('Deceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
+        self.accel0_constraint        = self.parse('Acceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
+
 
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',             'False',  c_type='bool')
@@ -318,6 +323,8 @@ class Config:
         elif(c_type == 'bool'):
             if(c_struct == 'list1D'): return list1D(self.config.get(self.section, key), i_type='bool')
             else:                     return self.config.getboolean(self.section, key)
+        elif(c_type == 'BIS'):
+            return list1D(self.config.get(self.section, key), i_type='BIS')           
         else:
             if(c_struct == 'list1D'): return list1D(self.config.get(self.section, key), i_type='string')
             else:                     return self.config.get(self.section, key)

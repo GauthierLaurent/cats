@@ -24,6 +24,7 @@ def main():
     import pvc_calibTools as calibTools
     import pvc_configure  as configure
     import pvc_csvParse   as csvParse
+    import pvc_outputs    as outputs
 
     ################################
     #        Os verification
@@ -116,7 +117,7 @@ def main():
     shutil.copy(os.path.join(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv'), os.path.join(working_path, config.inpx_name.strip('inpx') + 'csv'))
 
     #making sure the param file exists and is well suited to the present task
-    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], starting_point)
+    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], outputs.ActiveConstraints.getConstraintsTypes(config),starting_point)
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
 
     #moving NOMAD and param.txt
