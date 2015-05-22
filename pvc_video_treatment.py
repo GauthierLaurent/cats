@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 '''
 call exemples:
-   to draw aligments:            -i -s -v GP130001.sqlite
-   to draw many aligments:       -i -s -k
-   to process all sqlite:        -M 9000 -g 30 -a process
-   to process specified (2):     -M 9000 -g 30 -a process -v GP130001.sqlite GP020001.sqlite
-   to proocess all individually: -M 9000 -g 30 -a process -o
-   to diagnose a single video:   -M 9000 -g 30 -a diagnose -d 130 -v GP130001.sqlite
+   to draw aligments on world image: -s -v GP130001.sqlite
+   to draw many aligments:           -s -k
+   to process all sqlite:            -M 9000 -g 30 -a process
+   to process specified (2):         -M 9000 -g 30 -a process -v GP130001.sqlite GP020001.sqlite
+   to proocess all individually:     -M 9000 -g 30 -a process -o
+   to diagnose a single video:       -M 9000 -g 30 -a diagnose -d 130 -v GP130001.sqlite
+   load old data, draw and process:  -l -M 9000 -g 30 -a both -v GP100001.sqlite
 '''
 
 ##################
@@ -44,7 +45,7 @@ config   = configure.Config('pvc.cfg')
 ################################ 
 #        Trace functions       
 ################################
-def traceAndclick(objects, pixelUnitRatio = 1, imgPath = None):
+def traceAndclick(objects, loadOld = False, pixelUnitRatio = 1, imgPath = None):
     '''Pops-up the drawing interface and converts the results to Traffic Intelligence point
        list format for futur conversion into Traffic Intelligence alignement data'''
 
@@ -54,32 +55,80 @@ def traceAndclick(objects, pixelUnitRatio = 1, imgPath = None):
         img = plt.imread(imgPath)
         plt.imshow(img)
 
+    if loadOld is not False:
+        video_infos = csvParse.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
+        
+        for v in reversed(xrange(len(video_infos))):
+            if video_infos[v].video_name != loadOld:
+                video_infos.pop(v)
+                
+        if video_infos == []:
+            loadOld = False
+        
+        else:
+            print '== Loading old alignment information from csv ==' 
+            old_alignments = []
+            for old_a in xrange(len(video_infos[0].alignments)):
+                old_alignments.append(moving.Trajectory.fromPointList(video_infos[0].alignments[old_a].point_list))
+
+            #Assignments of alignments
+            for old_a in old_alignments:
+                old_a.computeCumulativeDistances()
+                
+            for o in objects:
+                o.projectCurvilinear(old_alignments)
+                
+            colors = [0.5 + i*(0.75-0.5)/(len(old_alignments)-1) for i in xrange(len(old_alignments))]
+
     for i in range(len(objects)):
-        if imgPath is not None:               
-            objects[i].plotOnWorldImage(float(pixelUnitRatio), withOrigin = True, color = '0.75')
-                        
+        if loadOld is not False:
+            color = str(colors[objects[i].curvilinearPositions.getLanes()[0]])
+        else:
+            color = '0.75'
+        
+        if imgPath is not None:
+            objects[i].plotOnWorldImage(float(pixelUnitRatio), withOrigin = True, color = color)                        
         else:
             #object
-            plt.plot(objects[i].getXCoordinates(), objects[i].getYCoordinates(), color = '0.75')
+            plt.plot(objects[i].getXCoordinates(), objects[i].getYCoordinates(), color = color)
             #origine
-            plt.plot(objects[i].getXCoordinates()[0], objects[i].getYCoordinates()[0], 'ro', color = '0.75')
+            plt.plot(objects[i].getXCoordinates()[0], objects[i].getYCoordinates()[0], 'ro', color = color)
+            
+        if loadOld is not False:
+            for old_a in old_alignments:
+                if imgPath is not None:
+                    old_a.plotOnWorldImage(float(pixelUnitRatio), withOrigin = False, color = '0.25', linestyle = '--')
+                else:
+                    plt.plot([row[0] for row in old_a], [row[1] for row in old_a], color = '0.25', linestyle = '--')
+                    plt.text(old_a[0][0], old_a[0][1], str(old_alignments.index(old_a)))
     
     alignments = write.drawAlign(fig)
     plt.close()
-    
-    #transforming to moving.Point() form
+
+    #transforming to moving.Point() form and taking out double points
     Alignments = []
-    for points in alignments:
+    for align in alignments:
+        RevPoints = []
+        for p in reversed(align):
+            if align.count(p) > 1:
+                align.pop(align.index(p))
+            else:
+                RevPoints.append(moving.Point(p[0]/pixelUnitRatio,p[1]/pixelUnitRatio))
         Points = []
-        for p in points:
-            Points.append(moving.Point(p[0]/pixelUnitRatio,p[1]/pixelUnitRatio))
+        for i in reversed(xrange(len(RevPoints))):
+            Points.append(RevPoints[i])
         Alignments.append(Points)
         
     return Alignments
 
-def processVideolist(config, video_names, save, loadImage, keep_align):
+def processVideolist(config, video_names, save, loadOld, loadImage, keep_align):
         
     for v in xrange(len(video_names)):
+        
+        if loadOld is True:
+            to_load = video_names[v]
+        else:
+            to_load = False
         
         if keep_align is True and v > 0:
             pass
@@ -87,20 +136,22 @@ def processVideolist(config, video_names, save, loadImage, keep_align):
             objects = storage.loadTrajectoriesFromSqlite(os.path.join(config.path_to_sqlite, video_names[v]), 'object')
             
             if loadImage:
-                points = traceAndclick(objects, config.pixel_to_unit_ratio, os.path.join(config.path_to_image, config.image_name))
+                points = traceAndclick(objects, to_load, config.pixel_to_unit_ratio, os.path.join(config.path_to_image, config.image_name))
             else:
-                points = traceAndclick(objects)
+                points = traceAndclick(objects, to_load)
                         
             alignments = []
             for p in points:
                 alignments.append(moving.Trajectory.fromPointList(p))         
             
+            print ''
             for a in alignments:
                 print a
-
+            print ''
+            
         if save is True:
             print '>> Saving data for '+str(video_names[v])+' to the CSV file'
-            configure.CSVparse.writeAlignToCSV(config.path_to_csv, config.inpx_name, video_names[v], alignments)
+            csvParse.writeAlignToCSV(config.path_to_csv, config.inpx_name, video_names[v], alignments)
             print '>> Saving successfull'
         else:
             print '>> No-Saving option chosen, here are the data for manual copy-pasting:'
@@ -110,6 +161,8 @@ def processVideolist(config, video_names, save, loadImage, keep_align):
                 for part in xrange(1,len(alignments[a])):
                     formated += ',' + str(alignments[a][part])
                 print str(a)+';'+formated
+                
+        return
             
 ################################ 
 #        Process functions       
@@ -183,13 +236,13 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
     #loading user defined information from [inpxname].csv
     trafIntCorridors = csvParse.extractCorridorsFromCSV(config.path_to_inpx, config.inpx_name, 'trafint')
     video_infos = csvParse.extractAlignmentsfromCSV(config.path_to_inpx, config.inpx_name)
-
+    
     #keeping only video_infos that are in video_list
     if video_list != 'all':    
         for v in reversed(xrange(len(video_infos))):
             if video_infos[v].video_name not in video_list:
                 video_infos.pop(v)
-    
+
     #variable declaration
     Outputs_list = []
     all_count = []
@@ -212,7 +265,7 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
             #filtering objects by time of appearence
             if min_time is not None or max_time is not None:        
                 objects = filterObjectsbyTime(objects, min_time, max_time)
-    
+            
             alignments = []
             alignNames = []
             for a in xrange(len(video_infos[i].alignments)):
@@ -241,11 +294,11 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
                         if np.mean(np.asarray(o.curvilinearVelocities)) < 0:
                             invert_speed.append(o)
                 else:
-                    problems.append(o)
+                    problems.append(objects.index(o))
             
             #discarding problematic objects
             for prob in reversed(problems):
-                objects.pop(prob.getNum())
+                objects.pop(prob)
             
             
             if diagnosis is True:
@@ -437,6 +490,8 @@ def turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, m
             ##generating the output    
             write.writeRealDataReport(config.path_to_inpx, defName(partial_filename, 'analysis', min_time, max_time), video_names, config.inpx_name, min_time, max_time, [percentages,values_at_p], other_info)
             
+            print 'count by lane:', Outputs.getLaneCounts(), Outputs.getLanePercent()          
+            
             #dumping serialised data
             print ' == Dumping to ' + partial_filename + '_' + timeName(min_time, max_time) + '.traj'+' ==  |' + str(time.clock())
             write.write_traj(config.path_to_inpx, partial_filename + '_' + timeName(min_time, max_time), Outputs)
@@ -459,11 +514,40 @@ def main(argv):
     video_names = commands.video_names
     save        = commands.save
     loadImage   = commands.loadImage
+    loadOld     = commands.loadOld
     keep_align  = commands.keep_align
 
-    print '== Starting work for the following network : ' + str(config.inpx_name) +' | Concatenation = True =='
-    
-    if commands.analysis == 'process' or commands.analysis == 'diagnose':
+    print '== Starting work for the following network : ' + str(config.inpx_name) +' | Concatenation = True =='        
+        
+    if commands.analysis == 'trace' or (commands.analysis == 'both' and len(commands.video_names) == 1):
+        if commands.analysis == 'both':
+            save = True
+            
+        if video_names is not None:
+            for v in reversed(xrange(len(video_names))):
+                if not os.path.isfile(os.path.join(config.path_to_sqlite, video_names[v])):
+                    video_names.pop(video_names[v])
+                    print 'video " ' + str(video_names) + ' " not found'
+
+        else:
+            video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
+            
+        if video_names == []:
+            print 'No valid video specified'
+            return 100
+
+        print '== Loading sqlites from ' + str(config.path_to_sqlite) +' =='
+        string = video_names[0]
+        for i in xrange(len(video_names)-1):
+            string = string +', '+ str(video_names[i+1])
+        print '== Enabling alignment drawing for the following videos: '+str(string) +' =='  
+
+        processVideolist(config, video_names, save, loadOld, loadImage, keep_align)
+        
+    if commands.analysis == 'process' or commands.analysis == 'diagnose' or (commands.analysis == 'both' and len(commands.video_names) == 1):
+        
+        if commands.analysis == 'both':
+            commands.analysis = 'process'
         
         if commands.analysis == 'diagnose':
             diagnosis = True
@@ -484,36 +568,10 @@ def main(argv):
             else:
                 print '== Processing sqlite list contained in the csv file for ' + str(config.inpx_name)  +' | Concatenation = False =='
             video_list = video_names[:]
-            
+   
         turnSqliteIntoTraj(config, min_time, max_time, fps, video_list, diagnosis, maxSpeed, commands)
                 
         print '\n == Processing for ' + str(config.inpx_name) + ' done <<'
-        
-        
-    elif commands.analysis == 'trace':
-        if video_names is not None:
-            for v in reversed(xrange(len(video_names))):
-                if not os.path.isfile(os.path.join(config.path_to_sqlite, video_names[v])):
-                    video_names.pop(video_names[v])
-                    print 'video " ' + str(video_names) + ' " not found'
-
-        else:
-            video_names = [f for f in os.listdir(config.path_to_sqlite) if f.endswith('.sqlite')]
-            
-        if video_names == []:
-            print 'No valid video specified'
-            return 100
-
-        print '== Loading sqlites from ' + str(config.path_to_sqlite) +' =='
-        string = video_names[0]
-        for i in xrange(len(video_names)-1):
-            string = string +', '+ str(video_names[i+1])
-        print '== Enabling alignment drawing for the following videos: '+str(string) +' =='  
-
-        processVideolist(config, video_names, save, loadImage, keep_align)
-
-    else:
-        return 100
        
     
 if __name__ == '__main__': sys.exit(main(sys.argv))

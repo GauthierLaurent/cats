@@ -272,6 +272,11 @@ class Derived_data:
                 else:
                     out.append(self.flow.lane[c])
             return out
+            
+    def getLanePercent(self):
+        counts = np.asarray(self.getLaneCounts())
+        return list(counts/float(sum(counts))*100)
+        
 
     def addSingleOutput(self, attr_name, value, filename):
         '''adds the value and the filename to the attribute given'''

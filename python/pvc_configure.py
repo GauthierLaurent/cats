@@ -165,7 +165,7 @@ class Config:
     def __init__(self,config_name):
         self.config = ConfigParser.ConfigParser(allow_no_value=True)
         self.config.read(config_name)
-
+        
         self.section = 'General'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
         self.inpx_name                = self.parse('inpx_name',            '',        c_type='string')
@@ -348,8 +348,9 @@ def commands(parser, script_type):
         parser.add_argument('-p','--point',          type=float, nargs='*',         dest = 'start_point',   default = None,    help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
 
     if script_type == 'Video':
-        parser.add_argument('-a', '--analysis',      choices=['trace','process','diagnose'],   dest='analysis',        default='trace', help='Chosse between trace, diagnose, and process. To draw alignements onto a visualisation of the data, select trace. To identify vehicule trajectories with aberrant speeds or global wrong way trajectories, select diagnose. To assign vehicule trajectories to predefined alignements select process')
+        parser.add_argument('-a', '--analysis',      choices=['trace','process','diagnose', 'both'],   dest='analysis',        default='trace', help='Chosse between trace, diagnose, and process. To draw alignements onto a visualisation of the data, select trace. To identify vehicule trajectories with aberrant speeds or global wrong way trajectories, select diagnose. To assign vehicule trajectories to predefined alignements select process')
         parser.add_argument('-i', '--image',         action='store_true',           dest='loadImage',       default=False,   help='Trace option. Loads the trajectories onto the image specified in the calib.cfg file')
+        parser.add_argument('-l', '--load-old',      action='store_true',           dest='loadOld',         default=False,   help='Trace option. If available, loads the trajectories previously drawn in black onto the image and colors the trajectories into shades corresponding to those alignments')
         parser.add_argument('-s', '--save',          action='store_true',           dest='save',            default=False,   help='Trace option. Saves the alignement data into the csv file specified in the calib.cfg file ')
         parser.add_argument('-v', '--video',         nargs='*',                     dest='video_names',                      help='[str] A list of video names - works for both Trace and Process modes')
         parser.add_argument('-k', '--keep_align',    action='store_true',           dest='keep_align',      default=False,   help='Trace option. If activated, the alignements will be drawn for the first video and the result will be saved for all specified videos')

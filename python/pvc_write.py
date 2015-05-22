@@ -1093,7 +1093,7 @@ def drawAlign(target=False):
         for p in ph: p.remove()
         if(not save_cond):
             alignments.append(pts)
-            pj.append(plb.plot([x[0] for x in pts], [x[1] for x in pts], 'k', lw=2))
+            pj.append(plb.plot([x[0] for x in pts], [x[1] for x in pts], 'b', lw=2))
             j += 1
 
         tellMe('Add alignments? Mouse for yes, key for no.', target=target)
