@@ -18,7 +18,7 @@ print would give NOMAD an erronous result of the called point
 ################################
 #        Native dependencies
 ################################
-import os, sys, multiprocessing, shutil, random, traceback
+import os, sys, multiprocessing, shutil, random, traceback, copy
 
 ################################
 #        Main
@@ -43,13 +43,19 @@ def main(argv):
     #output_name = argv.replace('input','output')
 
     #create subfolder for this point's evaluation
-    filename = write.findCalibName(os.getcwd())
-    point_folderpath = write.createSubFolder(os.path.join(os.getcwd(), filename), filename)
+    if 'Validation' not in str(os.getcwd()).split(os.sep)[-1]:
+        filename = write.findCalibName(os.getcwd())
+        point_folderpath = write.createSubFolder(os.path.join(os.getcwd(), filename), filename)
+    else:
+        point_folderpath = copy.deepcopy(os.getcwd())
 
     #load last_num from history file
     #NB: because of the header line, we must substract one from the standard output of the find_last_number function
     #last_num = write.History.find_last_number('calib_history.txt') - 1
-    last_num = filename.split('_')[-1]
+    if 'Validation' not in str(os.getcwd()).split(os.sep)[-1]:
+        last_num = filename.split('_')[-1]
+    else:
+        last_num = 1
 
     if config.random_seed is True:
         parameters[1] = random.randint(1,700)
@@ -89,8 +95,9 @@ def main(argv):
         return 1
 
     #move all inpx files to the point folder
-    for net in networks:
-        shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
+    if 'Validation' not in str(os.getcwd()).split(os.sep)[-1]:
+        for net in networks:
+            shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
 
     #pass data to vissim and simulate
 
@@ -133,15 +140,17 @@ def main(argv):
 
             seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)] + ['|']
 
-            fout = ['inf', 1, 1, 1, 1]
+            fout = ['inf'] + [1,1,1,1]#[1 for i in xrange(len())]
 
             write.History.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
 
             with open('run_'+str(last_num)+'.err','w') as err:
                 err.write(traceback.format_exc())
 
-
-            print '{} {} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3], fout[4])
+            out = ''
+            for f in fout:
+                out += str(f)
+            print out
             return 1
 
     else:
@@ -207,14 +216,22 @@ def main(argv):
 
             write.write_history(last_num, seeds, nomad_points, networks, os.getcwd(), ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'calib_history.txt')
 
-            print '{} {} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3], fout[4])
+            out = ''
+            for f in fout:
+                out += str(f)
+            print out
+
             return 1
 
     #write to history
     write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
 
     #output for NOMAD
-    print '{} {} {} {} {}'.format(fout[0], fout[1], fout[2], fout[3], fout[4])
+    out = ''
+    for f in fout:
+        out += str(f)+' '
+    print out
+
     return 0
 
 ###################

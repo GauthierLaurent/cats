@@ -195,12 +195,12 @@ class Constraints:
         return [f.filename for f in self.files]
 
     def addCi(self,name,value,filename):
-        if name in self.actives.getActiveNames():        
+        if name in self.actives.getActiveNames():
             if value is None:
                 ci = 0
             else:
                 ci = self.actives.calculateConstraint(name, value)
-    
+
             if filename in self.getFilenames():
                 self.files[self.getFilenames().index(filename)].addCi(ci,name)
             else:
@@ -229,8 +229,11 @@ class Constraints:
         '''concanate all the distributions of the constraints class variables into the first one'''
         for const in consts:
             for FileConst in const.files:
-                for ci in FileConst.constraints:
-                    const1.addCi(ci, FileConst.filename)
+                for ci in xrange(len(FileConst.constraints)):
+                    name = FileConst.names[ci]
+                    value = FileConst.constraints[0]
+
+                    const1.addCi(name, value, FileConst.filename)
 
 class Derived_data:
     def __init__(self):
@@ -272,11 +275,11 @@ class Derived_data:
                 else:
                     out.append(self.flow.lane[c])
             return out
-            
+
     def getLanePercent(self):
         counts = np.asarray(self.getLaneCounts())
         return list(counts/float(sum(counts))*100)
-        
+
 
     def addSingleOutput(self, attr_name, value, filename):
         '''adds the value and the filename to the attribute given'''
@@ -286,7 +289,7 @@ class Derived_data:
         if isinstance(getattr(self, attr_name),Stats):
             getattr(self, attr_name).add_one_dist_list(value)
             getattr(getattr(self, attr_name),'distributions')[-1].addFileName(filename)
-            
+
     def addConstraintValue(self, constraintName, value, filename):
         self.constraint.addCi(constraintName, value, filename)
 
@@ -314,8 +317,8 @@ class Derived_data:
 
     def getConstraints(self):
         return self.constraint.master
-        
-    def getActiveConstraintNames(self):        
+
+    def getActiveConstraintNames(self):
         return self.constraint.actives.getActiveNames()
 
     def getFilenames(self):
@@ -349,10 +352,10 @@ class Derived_data:
                 else:
                     for c in xrange(len(outputs2.flow.lane)):
                         outputs1.editLaneCount(c, outputs2.flow.lane[c])
-    
+
     def activateConstraints(self,config):
         self.constraint.actives.activate(config)
-        
+
 ##################
 ### Constraints
 ##################
@@ -364,26 +367,26 @@ class ActiveConstraints:
         self.tresholdList = []
         self.typeList = []
         self.nameList = []
-        
+
         if config is not None:
             self.activate(config)
-    
-    def activate(self,config):        
+
+    def activate(self,config):
         self.activeList.append(config.collis_constraint[0])
         self.activeList.append(config.nonGen_constraint[0])
         self.activeList.append(config.decelp_constraint[0])
         self.activeList.append(config.accel0_constraint[0])
-        
+
         self.tresholdList.append(config.collis_constraint[1])
         self.tresholdList.append(config.nonGen_constraint[1])
         self.tresholdList.append(config.decelp_constraint[1])
         self.tresholdList.append(config.accel0_constraint[1])
-        
+
         self.typeList.append(config.collis_constraint[2])
         self.typeList.append(config.nonGen_constraint[2])
         self.typeList.append(config.decelp_constraint[2])
         self.typeList.append(config.accel0_constraint[2])
-        
+
         self.nameList.append('collisions')
         self.nameList.append('nonGen')
         self.nameList.append('deceleration')
@@ -391,26 +394,26 @@ class ActiveConstraints:
 
     def getActiveNames(self):
         return [self.nameList[i] for i in xrange(len(self.nameList)) if self.activeList[i]]
-        
+
     def getInfoByName(self,name,key = None):
         '''If key is provided, returns the value of constraint "name" for the
            specific sublist "key".
-           Otherwise, returns a list of the values of each sublist for "name"'''        
+           Otherwise, returns a list of the values of each sublist for "name"'''
         if key is None:
             return [self.activeList[self.nameList.index(name)], self.tresholdList[self.nameList.index(name)], self.typeList[self.nameList.index(name)]]
-            
+
         else:
             return getattr(self, key)[self.nameList.index(name)]
-            
+
     def calculateConstraint(self, name, value):
         '''converts num, dp and a0 errors into constraint values'''
         return value - self.tresholdList[self.nameList.index(name)]
-    
-    @staticmethod    
+
+    @staticmethod
     def getConstraintsTypes(config):
         tmp = ActiveConstraints(config)
         return tmp.typeList
-    
+
 def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collisionTimeDifference = 0.2):
     '''Splits the fzp in smaller fzp files to prevent overflow errors when invoking
        moving.countCollisionsVissim
@@ -510,18 +513,6 @@ def search_folder_for_error_files(dirname, fzpname = None):
         return max(num_list), max(dp_list), max(a0_list)
     else:
         return float('nan'), float('nan'), float('nan')
-
-def convert_errors_to_constraints(config, num, dp, a0):
-    '''converts num, dp and a0 errors into constraint values
-
-       values are reduced by the tolerance threshold, allowing the use of
-       EB, PB or PEB constraint handling strategies
-    '''
-    C_0 = num - config.num_const_thresh
-    C_1 = dp - config.dp_const_thresh
-    C_2 = a0 - config.a0_const_thresh
-
-    return C_0, C_1, C_2
 
 def sort_fout_and_const(fout_lists):
     '''sort many outputs f1, f2, f3, etc. to keep the worst one
@@ -1006,17 +997,16 @@ def treat_Single_VissimOutput(filename, inputs):
         print ' == Lane change compilation done ==  |' + str(time.clock())
 
     #constraint
-    outputs.addSingleOutput('constraint', 'collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
+    outputs.addConstraintValue('collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
 
     if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
         num, dp, a0 = read_error_file(folderpath, filename.strip('.fzp')+'.err')
-        C_1, C_2, C_3 = convert_errors_to_constraints(config, num, dp, a0)
     else:
         num = None; dp = None; a0 = None
 
-    outputs.addSingleOutput('constraint', 'nonGen', num, filename)
-    outputs.addSingleOutput('constraint', 'deceleration', dp, filename)
-    outputs.addSingleOutput('constraint', 'acceleration', a0, filename)
+    outputs.addConstraintValue('nonGen', num, filename)
+    outputs.addConstraintValue('deceleration', dp, filename)
+    outputs.addConstraintValue('acceleration', a0, filename)
 
     if verbose:
         print ' == Constraints calculations done ==  |' + str(time.clock())

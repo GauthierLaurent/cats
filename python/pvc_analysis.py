@@ -89,7 +89,10 @@ def runVissimForCalibrationAnalysis(network, inputs):
         rejected_files = []
         #import pdb;pdb.set_trace()
         #treating the outputs
-        inputs = [final_inpx_path, False, network[0].corridors, outputs.Derived_data(), config]
+        vissim_data = outputs.Derived_data()
+        vissim_data.activateConstraints(config)
+
+        inputs = [final_inpx_path, False, network[0].corridors, vissim_data, config]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         if len(file_list) > 1 and multi_networks is False:
             packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, workers.FalseCommands(), defineNbrProcess = config.nbr_process)
@@ -110,7 +113,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 else:
                     rejected = []
 
-            if config.output_lane_change:
+            if config.output_lane_change_gaps:
                 if len(vissim_data.oppLCbgap.distributions) > 1:
                     rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
                 else:
@@ -152,7 +155,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         else:
                             rejected = []
 
-                    if config.output_lane_change_gap:
+                    if config.output_lane_change_gaps:
                         if len(vissim_data.oppLCbgap.distributions) > 1:
                             rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
                         else:
@@ -226,8 +229,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
                 #comparing video_values with output values
                 mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
-                secondary_values += calibTools.buildReportList(mean_list, d_stat_list)                
-                
+                secondary_values += calibTools.buildReportList(mean_list, d_stat_list)
+
                 #adding video comparison data to the network
                 network[0].addVideoComparison(secondary_values)
 
@@ -245,16 +248,16 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 #
                 if config.output_forward_gaps:
                     if secondary_values[4] == 'DNE':
-                        d_stat.append(['inf'] + vissim_data.constraint.master)
+                        d_stat.append(['inf'] + vissim_data.getConstraints())
                     else:
-                        d_stat.append([secondary_values[4]] + vissim_data.constraint.master)
+                        d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
                     write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
 
-                if config.output_lane_change:
+                if config.output_lane_change_gaps:
                     if secondary_values[8] == 'DNE':        #using the before gap to calibrate
-                        d_stat.append(['inf'] + vissim_data.constraint.master)
+                        d_stat.append(['inf'] + vissim_data.getConstraints())
                     else:
-                        d_stat.append([secondary_values[8]] + vissim_data.constraint.master)
+                        d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
                     write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
 
         vissim.stopVissim(Vissim)
