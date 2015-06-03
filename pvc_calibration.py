@@ -130,7 +130,7 @@ def main():
 
     #creating an history file for calib.py
     variable_names = [i.name for i in variables if i.include is True]
-    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks)
+    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks, outputs.ActiveConstraints.getNumberOfConstraints(config))
 
     #launching NOMADS
     try:

@@ -164,7 +164,7 @@ class History:
         return history.values()
 
     @staticmethod
-    def create_history(dirname, filename, nbr_seeds, variables, networks):
+    def create_history(dirname, filename, nbr_seeds, variables, networks, nConstraints):
         with open(os.path.join(dirname, filename), 'w') as hist:
             #first line:
             hist.write('Itt\t|\t')
@@ -194,22 +194,26 @@ class History:
             hist.write('|\t')
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
-                    hist.write('oppLCcount (mean)\t oppLCcount (delta)\t')
-                    hist.write('manLCcount (mean)\t manLCcount (delta)\t')
-                    hist.write('flow (mean)\t flow (delta)\t')
+                    hist.write('oppLCcount_mean\t oppLCcount_delta\t')
+                    hist.write('manLCcount_mean\t manLCcount_delta\t')
+                    hist.write('flow_mean\t flow_delta\t')
                     hist.write('-\t')
-                    hist.write('forFMgap (mean)\t forFMgap (ks_d_stat)\t')
-                    hist.write('oppLCagap (mean)\t oppLCagap (ks_d_stata)\t')
-                    hist.write('oppLCbgap (mean)\t oppLCbgap (ks_d_stat)\t')
-                    hist.write('manLCagap (mean)\t manLCagap (ks_d_stat)\t')
-                    hist.write('manLCbgap (mean)\t manLCbgap (ks_d_stat)\t')
-                    hist.write('forSpeeds (mean)\t forSpeeds (ks_d_stat)\t')
+                    hist.write('forFMgap_mean\t forFMgap_ks_d_stat\t')
+                    hist.write('oppLCagap_mean\t oppLCagap_ks_d_stat\t')
+                    hist.write('oppLCbgap_mean\t oppLCbgap_ks_d_stat\t')
+                    hist.write('manLCagap_mean\t manLCagap_ks_d_stat\t')
+                    hist.write('manLCbgap_mean\t manLCbgap_ks_d_stat\t')
+                    hist.write('forSpeeds_mean\t forSpeeds (ks_d_stat\t')
                     hist.write('|\t')
 
-            hist.write('fout\tC0\tC1\tC2\n')
+            hist.write('State\tfout\t')
+
+            for n in xrange(nConstraints):
+                hist.write('C'+str(n)+'\t')
+            hist.write('\n')
 
     @staticmethod
-    def write_history(last_num, seeds, points, networks, fout,  dirname, filename):
+    def write_history(last_num, seeds, points, networks, fout, feasability,  dirname, filename):
         with open(os.path.join(dirname, filename), 'a') as hist:
             hist.write(str(last_num)+'\t')
             hist.write('|\t')
@@ -234,6 +238,8 @@ class History:
                         hist.write(str(variables[v]) +'\t')
                     hist.write('|\t')
 
+            #feasibility test
+            hist.write(str(feasability)+'\t')
             #fout
             for f in fout:
                 hist.write(str(f)+'\t')
@@ -288,14 +294,14 @@ class NOMAD:
 
         constraints = ''
         for c in constraint_types: constraints += ' ' + c
-        constraints += '\n'        
+        constraints += '\n'
 
         with open(filepath,'w') as param:
             param.write('DIMENSION      '+num_dim+'					                  # number of variables\n'
                         '\n'
                         'BB_EXE        \'$python calib.py\'                      # blackbox program\n'
                         'BB_INPUT_TYPE  (' + IT + ')\n')
-            if biobj is False:                
+            if biobj is False:
                 param.write('BB_OUTPUT_TYPE OBJ' +constraints+'\n')
             else:
                 param.write('BB_OUTPUT_TYPE OBJ OBJ'+constraints+'\n')
@@ -476,12 +482,12 @@ class NOMAD:
                             current_lines[l] = 'BB_OUTPUT_TYPE OBJ'
                             for c in constraint_types: current_lines[l] += ' ' + c
                             current_lines[l] += '\n'
-                            
+
                         if biobj is True:
                             current_lines[l] = 'BB_OUTPUT_TYPE OBJ OBJ'
                             for c in constraint_types: current_lines[l] += ' ' + c
                             current_lines[l] += '\n'
-                            
+
             #correcting x0, lower_bounds and upper_bounds lines
             if flag[0] == 1:
                 X0 = ' '

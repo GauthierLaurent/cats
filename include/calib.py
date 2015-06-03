@@ -127,12 +127,13 @@ def main(argv):
 
             if mathTools.isbool(list(unpacked_outputs)):
                 seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
-                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
+                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
                 return 1
             else:
                 fout = outputs.sort_fout_and_const(unpacked_outputs[0])
                 networks = [unpacked_outputs[1]]
                 seeds = [store[0]+(i-1)*store[1] for i in unpacked_outputs[2]]
+                feasability = unpacked_outputs[3]
 
         except:
             for net in networks:
@@ -142,7 +143,7 @@ def main(argv):
 
             fout = ['inf'] + [1,1,1,1]#[1 for i in xrange(len())]
 
-            write.History.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
+            write.History.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
 
             with open('run_'+str(last_num)+'.err','w') as err:
                 err.write(traceback.format_exc())
@@ -163,6 +164,7 @@ def main(argv):
             d_stat = []
             networks = []
             seed_num_list = []
+            feasability_list = []
 
             for unpacked in packed_outputs:
                 networks.append(unpacked[1])
@@ -172,6 +174,16 @@ def main(argv):
                 else:
                     for t in xrange(len(unpacked[1].traj_paths)): #traj
                         d_stat.append(unpacked[0][t])
+
+                networks.append(unpacked[1])
+                seed_num_list.append(unpacked[2])
+                feasability_list.append(unpacked[3])
+
+            feasability = 'Feasible'
+            for f in feasability_list:
+                if f == 'Unfeasible':
+                    feasability = 'Unfeasible'
+                    break
 
             #ordering by network number
             net_order = []
@@ -193,7 +205,7 @@ def main(argv):
                     if j < len(seed_num_list)-1:
                         seeds += ['|']
 
-                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], os.getcwd(), 'calib_history.txt')
+                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
                 return 1
             else:
                 fout = outputs.sort_fout_and_const(d_stat)[0]
@@ -214,7 +226,7 @@ def main(argv):
             #might need to be bigger???
             fout = ['inf', 1, 1, 1, 1]
 
-            write.write_history(last_num, seeds, nomad_points, networks, os.getcwd(), ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'calib_history.txt')
+            write.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
 
             out = ''
             for f in fout:
@@ -224,7 +236,7 @@ def main(argv):
             return 1
 
     #write to history
-    write.History.write_history(last_num, seeds, nomad_points, networks, fout, os.getcwd(), 'calib_history.txt')
+    write.History.write_history(last_num, seeds, nomad_points, networks, fout, feasability, os.getcwd(), 'calib_history.txt')
 
     #output for NOMAD
     out = ''

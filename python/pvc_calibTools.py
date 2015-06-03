@@ -94,12 +94,12 @@ def checkCorrespondanceOfOutputs(video_value, calculated_value, simulationStepsP
     return mean_list, D_statistic_list
 
 def buildReportList(mean_list, d_stat_list):
-    reportList = []    
+    reportList = []
     for i in xrange(len(mean_list)):
         reportList.append(mean_list[i])
         reportList.append(d_stat_list[i])
     return reportList
-        
+
 def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
 
     if len(video_value) > 0 and len(calculated_value) > 0:
