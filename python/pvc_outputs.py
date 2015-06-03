@@ -321,6 +321,15 @@ class Derived_data:
     def getActiveConstraintNames(self):
         return self.constraint.actives.getActiveNames()
 
+    def testConstraints(self):
+        tmp = self.getConstraints()
+        for f in tmp:
+            if f > 0:
+                return 'Unfeasible'
+            else:
+                pass
+        return 'Feasible'
+
     def getFilenames(self):
             filenames = []
             for attr in [attr for attr in dir(self) if callable(attr) is False and '__' not in attr and 'get' not in attr and 'add' not in attr and 'edit' not in attr]:
@@ -413,6 +422,11 @@ class ActiveConstraints:
     def getConstraintsTypes(config):
         tmp = ActiveConstraints(config)
         return tmp.typeList
+
+    @staticmethod
+    def getNumberOfConstraints(config):
+        tmp = ActiveConstraints(config)
+        return len([i for i in tmp.activeList if i is True])
 
 def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collisionTimeDifference = 0.2):
     '''Splits the fzp in smaller fzp files to prevent overflow errors when invoking

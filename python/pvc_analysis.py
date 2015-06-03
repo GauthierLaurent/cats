@@ -260,8 +260,10 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
                     write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
 
+                feasibility = vissim_data.testConstraints()
+
         vissim.stopVissim(Vissim)
-        return d_stat, network[0], seed_nums
+        return d_stat, network[0], seed_nums, feasibility
 
 ################################
 #        Statistical precision analysis
