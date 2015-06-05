@@ -259,7 +259,7 @@ def extractParamFromCSV(dirname, filename):
         
         return parameters
     else:
-        print 'No vissim file or csv file named ' + str(filename) + 'were found, closing program '
+        print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
         sys.exit()
 
 def extractCorridorsFromCSV(dirname, inpxname, types):

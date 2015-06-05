@@ -765,7 +765,6 @@ def writeDisgnosedReport(dirname, filename, video_names, inpxname, min_time, max
 
     return
 
-
 def writeListToCSV(lists, name):
     '''writes a CSV file which will contain one line per element in lists'''
     out = open(name, 'w')
@@ -778,19 +777,22 @@ def writeInFile(out, *args, **kwargs):
     variables = mathTools.ToOneList(list(args))
 
     rounding = 4
+    sep = ';'
     if kwargs is not None:
         for key, value in kwargs.items():
             if key == 'rounding':
                 rounding = value
+            if key == 'sep':
+                sep = value
 
     for var in variables:
         if isinstance(var,float) is True:
             if rounding is False:
-                out.write(str(var) + ';')
+                out.write(str(var) + str(sep))
             else:
-                out.write(str(round(var,rounding)) + ';')
+                out.write(str(round(var,rounding)) + str(sep))
         else:
-            out.write(str(var) +';')
+            out.write(str(var) +str(sep))
     out.write('\n')
 
 def timeStamp(variables, points, sim, itt = None):
