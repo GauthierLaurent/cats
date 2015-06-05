@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Libraries
 ##################
 ##natives
-import os, sys, StringIO
+import os, sys, StringIO, copy
 import numpy as np
 import random, time
 
@@ -177,13 +177,22 @@ class FileConstraint:
 
     def addCi(self,ci,name):
         if name not in self.names:
-            self.constraints += [ci]
-            self.names += [name]
+            self.constraints.append(ci)
+            self.names.append(name)
         else:
             self.constraints[self.names.index(name)] = ci
 
     def addFilename(self,filename):
         self.filename = filename
+
+    def setDefaults(self, nameList,valueList):
+        self.constraints = copy.deepcopy(valueList)
+        self.names = nameList
+
+    def setAll(self,nameList,valueList,ci,name,filename):
+        self.setDefaults(nameList,valueList)
+        self.addCi(ci,name)
+        self.addFilename(filename)
 
 class Constraints:
     def __init__(self):
@@ -197,16 +206,14 @@ class Constraints:
     def addCi(self,name,value,filename):
         if name in self.actives.getActiveNames():
             if value is None:
-                ci = 0
-            else:
-                ci = self.actives.calculateConstraint(name, value)
+                value = 0
+            ci = self.actives.calculateConstraint(name, value)
 
             if filename in self.getFilenames():
                 self.files[self.getFilenames().index(filename)].addCi(ci,name)
             else:
                 self.files += [FileConstraint()]
-                self.files[-1].addFilename(filename)
-                self.files[-1].addCi(ci,name)
+                self.files[-1].setAll(self.actives.getActiveNames(),self.actives.getThresholdList(),ci,name,filename)
             self.regenMaster()
 
     def regenMaster(self):
@@ -229,11 +236,14 @@ class Constraints:
         '''concanate all the distributions of the constraints class variables into the first one'''
         for const in consts:
             for FileConst in const.files:
-                for ci in xrange(len(FileConst.constraints)):
-                    name = FileConst.names[ci]
-                    value = FileConst.constraints[0]
+                if FileConst not in const1.files:
+                    const1.files.append(FileConst)
+                else:
+                    for ci in xrange(len(FileConst.constraints)):
+                        name = FileConst.names[ci]
+                        value = FileConst.constraints[ci]
 
-                    const1.addCi(name, value, FileConst.filename)
+                        const1.addCi(name, value, FileConst.filename)
 
 class Derived_data:
     def __init__(self):
@@ -321,6 +331,9 @@ class Derived_data:
     def getActiveConstraintNames(self):
         return self.constraint.actives.getActiveNames()
 
+    def getConstraintsForFile(self,filename):
+        return self.constraint.files[self.constraint.getFilenames().index(filename)].constraints
+
     def testConstraints(self):
         tmp = self.getConstraints()
         for f in tmp:
@@ -403,6 +416,9 @@ class ActiveConstraints:
 
     def getActiveNames(self):
         return [self.nameList[i] for i in xrange(len(self.nameList)) if self.activeList[i]]
+
+    def getThresholdList(self):
+        return self.tresholdList
 
     def getInfoByName(self,name,key = None):
         '''If key is provided, returns the value of constraint "name" for the

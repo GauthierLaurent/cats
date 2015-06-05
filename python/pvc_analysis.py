@@ -91,7 +91,6 @@ def runVissimForCalibrationAnalysis(network, inputs):
         #treating the outputs
         vissim_data = outputs.Derived_data()
         vissim_data.activateConstraints(config)
-
         inputs = [final_inpx_path, False, network[0].corridors, vissim_data, config]
         file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
         if len(file_list) > 1 and multi_networks is False:
