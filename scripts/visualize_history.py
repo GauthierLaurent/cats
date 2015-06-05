@@ -105,12 +105,12 @@ if Commands.graphType == 'panda' or Commands.graphType == 'both':
     import pandas
     import parallel_coordinates
 
-    columns = [var.name for var in variables] + ['Test']
+    columns = [var.name for var in variables] + ['State']
     
     data = pandas.read_csv(os.path.join(Commands.cwd,'calib_history.txt'), index_col=False, header=0, lineterminator='\n', error_bad_lines=True, sep='\t', skiprows=1, usecols = columns)   
     
     lower_bounds = [var.desired_min for var in variables if var.include is True]
     upper_bounds = [var.desired_max for var in variables if var.include is True]
     
-    parallel_coordinates.parallel_coordinates(data, 'Test', color = ['g','b'], normalize=True, bounds = [lower_bounds, upper_bounds])
+    parallel_coordinates.parallel_coordinates(data.dropna(subset=['State']), 'State', color = ['b','g','r'], normalize=True, bounds = [lower_bounds, upper_bounds])
     plt.show()
