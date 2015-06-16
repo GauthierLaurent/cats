@@ -102,7 +102,7 @@ class Stats:
         '''mylist must refer to the indexes of the list of distributions to pop'''
         if len(mylist) > 0:
             for i in reversed(sorted(mylist)):
-                if len(self.distributions) >= i:
+                if len(self.distributions) > i:
                     self.distributions.pop(i)
             self.regen_cumul_all()
 
@@ -1069,7 +1069,7 @@ def treat_Single_VissimOutput(filename, inputs):
         if verbose:
             print ' == Mandatory lane change gaps calculation done  ==  |' + str(time.clock())
         outputs.addSingleOutput('manLCagap', raw_man_LC_agaps, filename)
-        outputs.addSingleOutput('manLCagap', raw_man_LC_bgaps, filename)
+        outputs.addSingleOutput('manLCbgap', raw_man_LC_bgaps, filename)
 
     if config.cmp_opp_lcgaps:
         raw_opp_LC_agaps    = []
@@ -1077,12 +1077,12 @@ def treat_Single_VissimOutput(filename, inputs):
 
         #opportunistic lane change gaps
         agaps, bgaps = laneChangeGaps(oppObjDict, laneDict, objects)
-        if agaps.any(): raw_man_LC_agaps = agaps.tolist()
-        if bgaps.any(): raw_man_LC_bgaps = bgaps.tolist()
+        if agaps.any(): raw_opp_LC_agaps = agaps.tolist()
+        if bgaps.any(): raw_opp_LC_bgaps = bgaps.tolist()
         if verbose:
             print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
         outputs.addSingleOutput('oppLCagap', raw_opp_LC_agaps, filename)
-        outputs.addSingleOutput('oppLCagap', raw_opp_LC_bgaps, filename)
+        outputs.addSingleOutput('oppLCbgap', raw_opp_LC_bgaps, filename)
 
     if verbose:
         print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
