@@ -6,14 +6,20 @@ Created on Fri Jun 05 11:47:30 2015
 """
 import argparse, os
 
+'''
+ex, 1 graph with subgraphs: --points 1 --xlim 20 --cumul --title default values
+    1 graph per video:      --points 739 --xlim 20 --concat --cumul --title calibrated values
+'''
+
 #Command parser
 def commands(parser):
     parser.add_argument('--points', type=int,            dest='pts',    default=None,        help='Number of graphs per figure (Nx1)')
     parser.add_argument('--dir',                         dest='cwd',    default=os.getcwd(), help='Directory (Optional: default is current working directory)')
     parser.add_argument('--cumul',  action='store_true', dest='cumul',  default=False,       help='If called, the cumulative distributions will be traced')
-    parser.add_argument('--hspace', type=float,          dest='hspace', default=0.2,        help='Horizontal space between subplots')
+    parser.add_argument('--concat', action='store_false',dest='concat', default=True,        help='If called, the cumulative distributions will be traced')
+    parser.add_argument('--hspace', type=float,          dest='hspace', default=0.2,         help='Horizontal space between subplots')
     parser.add_argument('--xlim',   type=int,            dest='xlim',   default=30,          help='Limit of the x-axis when plotting the data. Default = 30')
-    parser.add_argument('--title',  nargs='*',           dest='title',  default=None,          help='Limit of the x-axis when plotting the data. Default = 30')
+    parser.add_argument('--title',  nargs='*',           dest='title',  default=None,        help='Text to add the the title ''Comparison of simulated and observed [type of output] [for]'' ')
     return parser.parse_args()
 
 def main():
@@ -24,6 +30,7 @@ def main():
     #Native dependencies
     import os, copy
     import matplotlib.pyplot as plt
+    import numpy as np
 
     #Internal
     import pvc_write      as write
@@ -137,8 +144,9 @@ def main():
                         mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs([video_data.oppLCbgap], [vissim_data.oppLCbgap], config.sim_steps, config.fps)
                         fout_list += d_stat_list
 
-            fig = plt.figure()
-            fig.set_size_inches(7,7)
+            if Commands.concat:
+                fig = plt.figure()
+                fig.set_size_inches(7,7)
 
             if Commands.cumul:
                 histtype = 'step'
@@ -150,6 +158,10 @@ def main():
                 for i in xrange(len(video_data_list)/2):
                     if (2*i+j) <= len(video_data_list):
 
+                        if not Commands.concat:
+                            fig = plt.figure()
+                            fig.set_size_inches(7,7)
+
                         video_p_list  = [vd/float(config.fps) for vd in video_data_list[2*i+j].cumul_all.raw if vd/float(config.fps) < 60]
 
                         #cheat to hide the end of the histogram with cumulative function 1/2
@@ -157,37 +169,74 @@ def main():
                             video_p_list.append(70)
                             vissim_p_list.append(70)
 
-                        ax = fig.add_subplot(len(video_data_list)/2,2,(2*i+j)+1)
-                        ax.hist(video_p_list, normed=True, histtype=histtype, cumulative=Commands.cumul, bins = 100, color = 'b', alpha=0.6, label='video data')
-                        ax.hist(vissim_p_list, normed=True, histtype=histtype, cumulative=Commands.cumul, bins = 100, color = 'r', alpha=0.6, label='vissim data')
-                        ax.set_title(video_name_list[2*i+j] + ', d = ' + str(round(fout_list[2*i+j],3)), fontsize='small')
+                        bins = 100
+                        if Commands.cumul:
+                            bins = 1000
+
+                        if Commands.concat:
+                            ax = fig.add_subplot(len(video_data_list)/2,2,(2*i+j)+1)
+                        else:
+                            ax = fig.add_subplot(1,1,1)
+
+                        ax.hist(video_p_list, normed=True, histtype=histtype, cumulative=Commands.cumul, bins = bins, color = 'b', alpha=0.6, label='video data')
+                        ax.hist(vissim_p_list, normed=True, histtype=histtype, cumulative=Commands.cumul, bins = bins, color = 'r', alpha=0.6, label='vissim data')
+                        if Commands.concat:
+                            ax.set_title(video_name_list[2*i+j] + ', d = ' + str(round(fout_list[2*i+j],3)), fontsize='small')
 
                         #cheat to hide the end of the histogram with cumulative function 2/2
                         if Commands.cumul:
                             ax.set_xlim(right=Commands.xlim)
+                            ax.set_xticks(np.arange(0,Commands.xlim+1,float(Commands.xlim)/10))
 
+                            ax.set_ylim(top=1.0)
+                            ax.set_yticks(np.arange(0,1.1,0.1))
 
-                        #making only the border labels appear
-                        if i == len(video_data_list)/2-1:
+                        if Commands.concat:
+                            #making only the border labels appear
+                            if i == len(video_data_list)/2-1:
+                                ax.set_xlabel('time (sec)', fontsize='small')
+                            else:
+                                ax.set_xticklabels('',  visible=False)
+
+                            if (2*i+j)%2 == 0:
+                                if Commands.cumul:
+                                    ax.set_ylabel('cumulated probability', fontsize='small')
+                                else:
+                                    ax.set_ylabel('occurrence', fontsize='small')
+                            else:
+                                ax.set_yticklabels('', visible=False)
+                        else:
                             ax.set_xlabel('time (sec)', fontsize='small')
-                        else:
-                            ax.set_xticklabels('',  visible=False)
+                            if Commands.cumul:
+                                ax.set_ylabel('cumulated probability', fontsize='small')
+                            else:
+                                ax.set_ylabel('occurrence', fontsize='small')
 
-                        if (2*i+j)%2 == 0:
-                            ax.set_ylabel('occurrence', fontsize='small')
-                        else:
-                            ax.set_yticklabels('', visible=False)
+                        if not Commands.concat:
+                            ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.3), ncol=2, fontsize='small', frameon=False)
+                            plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title+' for '+video_name_list[2*i+j] + ', d = ' + str(round(fout_list[2*i+j],3)))
+                            plt.grid()
 
-            plt.subplots_adjust(hspace=Commands.hspace)
-            ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.3), ncol=2, fontsize='small', frameon=False)
-            plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title)
+                            if Commands.cumul:
+                                plt.savefig(os.path.join(final_inpx_path, 'Publishable video and Vissim cumulative distributions for '+video_name_list[2*i+j]))
+                            else:
+                                plt.savefig(os.path.join(final_inpx_path, 'Publishable video and Vissim distributions for '+video_name_list[2*i+j]))
+                            plt.clf()
+                            plt.close(fig)
 
-            if Commands.cumul:
-                plt.savefig(os.path.join(final_inpx_path, 'Publishable video and Vissim cumulative distributions'))#, bbox_extra_artists=(lgd,), bbox_inches='tight')
-            else:
-                plt.savefig(os.path.join(final_inpx_path, 'Publishable video and Vissim distributions'))#, bbox_extra_artists=(lgd,), bbox_inches='tight')
-            plt.clf()
-            plt.close(f)
+
+            if Commands.concat:
+                plt.subplots_adjust(hspace=Commands.hspace)
+                ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.3), ncol=2, fontsize='small', frameon=False)
+                plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title)
+                plt.grid()
+
+                if Commands.cumul:
+                    plt.savefig(os.path.join(final_inpx_path, 'Publishable video and Vissim cumulative distributions'))#, bbox_extra_artists=(lgd,), bbox_inches='tight')
+                else:
+                    plt.savefig(os.path.join(final_inpx_path, 'Publishable video and Vissim distributions'))#, bbox_extra_artists=(lgd,), bbox_inches='tight')
+                plt.clf()
+                plt.close(fig)
 
     return
 
