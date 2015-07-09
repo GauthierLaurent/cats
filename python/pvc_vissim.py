@@ -23,7 +23,7 @@ def isVissimRunning(kill=False):
        starting the python program
     '''
     running = False
-    
+
     # Go through list and check each processes executeable name for 'Vissim.exe'
     for p in psutil.get_process_list():
         try:
@@ -34,7 +34,7 @@ def isVissimRunning(kill=False):
                 else:
                     running = True
         except:
-            pass             
+            pass
     return running
 
 def startVissim():
@@ -47,7 +47,7 @@ def startVissim():
         #      win32com.client.Dispatch() will ignore already opened vissim instances and start a fresh one
     except:
         return 'StartError'
-           
+
 def loadNetwork(Vissim, InpxPath, err_file=False):
     '''start a Vissim network. Returns True if successfull, LoadNetError otherwise
        The filename MUST have a capital first letter'''
@@ -57,7 +57,8 @@ def loadNetwork(Vissim, InpxPath, err_file=False):
             return True
         except:
             if err_file is True:
-                traceback.print_exc(file=open(os.path.join(InpxPath, 'loadNetwork.err'),'w'))
+                with open(os.path.join(InpxPath, 'loadNetwork.err'),'w') as err:
+                    err.write(traceback.format_exc())
             return 'LoadNetError'
 
 def stopVissim(Vissim):
@@ -70,64 +71,65 @@ def stopVissim(Vissim):
         return False
     else:
         return True
-        
+
 def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False, err_file_path=False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
         the sim_parameters variables must be [simulationStepsPerTimeUnit,
-        first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''    
+        first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''
 
     try:
         Simulation = Vissim.Simulation
         Evaluation = Vissim.Evaluation
-        
+
         if Simulation.AttValue("IsRunning") is True:
             Simulation.Stop()
-        
-        #Setting Simulation attributes        
+
+        #Setting Simulation attributes
         Simulation.SetAttValue("SimRes", sim_parameters[0])         #ODOT p.45 (56 in the pdf)
         Simulation.SetAttValue("useMaxSimSpeed", True)
         Simulation.SetAttValue("RandSeed", sim_parameters[1])       #Hitchhiker's Guide to the Galaxy!
         Simulation.SetAttValue("RandSeedIncr", sim_parameters[5])
         Simulation.SetAttValue("NumRuns", sim_parameters[2])        #To be verified
         Simulation.SetAttValue("SimPeriod",sim_parameters[3])
-        
+
         #Setting the number of cores to use
-        Simulation.SetAttValue("NumCores",sim_parameters[4])       
-        
+        Simulation.SetAttValue("NumCores",sim_parameters[4])
+
         #Enabling the Quick Mode
         Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
-        
+
         #Setting Evaluation outputs
         Evaluation.SetAttValue("VehRecWriteFile",True)               #Enable .fzp outputs
         if swp: Evaluation.SetAttValue("LaneChangesWriteFile",True)  #Enable .swp outputs
-        
+
         #Setting driving behavior attributes
         if sim_parameters[3] is not None:
-            for i in xrange(len(Vissim.Net.DrivingBehaviors)):                       
+            for i in xrange(len(Vissim.Net.DrivingBehaviors)):
                 for variable in xrange(len(parameters)):
                     if caracterizedParameter('DrivingBehaviors', parameters[variable]):
                         Vissim.Net.DrivingBehaviors[i].SetAttValue(parameters[variable].vissim_name,values[variable])
-        
+
         #Saving variable changes
         Vissim.SaveNet()
-        
-        #Starting the simulation            
+
+        #Starting the simulation
         Simulation.RunContinuous()
-        
-        simulated = True        
+
+        simulated = True
     except:
-        if err_file_path is False:           
+        if err_file_path is False:
             simulated = sys.exc_info()
         else:
             simulated = False
-            traceback.print_exc(file=open(os.path.join(err_file_path, 'initializeSimulation'),'w'))
+            with open(os.path.join(err_file_path, 'initializeSimulation'),'w') as err:
+                err.write(traceback.format_exc())
     return simulated
-    
+
 def caracterizedParameter(param_type, parameter):
     '''function used to assign parameters to the correct Vissim COM method
         -> this will be usefull to expand pvctools to other type of study than
            DrivingBehaviors related studies
-           
+
            checks if the parameter is in the type of variables, returns True or False
     '''
     drivingBehaviors_list = ['W74ax','W74bxAdd', 'W74bxMult',
@@ -135,7 +137,7 @@ def caracterizedParameter(param_type, parameter):
                              'LookAheadDistMin','LookAheadDistMax','ObsrvdVehs','LookBackDistMin','LookBackDistMax',
                              'MaxDecelOwn','DecelRedDistOwn','AccDecelOwn','MaxDecelTrail','DecelRedDistTrail','AccDecelTrail','DiffusTm','MinHdwy','SafDistFactLnChg','CoopLnChg','CoopLnChgSpeedDiff','CoopLnChgCollTm','CoopDecel'
                              ]
-                             
+
     if param_type == 'DrivingBehaviors':
         if parameter.vissim_name in drivingBehaviors_list:
             return True
@@ -146,11 +148,11 @@ def weidemannCheck(model, parameters):
     '''returns the parameters that are not part of the other wiedemann model than
        the one specified. If None is passed for the model type, every parameters
        will be returned   - Presently unused'''
-       
-    weidemann74 = ['W74ax','W74bxAdd', 'W74bxMult']
-    weidemann99 = ['W99cc0','W99cc1','W99cc2','W99cc3','W99cc4','W99cc5','W99cc6','W99cc7','W99cc8','W99cc9']    
 
-    output = []    
+    weidemann74 = ['W74ax','W74bxAdd', 'W74bxMult']
+    weidemann99 = ['W99cc0','W99cc1','W99cc2','W99cc3','W99cc4','W99cc5','W99cc6','W99cc7','W99cc8','W99cc9']
+
+    output = []
     for i in xrange(len(parameters)):
         if model == 74:
             if parameters[i].vissim_name in weidemann99:
@@ -164,7 +166,7 @@ def weidemannCheck(model, parameters):
             else:
                 output.append(parameters[i])
     return output
-    
+
 #######   Under developpement  ############
 class linkTo:
     def __init__(self, linked_variable, relation):
@@ -179,19 +181,19 @@ class vissimParameters:
         self.vissim_default = vissim_default
         self.param_type     = param_type
         self.ValueType      = value_type
-        
+
     def set_link(self, linked_variable, relation):
         #relation = 'greater' or 'lower'
         self.linkedTo = linkTo(linked_variable, relation)
-        
+
 def vissimDictionnary():
     values = {}
-    
+
     #Wiedemann 74
     values['W74ax']     = vissimParameters('W74ax',      0.0,   None,    2.0,   'DrivingBehaviors', 'R')
     values['W74bxAdd']  = vissimParameters('W74bxAdd',   0.0,   None,    2.0,   'DrivingBehaviors', 'R')
     values['W74bxMult'] = vissimParameters('W74bxMult',  0.0,   None,    3.0,   'DrivingBehaviors', 'R')
-    
+
     #Wiedemann 99
     values['W99cc0']    = vissimParameters('W99cc0',     0.0,   None,    1.5,   'DrivingBehaviors', 'R')
     values['W99cc1']    = vissimParameters('W99cc1',    None,   None,    0.9,   'DrivingBehaviors', 'R')
@@ -203,14 +205,14 @@ def vissimDictionnary():
     values['W99cc7']    = vissimParameters('W99cc7',    None,   None,    0.25,  'DrivingBehaviors', 'R')
     values['W99cc8']    = vissimParameters('W99cc8',    None,   None,    3.5 ,  'DrivingBehaviors', 'R')
     values['W99cc9']    = vissimParameters('W99cc9',    None,   None,    1.5 ,  'DrivingBehaviors', 'R')
-    
+
     #general following behavior
     values['LookAheadDistMin']   = vissimParameters('LookAheadDistMin',    0.0,   999999,    0.0,  'DrivingBehaviors',  'R'); values['LookAheadDistMin'].set_link('LookAheadDistMax','lower')
     values['LookAheadDistMax']   = vissimParameters('LookAheadDistMax',    0.0,   999999,  250.0,  'DrivingBehaviors',  'R'); values['LookAheadDistMax'].set_link('LookAheadDistMin','greater')
     values['ObsrvdVehs']         = vissimParameters('ObsrvdVehs',          0.0,   999999,    2.0,  'DrivingBehaviors',  'I')
     values['LookBackDistMin']    = vissimParameters('LookBackDistMin',     0.0,   999999,    0.0,  'DrivingBehaviors',  'R'); values['LookBackDistMin'].set_link('LookBackDistMax','lower')
     values['LookBackDistMax']    = vissimParameters('LookBackDistMax',     0.0,   999999,  150.0,  'DrivingBehaviors',  'R'); values['LookBackDistMax'].set_link('LookBackDistMin','greater')
-    
+
     #general lane change
     values['MaxDecelOwn']        = vissimParameters('MaxDecelOwn',       -10.0,  -0.02,    -4.0,  'DrivingBehaviors',  'R')
     values['DecelRedDistOwn']    = vissimParameters('DecelRedDistOwn',     0.0,   None,   100.0,  'DrivingBehaviors',  'R')
@@ -225,6 +227,5 @@ def vissimDictionnary():
     values['CoopLnChgSpeedDiff'] = vissimParameters('CoopLnChgSpeedDiff', None,   None,     3.0,  'DrivingBehaviors',  'R')
     values['CoopLnChgCollTm']    = vissimParameters('CoopLnChgCollTm',    None,   None,    10.0,  'DrivingBehaviors',  'R')
     values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,    -3.0,  'DrivingBehaviors',  'R')
-    
+
     return values
-    
