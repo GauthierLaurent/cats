@@ -483,8 +483,11 @@ def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collis
                 nCollisions +=  storage.countCollisionsVissim(StringIO.StringIO(tmp), lanes = lanes, collisionTimeDifference = 0.2)
                 test_again = False
             except:
-                maxLines += - 100000
-                test_again = True
+                if maxLines > 400000:
+                    maxLines += - 200000
+                    test_again = True
+                else:
+                    return
 
     return nCollisions
 
