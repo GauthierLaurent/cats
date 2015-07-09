@@ -19,6 +19,7 @@ from scipy.stats.mstats import ks_twosamp
 
 #Internal
 import pvc_csvParse as csvParse
+import pvc_outputs as outputs
 
 ##################
 # Statistic tests
@@ -103,7 +104,7 @@ def buildReportList(mean_list, d_stat_list):
 def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationStepsPerTimeUnit, fps):
 
     if len(video_value) > 0 and len(calculated_value) > 0:
-        D_statistic, p_value = ks_twosamp([p/float(simulationStepsPerTimeUnit) for p in video_value], [p/float(fps) for p in calculated_value])
+        D_statistic, p_value = ks_twosamp([p/float(fps) for p in video_value], [p/float(simulationStepsPerTimeUnit) for p in calculated_value])
     else:
         D_statistic = 'DNE'
 
@@ -115,6 +116,7 @@ def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationSteps
 class Network:
     def __init__(self,inpx_path,traj_path_list):
         self.inpx_path = inpx_path
+        self.feasability = 'Unfeasible'
 
         if isinstance(traj_path_list, list):
             self.traj_paths = traj_path_list
