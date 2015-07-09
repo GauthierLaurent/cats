@@ -27,7 +27,6 @@ def main(argv):
 
     #Internal
     import pvc_write     as write
-    import pvc_workers   as workers
     import pvc_mathTools as mathTools
     import pvc_configure as configure
     import pvc_csvParse  as csvParse
@@ -101,139 +100,60 @@ def main(argv):
 
     #pass data to vissim and simulate
 
-    if len(networks) == 1:
+    '''
+    #TEST NEEDS TO BE OUT OF TRY/EXCEPT
+    ##run the analysis
+    parameters[4] = multiprocessing.cpu_count() - 1
+    inputs = [config, variables, parameters, point_folderpath]
+    unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
+    if mathTools.isbool(list(unpacked_outputs)):
+        print 'end crashed'
+        import pdb;pdb.set_trace()
+    else:
+        fout = outputs.sort_fout_and_const(unpacked_outputs[0])
+        print fout
+        import pdb;pdb.set_trace()
+    #'''
 
-        '''
-        #TEST NEEDS TO BE OUT OF TRY/EXCEPT
+    try:
         ##run the analysis
         parameters[4] = multiprocessing.cpu_count() - 1
-        inputs = [config, variables, parameters, point_folderpath, False]
+        inputs = [config, variables, parameters, point_folderpath]
         unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
 
         if mathTools.isbool(list(unpacked_outputs)):
-            print 'end crashed'
-            import pdb;pdb.set_trace()
+            seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
+            write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
+            return 1
         else:
             fout = outputs.sort_fout_and_const(unpacked_outputs[0])
-            print fout
-            import pdb;pdb.set_trace()
-        #'''
-
-        try:
-            ##run the analysis
-            parameters[4] = multiprocessing.cpu_count() - 1
-            inputs = [config, variables, parameters, point_folderpath, False]
-            unpacked_outputs = analysis.runVissimForCalibrationAnalysis(networks, inputs)
-
-            if mathTools.isbool(list(unpacked_outputs)):
-                seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
-                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
-                return 1
-            else:
-                fout = outputs.sort_fout_and_const(unpacked_outputs[0])
-                networks = [unpacked_outputs[1]]
-                seeds = [store[0]+(i-1)*store[1] for i in unpacked_outputs[2]]
-                feasability = unpacked_outputs[3]
-
-        except:
+            networks = unpacked_outputs[1]
+            seeds = [store[0]+(i-1)*store[1] for i in unpacked_outputs[2]]
+            feasability = 'feasible'
             for net in networks:
-                net.addVideoComparison([sys.exc_info()[0]])
-
-            seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)] + ['|']
-
-            fout = ['inf'] + [1,1,1,1]#[1 for i in xrange(len())]
-
-            write.History.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
-
-            with open('run_'+str(last_num)+'.err','w') as err:
-                err.write(traceback.format_exc())
-
-            out = ''
-            for f in fout:
-                out += str(f)
-            print out
-            return 1
-
-    else:
-        try:
-            ##run the analysis through workers -- separate with networks
-            commands = workers.FalseCommands()
-            inputs = [config, variables, parameters, point_folderpath, True]
-            packed_outputs = workers.createWorkers(networks, analysis.runVissimForCalibrationAnalysis, inputs, commands, defineNbrProcess = min(len(networks),4))
-
-            d_stat = []
-            networks = []
-            seed_num_list = []
-            feasability_list = []
-
-            for unpacked in packed_outputs:
-                networks.append(unpacked[1])
-
-                if isinstance(unpacked[0], bool):
-                    d_stat.append(unpacked[0])
-                else:
-                    for t in xrange(len(unpacked[1].traj_paths)): #traj
-                        d_stat.append(unpacked[0][t])
-
-                networks.append(unpacked[1])
-                seed_num_list.append(unpacked[2])
-                feasability_list.append(unpacked[3])
-
-            feasability = 'Feasible'
-            for f in feasability_list:
-                if f == 'Unfeasible':
+                if net.feasibility == 'Unfeasible':
                     feasability = 'Unfeasible'
-                    break
 
-            #ordering by network number
-            net_order = []
-            for i in xrange(len(networks)):
-                if networks[i].inpx_path == config.path_to_inpx_file_1: net_order.append(1)
-                if networks[i].inpx_path == config.path_to_inpx_file_2: net_order.append(2)
-                if networks[i].inpx_path == config.path_to_inpx_file_3: net_order.append(3)
-                if networks[i].inpx_path == config.path_to_inpx_file_4: net_order.append(4)
+    except:
+        for net in networks:
+            net.addVideoComparison([sys.exc_info()[0]])
 
-            net_order, d_stat, networks, seed_num_list = mathTools.sortManyLists(net_order, d_stat, networks, seed_num_list)
+        seeds = [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
 
-            if mathTools.isbool(d_stat):
-                seeds = []
-                for j in xrange(len(seed_num_list)):
-                    if seed_num_list[j][0] == 'N/A':
-                        seeds += seed_num_list[j] + ['|']
-                    else:
-                        seeds += [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
-                    if j < len(seed_num_list)-1:
-                        seeds += ['|']
+        tmp = outputs.Derived_data()
+        tmp.activateConstraints(config)
+        fout = ['inf'] + [1 for i in tmp.getActiveConstraintNames()]
 
-                write.History.write_history(last_num, seeds, nomad_points, networks, ['crashed', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
-                return 1
-            else:
-                fout = outputs.sort_fout_and_const(d_stat)[0]
-                seeds = []
-                for j in xrange(len(seed_num_list)):
-                    seeds += [store[0]+(i-1)*store[1] for i in seed_num_list[j]]
-                    if j < len(seed_num_list)-1:
-                        seeds += ['|']
-        except:
-            for net in networks:
-                net.addVideoComparison([sys.exc_info()[0]])
+        write.History.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
 
-            seeds = []
-            for j in xrange(parameters[2]):
-                seeds += [parameters[1]] + [parameters[1]+i*parameters[5] for i in range(1,config.nbr_runs)]
-                if j < parameters[2]-1:
-                    seeds += ['|']
-            #might need to be bigger???
-            fout = ['inf', 1, 1, 1, 1]
+        with open('run_'+str(last_num)+'.err','w') as err:
+            err.write(traceback.format_exc())
 
-            write.write_history(last_num, seeds, nomad_points, networks, ['err', 'NaN', 'NaN', 'NaN', 'NaN'], 'Unfeasible', os.getcwd(), 'calib_history.txt')
-
-            out = ''
-            for f in fout:
-                out += str(f)
-            print out
-
-            return 1
+        out = ''
+        for f in fout:
+            out += str(f)+' '
+        print out
+        return 1
 
     #write to history
     write.History.write_history(last_num, seeds, nomad_points, networks, fout, feasability, os.getcwd(), 'calib_history.txt')

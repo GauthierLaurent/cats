@@ -36,233 +36,235 @@ def runVissimForCalibrationAnalysis(network, inputs):
     variables        = inputs[1]
     parameters       = inputs[2]
     point_folderpath = inputs[3]
-    multi_networks   = inputs[4]
 
     Vissim = vissim.startVissim()
 
-    if multi_networks is True:
-        #if we are treating more than one network, than we subdivide the point folder into network folders
-        if not os.path.isdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])):
-            os.mkdir(os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0]))
-
-        final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[0].inpx_path.split(os.sep)[-1])[0])
-        shutil.move(os.path.join(point_folderpath,network[0].inpx_path.split(os.sep)[-1]),os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]))
-
-    else:
-        final_inpx_path = copy.deepcopy(point_folderpath)
-
-    #retry the start vissim after having killed all vissims - only owrks if not in multi network mode
-    if isinstance(Vissim, str) and multi_networks is False:
+    #retry the start vissim after having killed all vissims - only works if not in multi network mode
+    if isinstance(Vissim, str):
         vissim.isVissimRunning(True)
         Vissim = vissim.startVissim()
 
-    #check for starting error
-    if isinstance(Vissim, str):
-        for traj in network[0].traj_paths:
-            network[0].addVideoComparison(['StartError'])
-            return False, network[0], ['N/A' for i in xrange(parameters[2])]
+    d_stat = []
+    for N in xrange(len(network)):
 
-    #load the network
-    load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[0].inpx_path.split(os.sep)[-1]), err_file=True)
+        if len(network) > 1:
+            #if we are treating more than one network, than we subdivide the point folder into network folders
+            if not os.path.isdir(os.path.join(point_folderpath,os.path.splitext(network[N].inpx_path.split(os.sep)[-1])[0])):
+                os.mkdir(os.path.join(point_folderpath,os.path.splitext(network[N].inpx_path.split(os.sep)[-1])[0]))
 
-    #check for network loading error
-    if load is not True:
-        for traj in network[0].traj_paths:
-            network[0].addVideoComparison(['LoadNetError'])
-            return False, network[0], ['N/A' for i in xrange(parameters[2])]
-
-    values = []
-    for var in variables:
-        values.append(var.point)
-
-    #Initializing and running the simulation
-    simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
-
-    if simulated is not True:
-        for traj in network[0].traj_paths:
-            network[0].addVideoComparison(['SimulationError'])
-            vissim.stopVissim(Vissim)
-        return False, network[0], ['N/A' for i in xrange(parameters[2])]
-
-    else:
-        d_stat = []
-        rejected_files = []
-        #import pdb;pdb.set_trace()
-        #treating the outputs
-        vissim_data = outputs.Derived_data()
-        vissim_data.activateConstraints(config)
-        inputs = [final_inpx_path, False, network[0].corridors, vissim_data, config]
-        file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-        if len(file_list) > 1 and multi_networks is False:
-            packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, workers.FalseCommands(), defineNbrProcess = config.nbr_process)
-
-            vissim_data = packedStatsLists[0]
-
-            for stat in xrange(1,len(packedStatsLists)):
-                outputs.Derived_data.concat(vissim_data, packedStatsLists[stat])
+            final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[N].inpx_path.split(os.sep)[-1])[0])
+            shutil.move(os.path.join(point_folderpath,network[N].inpx_path.split(os.sep)[-1]),os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]))
 
         else:
-            vissim_data = outputs.treatVissimOutputs(file_list, inputs)
+            final_inpx_path = copy.deepcopy(point_folderpath)
 
-        if config.ks_switch:
-            #verifying the validity of the distributions
-            if config.output_forward_gaps:
-                if len(vissim_data.forFMgap.distributions) > 1:
-                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
-                else:
-                    rejected = []
+        #check for starting error
+        if isinstance(Vissim, str):
+            for traj in network[N].traj_paths:
+                network[N].addVideoComparison(['StartError'])
+                return False, network[N], ['N/A' for i in xrange(parameters[2])], 'Unfeasible'
 
-            if config.output_lane_change_gaps:
-                if len(vissim_data.oppLCbgap.distributions) > 1:
-                    rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
-                else:
-                    rejected = []
+        #load the network
+        load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]), err_file=True)
 
-            #adjustment
-            vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds', 'constraint'], rejected)
+        #check for network loading error
+        if load is not True:
+            for traj in network[N].traj_paths:
+                network[N].addVideoComparison(['LoadNetError'])
+                return False, network[N], ['N/A' for i in xrange(parameters[2])], 'Unfeasible'
 
-            #memorizing bad files
-            for r in reversed(rejected):
-                rejected_files.append(file_list[r])
+        values = []
+        for var in variables:
+            values.append(var.point)
 
-            #running new data
-            goal = parameters[2]
-            total_retries = 5 ###this could be moved to the cfg file
-            retry = 0
-            first_seed = parameters[1]
-            new_seed = first_seed + goal*parameters[5]
+        #Initializing and running the simulation
+        simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
 
-            while len(vissim_data.forFMgap.distributions) < goal and retry <= total_retries:
-                #fixing vissim parameters
-                nbr_run_this_try = len(rejected)
-                parameters[2] = nbr_run_this_try  #number of rerun
-                parameters[1] = new_seed
+        if simulated is not True:
+            for traj in network[N].traj_paths:
+                network[N].addVideoComparison(['SimulationError'])
+                vissim.stopVissim(Vissim)
+            return False, network[N], ['N/A' for i in xrange(parameters[2])]
 
-                #Initializing and running the simulation
-                simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
+        else:
+            rejected_files = []
+            #import pdb;pdb.set_trace()
+            #treating the outputs
+            vissim_data = outputs.Derived_data()
+            vissim_data.activateConstraints(config)
+            inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config]
+            file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
+            if len(file_list) > 1:
+                packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, workers.FalseCommands(), defineNbrProcess = config.nbr_process)
 
-                if simulated is True:
-                    #treating the outputs
-                    inputs = [final_inpx_path, False, network[0].corridors, vissim_data, config]
-                    file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-                    vissim_data = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
+                vissim_data = packedStatsLists[0]
 
-                    #verifying the validity of the distributions
-                    if config.output_forward_gaps:
-                        if len(vissim_data.forFMgap.distributions) > 1:
-                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
-                        else:
-                            rejected = []
+                for stat in xrange(1,len(packedStatsLists)):
+                    outputs.Derived_data.concat(vissim_data, packedStatsLists[stat])
 
-                    if config.output_lane_change_gaps:
-                        if len(vissim_data.oppLCbgap.distributions) > 1:
-                            rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
-                        else:
-                            rejected = []
-
-                    #adjustment
-                    vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds'], rejected)
-
-                    #memorizing bad files
-                    for r in reversed(rejected):
-                        rejected_files.append(file_list[r])
-
-                #fixing while loop info
-                new_seed += nbr_run_this_try*parameters[5]
-                retry += 1
-
-            #moving unwanted file
-            if len(rejected_files) > 0:
-                if not os.path.exists(os.path.join(final_inpx_path, 'rejected_tests')):
-                    os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
-                for rejected_file in rejected_files:
-                    shutil.move(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
-
-                    #moving associated error files if they exist
-                    if os.path.exists(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err')):
-                        shutil.move(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err'), os.path.join(final_inpx_path,'rejected_tests',os.path.splitext(rejected_file)[0] + '.err'))
-
-                    #removing the unwanted files from the file list
-                    file_list.remove(rejected_file)
-
-                #creating a storage file for seed information
-                with open(os.path.join(final_inpx_path,'rejected_tests','info.seeds'),'w') as seed:
-                    seed.write('first seed:      '+str(first_seed)+'\n'
-                               'seed increment : '+str(parameters[5])+'\n'
-                               '\n')
-                    for s in xrange(len(file_list)+len(rejected_files)):
-                        seed.write('seed_'+str(s+1)+': '+str(parameters[1]+s*parameters[5])+'\n')
-
-        seed_nums = outputs.extract_num_from_fzp_list(file_list)
-
-        non_dist_data = [vissim_data.oppLCcount, vissim_data.manLCcount, vissim_data.flow]
-        dist_data = [vissim_data.forFMgap, vissim_data.oppLCagap, vissim_data.oppLCbgap, vissim_data.manLCagap, vissim_data.manLCbgap, vissim_data.forSpeeds]
-
-        #setting video values
-        for traj in network[0].traj_paths:
-
-            #loading video data
-            video_data = write.load_traj(traj)
-            if video_data == 'TrajVersionError':
-                network[0].addVideoComparison(['TrajVersionError'])
             else:
-                non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
-                dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
-                #starting the building of the secondary values outputs
-                #for the first 3 variables, which are intergers, we use:
-                #                       PE = (M-V)/V
-                #       with:    V = number from video
-                #                M = mean from modelisation
-                # of course this would fail is V = 0, in which case we must turn to
-                #                       AE = M-V...   with V = 0: AE = M
-                #to which we will add a ' * '
-                secondary_values = []
-                for d in xrange(len(non_dist_data)):
-                    if non_dist_video_data[d].mean != 0:
-                        secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-non_dist_video_data[d].mean)/non_dist_video_data[d].mean])
-                    else:
-                        if non_dist_data[d].mean is not None and non_dist_data[d].mean != 0:
-                            secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])
-                        else:
-                            secondary_values.append(['0.00', '0.00*'])
+                vissim_data = outputs.treatVissimOutputs(file_list, inputs)
 
-                #comparing video_values with output values
-                mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
-                secondary_values += calibTools.buildReportList(mean_list, d_stat_list)
-
-                #adding video comparison data to the network
-                network[0].addVideoComparison(secondary_values)
-
-                #determining main p_value
-                #
-                #at this point, secondary_value looks like:
-                #    [[oppLCgap, oppLCgap_delta], [manLCgap, manLCgap_delta], [flow, flow_delta], ...
-                #         0-0          0-1            1-0          1-1         2-0      2-1
-                #
-                #      forFMgap, forFMgap_KS_d, oppLCagap, oppLCagap_KS_d, oppLCbgap, oppLCbgap_KS_d, ...
-                #         3            4              5          6              7          8
-                #
-                #      manLCagap, manLCagap_KS_d, manLCbgap, manLCbgap_KS_d, speeds, speeds_KS_d]
-                #         9           10             11         12             13         14
-                #
+            if config.ks_switch:
+                #verifying the validity of the distributions
                 if config.output_forward_gaps:
-                    if secondary_values[4] == 'DNE':
-                        d_stat.append(['inf'] + vissim_data.getConstraints())
+                    if len(vissim_data.forFMgap.distributions) > 1:
+                        rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
                     else:
-                        d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
-                    write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
+                        rejected = []
 
                 if config.output_lane_change_gaps:
-                    if secondary_values[8] == 'DNE':        #using the before gap to calibrate
-                        d_stat.append(['inf'] + vissim_data.getConstraints())
+                    if len(vissim_data.oppLCbgap.distributions) > 1:
+                        rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
                     else:
-                        d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
-                    write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
+                        rejected = []
 
-                feasibility = vissim_data.testConstraints()
+                #adjustment
+                vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds', 'constraint'], rejected)
 
-        vissim.stopVissim(Vissim)
-        return d_stat, network[0], seed_nums, feasibility
+                #memorizing bad files
+                for r in reversed(rejected):
+                    rejected_files.append(file_list[r])
+
+                #running new data
+                goal = parameters[2]
+                total_retries = 5 ###this could be moved to the cfg file
+                retry = 0
+                first_seed = parameters[1]
+                new_seed = first_seed + goal*parameters[5]
+
+                while len(vissim_data.forFMgap.distributions) < goal and retry <= total_retries:
+                    #fixing vissim parameters
+                    nbr_run_this_try = len(rejected)
+                    parameters[2] = nbr_run_this_try  #number of rerun
+                    parameters[1] = new_seed
+
+                    #Initializing and running the simulation
+                    simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
+
+                    if simulated is True:
+                        #treating the outputs
+                        inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config]
+                        file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
+                        vissim_data = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
+
+                        #verifying the validity of the distributions
+                        if config.output_forward_gaps:
+                            if len(vissim_data.forFMgap.distributions) > 1:
+                                rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
+                            else:
+                                rejected = []
+
+                        if config.output_lane_change_gaps:
+                            if len(vissim_data.oppLCbgap.distributions) > 1:
+                                rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
+                            else:
+                                rejected = []
+
+                        #adjustment
+                        vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds'], rejected)
+
+                        #memorizing bad files
+                        for r in reversed(rejected):
+                            rejected_files.append(file_list[r])
+
+                    #fixing while loop info
+                    new_seed += nbr_run_this_try*parameters[5]
+                    retry += 1
+
+                #moving unwanted file
+                if len(rejected_files) > 0:
+                    if not os.path.exists(os.path.join(final_inpx_path, 'rejected_tests')):
+                        os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
+                    for rejected_file in rejected_files:
+                        shutil.move(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
+
+                        #moving associated error files if they exist
+                        if os.path.exists(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err')):
+                            shutil.move(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err'), os.path.join(final_inpx_path,'rejected_tests',os.path.splitext(rejected_file)[0] + '.err'))
+
+                        #removing the unwanted files from the file list
+                        file_list.remove(rejected_file)
+
+                    #creating a storage file for seed information
+                    with open(os.path.join(final_inpx_path,'rejected_tests','info.seeds'),'w') as seed:
+                        seed.write('first seed:      '+str(first_seed)+'\n'
+                                   'seed increment : '+str(parameters[5])+'\n'
+                                   '\n')
+                        for s in xrange(len(file_list)+len(rejected_files)):
+                            seed.write('seed_'+str(s+1)+': '+str(parameters[1]+s*parameters[5])+'\n')
+
+            seed_nums = outputs.extract_num_from_fzp_list(file_list)
+
+            non_dist_data = [vissim_data.oppLCcount, vissim_data.manLCcount, vissim_data.flow]
+            dist_data = [vissim_data.forFMgap, vissim_data.oppLCagap, vissim_data.oppLCbgap, vissim_data.manLCagap, vissim_data.manLCbgap, vissim_data.forSpeeds]
+
+            #setting video values
+            for traj in network[N].traj_paths:
+
+                #loading video data
+                video_data = write.load_traj(traj)
+                if video_data == 'TrajVersionError':
+                    network[N].addVideoComparison(['TrajVersionError'])
+                else:
+                    non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
+                    dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
+                    #starting the building of the secondary values outputs
+                    #for the first 3 variables, which are intergers, we use:
+                    #                       PE = (M-V)/V
+                    #       with:    V = number from video
+                    #                M = mean from modelisation
+                    # of course this would fail is V = 0, in which case we must turn to
+                    #                       AE = M-V...   with V = 0: AE = M
+                    #to which we will add a ' * '
+                    secondary_values = []
+                    for d in xrange(len(non_dist_data)):
+                        if non_dist_video_data[d].mean != 0:
+                            secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-non_dist_video_data[d].mean)/non_dist_video_data[d].mean])
+                        else:
+                            if non_dist_data[d].mean is not None and non_dist_data[d].mean != 0:
+                                secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])
+                            else:
+                                secondary_values.append(['0.00', '0.00*'])
+
+                    #comparing video_values with output values
+                    mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
+                    secondary_values += calibTools.buildReportList(mean_list, d_stat_list)
+
+                    #adding video comparison data to the network
+                    network[N].addVideoComparison(secondary_values)
+
+                    #determining main p_value
+                    #
+                    #at this point, secondary_value looks like:
+                    #    [[oppLCgap, oppLCgap_delta], [manLCgap, manLCgap_delta], [flow, flow_delta], ...
+                    #         0-0          0-1            1-0          1-1         2-0      2-1
+                    #
+                    #      forFMgap, forFMgap_KS_d, oppLCagap, oppLCagap_KS_d, oppLCbgap, oppLCbgap_KS_d, ...
+                    #         3            4              5          6              7          8
+                    #
+                    #      manLCagap, manLCagap_KS_d, manLCbgap, manLCbgap_KS_d, speeds, speeds_KS_d]
+                    #         9           10             11         12             13         14
+                    #
+                    if config.output_forward_gaps:
+                        if secondary_values[4] == 'DNE':
+                            d_stat.append(['inf'] + vissim_data.getConstraints())
+                        else:
+                            d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
+                        write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
+
+                    if config.output_lane_change_gaps:
+                        if secondary_values[8] == 'DNE':        #using the before gap to calibrate
+                            d_stat.append(['inf'] + vissim_data.getConstraints())
+                        else:
+                            d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
+                        write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
+
+            network[N].feasibility = vissim_data.testConstraints()
+
+    vissim.stopVissim(Vissim)
+
+    return d_stat, network, seed_nums
 
 ################################
 #        Statistical precision analysis
