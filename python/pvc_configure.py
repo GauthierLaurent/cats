@@ -165,7 +165,7 @@ class Config:
     def __init__(self,config_name):
         self.config = ConfigParser.ConfigParser(allow_no_value=True)
         self.config.read(config_name)
-        
+
         self.section = 'General'
         self.path_to_inpx             = path_slashes(self.parse('path_to_inpx', 'Path\to\Inpx',  c_type='string'))
         self.inpx_name                = self.parse('inpx_name',            '',        c_type='string')
@@ -202,14 +202,12 @@ class Config:
         self.output_lane_change_gaps  = self.parse('calib_lane_change_gaps',       'False',  c_type='bool')
         self.output_lane_change_count = self.parse('calib_lane_change_count',      'False',  c_type='bool')
         self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',      '',       c_type='string')
-        self.ks_threshold             = self.parse('ks_threshold',                 '0.3',    c_type='float')    #may want to check out that treshold
-        self.ks_switch                = self.parse('reject_vissim_dist',           'False',  c_type='bool')
         self.jam_const_thresh         = self.parse('Jam_constraint_threshold',     '0',      c_type='float')
         self.jam_calcu_thresh         = self.parse('Jam_calculation_threshold',    '5',      c_type='float')
         self.cmp_man_lcgaps           = self.parse('Compute_mandatory_LC_gaps',    'True',   c_type='bool')
         self.cmp_opp_lcgaps           = self.parse('Compute_opportunistic_LC_gaps','True',   c_type='bool')
         self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'True',   c_type='bool')
-        
+
         self.fzp_maxLines             = self.parse('MaxLine_for_collisions_calc', '6000000', c_type='int')
         self.collis_constraint        = self.parse('Collisions_constraint',       '[True, 0, EB]',  c_type='BIS')
         self.nonGen_constraint        = self.parse('Vehic_nongen_constraint',     '[True, 10, EB]', c_type='BIS')
@@ -278,8 +276,6 @@ class Config:
                            'output_forward_gaps       = ' + str(self.output_forward_gaps)+'\n'
                            'output_lane_change        = ' + str(self.output_lane_change)+'\n'
                            'NOMAD_solution_filename   = ' + self.NOMAD_solution_filename+'\n'
-                           'ks_threshold              = ' + str(self.ks_threshold)+'\n'
-                           'reject_vissim_dist        = ' + str(self.ks_switch)+'\n'
                            'Vehic_gen_err_constraint  = ' + str(self.num_const_thresh)+'\n'
                            'Decel_gen_err_constraint  = ' + str(self.dp_const_thresh)+'\n'
                            'Accel_gen_err_constraint  = ' + str(self.a0_const_thresh)+'\n'
@@ -324,7 +320,7 @@ class Config:
             if(c_struct == 'list1D'): return list1D(self.config.get(self.section, key), i_type='bool')
             else:                     return self.config.getboolean(self.section, key)
         elif(c_type == 'BIS'):
-            return list1D(self.config.get(self.section, key), i_type='BIS')           
+            return list1D(self.config.get(self.section, key), i_type='BIS')
         else:
             if(c_struct == 'list1D'): return list1D(self.config.get(self.section, key), i_type='string')
             else:                     return self.config.get(self.section, key)

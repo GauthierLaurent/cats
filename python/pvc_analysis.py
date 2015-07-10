@@ -87,8 +87,6 @@ def runVissimForCalibrationAnalysis(network, inputs):
             return False, network[N], ['N/A' for i in xrange(parameters[2])]
 
         else:
-            rejected_files = []
-            #import pdb;pdb.set_trace()
             #treating the outputs
             vissim_data = outputs.Derived_data()
             vissim_data.activateConstraints(config)
@@ -104,95 +102,6 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
             else:
                 vissim_data = outputs.treatVissimOutputs(file_list, inputs)
-
-            if config.ks_switch:
-                #verifying the validity of the distributions
-                if config.output_forward_gaps:
-                    if len(vissim_data.forFMgap.distributions) > 1:
-                        rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
-                    else:
-                        rejected = []
-
-                if config.output_lane_change_gaps:
-                    if len(vissim_data.oppLCbgap.distributions) > 1:
-                        rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
-                    else:
-                        rejected = []
-
-                #adjustment
-                vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds', 'constraint'], rejected)
-
-                #memorizing bad files
-                for r in reversed(rejected):
-                    rejected_files.append(file_list[r])
-
-                #running new data
-                goal = parameters[2]
-                total_retries = 5 ###this could be moved to the cfg file
-                retry = 0
-                first_seed = parameters[1]
-                new_seed = first_seed + goal*parameters[5]
-
-                while len(vissim_data.forFMgap.distributions) < goal and retry <= total_retries:
-                    #fixing vissim parameters
-                    nbr_run_this_try = len(rejected)
-                    parameters[2] = nbr_run_this_try  #number of rerun
-                    parameters[1] = new_seed
-
-                    #Initializing and running the simulation
-                    simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
-
-                    if simulated is True:
-                        #treating the outputs
-                        inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config]
-                        file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-                        vissim_data = outputs.treatVissimOutputs(file_list[-nbr_run_this_try:], inputs)
-
-                        #verifying the validity of the distributions
-                        if config.output_forward_gaps:
-                            if len(vissim_data.forFMgap.distributions) > 1:
-                                rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.forFMgap), config.ks_threshold)
-                            else:
-                                rejected = []
-
-                        if config.output_lane_change_gaps:
-                            if len(vissim_data.oppLCbgap.distributions) > 1:
-                                rejected = calibTools.filter_dist_with_ks(calibTools.treat_stats_list(vissim_data.oppLCbgap), config.ks_threshold)    #using before lane change gaps
-                            else:
-                                rejected = []
-
-                        #adjustment
-                        vissim_data.popManyOutputList(['flow', 'oppLCcount', 'manLCcount', 'forFMgap', 'oppLCagap', 'oppLCbgap', 'manLCagap', 'manLCbgap', 'forSpeeds'], rejected)
-
-                        #memorizing bad files
-                        for r in reversed(rejected):
-                            rejected_files.append(file_list[r])
-
-                    #fixing while loop info
-                    new_seed += nbr_run_this_try*parameters[5]
-                    retry += 1
-
-                #moving unwanted file
-                if len(rejected_files) > 0:
-                    if not os.path.exists(os.path.join(final_inpx_path, 'rejected_tests')):
-                        os.makedirs(os.path.join(final_inpx_path, 'rejected_tests'))
-                    for rejected_file in rejected_files:
-                        shutil.move(os.path.join(final_inpx_path,rejected_file),os.path.join(final_inpx_path,'rejected_tests',rejected_file))
-
-                        #moving associated error files if they exist
-                        if os.path.exists(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err')):
-                            shutil.move(os.path.join(final_inpx_path,os.path.splitext(rejected_file)[0] + '.err'), os.path.join(final_inpx_path,'rejected_tests',os.path.splitext(rejected_file)[0] + '.err'))
-
-                        #removing the unwanted files from the file list
-                        file_list.remove(rejected_file)
-
-                    #creating a storage file for seed information
-                    with open(os.path.join(final_inpx_path,'rejected_tests','info.seeds'),'w') as seed:
-                        seed.write('first seed:      '+str(first_seed)+'\n'
-                                   'seed increment : '+str(parameters[5])+'\n'
-                                   '\n')
-                        for s in xrange(len(file_list)+len(rejected_files)):
-                            seed.write('seed_'+str(s+1)+': '+str(parameters[1]+s*parameters[5])+'\n')
 
             seed_nums = outputs.extract_num_from_fzp_list(file_list)
 
