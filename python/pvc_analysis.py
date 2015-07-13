@@ -117,7 +117,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     network[N].addVideoComparison(['TrajVersionError'])
                 else:
                     non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
-                    dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
+                    dist_video_data = [outputs.makestatsclean(video_data.forFMgap, 0.5*config.fps), video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
                     #starting the building of the secondary values outputs
                     #for the first 3 variables, which are intergers, we use:
                     #                       PE = (M-V)/V
@@ -155,6 +155,9 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     #      manLCagap, manLCagap_KS_d, manLCbgap, manLCbgap_KS_d, speeds, speeds_KS_d]
                     #         9           10             11         12             13         14
                     #
+
+                    #fout = outputs.buildFout(config,secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCagaps, manLCagaps
+
                     if config.output_forward_gaps:
                         if secondary_values[4] == 'DNE':
                             d_stat.append(['inf'] + vissim_data.getConstraints())

@@ -123,6 +123,15 @@ class Stats:
                 if hasattr(dist,'filename'):
                     stats1.distributions[-1].addFileName(dist.filename)
 
+    def cleanStats(self, threshold):
+        for d in xrange(len(self.distributions)):
+            self.distributons[d] = Sublvl(makeitclean(self.distributions[d].raw))
+        self.regen_cumul_all()
+
+    @classmethod
+    def makeStatsClean(cls, stats, threshold):
+        return stats.cleanStats(threshold)
+
 class SingleValueStats:
     def __init__(self,raw):
         self.raw = raw
@@ -546,6 +555,12 @@ def search_folder_for_error_files(dirname, fzpname = None):
         return max(num_list), max(dp_list), max(a0_list)
     else:
         return float('nan'), float('nan'), float('nan')
+
+def makeitclean(video_forward_gaps, threshold):
+    for g in reversed(range(len(video_forward_gaps))):
+        if video_forward_gaps[g] < threshold:
+            video_forward_gaps.pop(g)
+    return video_forward_gaps
 
 def sort_fout_and_const(fout_lists):
     '''sort many outputs f1, f2, f3, etc. to keep the worst one
