@@ -845,6 +845,59 @@ def verboseIntro(commands, config, TypeOfAnalysis):
 ##################
 # Graphic tools
 ##################
+def defineLabel(label,netlabel):
+    if 'gp01' in label:
+        netlabel += '-01'
+    elif 'gp02' in label:
+        netlabel += '-02'
+    elif 'gp03' in label:
+        netlabel += '-03'
+    elif 'gp04' in label:
+        netlabel += '-04'
+    elif 'gp05' in label:
+        netlabel += '-05'
+    elif 'gp06' in label:
+        netlabel += '-06'
+    elif 'gp07' in label:
+        netlabel += '-07'
+    elif 'gp08' in label:
+        netlabel += '-08'
+    elif 'gp09' in label:
+        netlabel += '-09'
+    elif 'gp10' in label:
+        netlabel += '-10'
+    elif 'gp11' in label:
+        netlabel += '-11'
+    elif 'gp12' in label:
+        netlabel += '-12'
+    elif 'gp13' in label:
+        netlabel += '-13'
+    elif 'gp14' in label:
+        netlabel += '-14'
+    elif 'gp15' in label:
+        netlabel += '-15'
+    elif 'gp16' in label:
+        netlabel += '-16'
+    elif 'gp17' in label:
+        netlabel += '-17'
+    elif 'gp18' in label:
+        netlabel += '-18'
+    elif 'gp19' in label:
+        netlabel += '-19'
+    elif 'gp20' in label:
+        netlabel += '-20'
+    elif 'gp21' in label:
+        netlabel += '-21'
+    elif 'gp22' in label:
+        netlabel += '-22'
+    elif 'gp23' in label:
+        netlabel += '-23'
+    elif 'gp24' in label:
+        netlabel += '-24'
+    elif 'gp25' in label:
+        netlabel += '-25'
+    return netlabel
+
 def printStatGraphs(graphspath, variable, value_name, variable_name, graphformat, nsim, subpath = ''):
     '''create graphs for a type 'Stats' variable | data comes from vissim output
        file

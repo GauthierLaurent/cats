@@ -13,7 +13,7 @@ Created on Thu Jul 03 11:28:53 2014
 ##################
 #Natives
 from itertools import repeat, product
-import random, os
+import random, os, copy
 import numpy as np
 from scipy.stats.mstats import ks_twosamp
 
@@ -272,3 +272,93 @@ def genLHCsample(variables,n):
 
     return final_mat
 
+def gen_table(n,m,pmin=0,pmax=None):
+    '''n: nbr of points
+       m: nbr of groups of n
+       pmin: minimum value for the points, must be >= 0
+
+       assign a random place to each guest, making sure the combinaison
+       is never the same'''
+
+    if pmax is None:
+        pmax = n
+
+    base = np.arange(pmin,pmax)
+
+    lines = []
+    for i in xrange(0,m):
+        np.random.shuffle(base)
+        lines.append(copy.deepcopy(list(base[0:n])))
+
+    return lines
+
+def calculateConfidencePoint(n,m,vissim_data,video_data,config): #ajouter config
+
+    d_stat_list = []
+    lines = gen_table(n,m,pmax=m)
+    #if config.output_forward_gaps:
+    for line in lines:
+        tmp = []
+        for p in line:
+            tmp += vissim_data.forFMgap.distributions[p].raw
+
+        d_stat_list.append(checkCorrespondanceOfTwoLists(outputs.makeitclean(video_data.forFMgap.cumul_all.raw, 0.5*config.fps),tmp,config.sim_steps, config.fps))
+
+    return min(d_stat_list), max(d_stat_list)
+
+def calculateConfidenceLine(lConf,uConf,label,netlabel,m,vissim_data,video_data,config):
+    #TODO: implement multiprocessing
+    for n in range(1,m+1):
+        min_d, max_d = calculateConfidencePoint(n,m,vissim_data,video_data,config)
+
+        lConf.addResult(label,netlabel,n,min_d)
+        uConf.addResult(label,netlabel,n,max_d)
+
+        print '\t calculation for point '+str(n)+'/'+str(m)+' | min: '+str(round(min_d,4))+', max: '+str(round(max_d,4))
+    return lConf, uConf
+
+class Result:
+    def __init__(self,label):
+        self.label = label
+        self.x = []
+        self.y = []
+
+    def addPoint(self,x,y):
+        self.x.append(x)
+        self.y.append(y)
+
+    def addNetLabel(self,netLabel):
+        self.netLabel = netLabel
+
+    def addInfo(self,info):
+        self.info = info
+
+class ResultList:
+    def __init__(self):
+        self.results = []
+        self.labels = []
+
+    def addResult(self,label,netLabel,x,y,*arg):
+        if label in self.GetLabels():
+            self.results[self.GetLabels().index(label)].addPoint(x,y)
+            if len(arg) > 0:
+                self.results[self.GetLabels().index(label)].addInfo(arg)
+        else:
+            self.results += [Result(label)]
+            self.results[-1].addPoint(x,y)
+            self.results[-1].addNetLabel(netLabel)
+            if len(arg) > 0:
+                self.results[-1].addInfo(arg)
+
+    def GetLabels(self):
+        return [result.label for result in self.results]
+
+    def GetNetLabels(self):
+        return [result.netLabel for result in self.results]
+
+    def GetResultForNetLabel(self,netLabel):
+        out = []
+        for result in self.results:
+            if result.netLabel == netLabel:
+                out.append(result)
+        return out

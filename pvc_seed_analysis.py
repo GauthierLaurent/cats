@@ -6,117 +6,6 @@ Created on Mon Mar 16 16:59:41 2015
 
 call ex: -a Trace --dir C:\Users\lab\Desktop\vissim_files\A13\Combined_06_10_11_12\Seed_test_Analysis_1
 """
-import copy
-import numpy as np
-import pvc_calibTools as calibTools
-import pvc_outputs    as outputs
-
-def findAvailable(nMax,excludeList1):
-    avail = []
-    for i in xrange(nMax):
-        if i not in excludeList1:
-            avail.append(i)
-    return avail
-
-def gen_table(n,m,pmin=0,pmax=None):
-    '''n: nbr of points
-       m: nbr of groups of n
-       pmin: minimum value for the points, must be >= 0
-
-       assign a random place to each guest, making sure the combinaison
-       is never the same'''
-
-    if pmax is None:
-        pmax = n
-
-    base = np.arange(pmin,pmax)
-
-    lines = []
-    for i in xrange(0,m):
-        np.random.shuffle(base)
-        lines.append(copy.deepcopy(list(base[0:n])))
-
-    return lines
-
-def calculateConfidencePoint(n,m,vissim_data,video_data,config): #ajouter config
-
-    d_stat_list = []
-    lines = gen_table(n,m,pmax=m)
-    #if config.output_forward_gaps:
-    for line in lines:
-        tmp = []
-        for p in line:
-            tmp += vissim_data.forFMgap.distributions[p].raw
-
-        d_stat_list.append(calibTools.checkCorrespondanceOfTwoLists(outputs.makeitclean(video_data.forFMgap.cumul_all.raw, 0.5*config.fps),tmp,config.sim_steps, config.fps))
-
-    return min(d_stat_list), max(d_stat_list)
-
-def calculateConfidenceLine(lConf,uConf,label,netlabel,m,vissim_data,video_data,config):
-    #TODO: implement multiprocessing
-    for n in range(1,m+1):
-        min_d, max_d = calculateConfidencePoint(n,m,vissim_data,video_data,config)
-
-        lConf.addResult(label,netlabel,n,min_d)
-        uConf.addResult(label,netlabel,n,max_d)
-
-        print '\t calculation for point '+str(n)+'/'+str(m)+' | min: '+str(round(min_d,4))+', max: '+str(round(max_d,4))
-    return lConf, uConf
-
-def defineLabel(label,netlabel):
-    if 'gp06' in label:
-        netlabel += '-06'
-    elif 'gp10' in label:
-        netlabel += '-10'
-    elif 'gp11' in label:
-        netlabel += '-11'
-    elif 'gp12' in label:
-        netlabel += '-12'
-    elif 'gp13' in label:
-        netlabel += '-13'
-    elif 'gp25' in label:
-        netlabel += '-25'
-    return netlabel
-
-class Result:
-    def __init__(self,label):
-        self.label = label
-        self.x = []
-        self.y = []
-
-    def addPoint(self,x,y):
-        self.x.append(x)
-        self.y.append(y)
-
-    def addNetLabel(self,netLabel):
-        self.netLabel = netLabel
-
-class ResultList:
-    def __init__(self):
-        self.results = []
-        self.labels = []
-
-    def addResult(self,label,netLabel,x,y):
-        if label in self.GetLabels():
-            self.results[self.GetLabels().index(label)].addPoint(x,y)
-        else:
-            self.results += [Result(label)]
-            self.results[-1].addPoint(x,y)
-            self.results[-1].addNetLabel(netLabel)
-
-    def GetLabels(self):
-        return [result.label for result in self.results]
-
-    def GetNetLabels(self):
-        return [result.netLabel for result in self.results]
-
-    def GetResultForNetLabel(self,netLabel):
-        out = []
-        for result in self.results:
-            if result.netLabel == netLabel:
-                out.append(result)
-        return out
-
 def commands(parser):
     parser.add_argument('-p',    type=float, nargs='*',                             dest='start_point', default = None, help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
     parser.add_argument('--dir',                                                    dest='dir',         default='',     help='Directory (Must be provided if Calc or Trace mode are activated)')
@@ -291,9 +180,9 @@ def main():
     if Commands.analysis == 'Calc' or Commands.analysis == 'All':
 
         #initializing data variables
-        single_fzp_data = ResultList()
-        concat_fzp_data = ResultList()
-        concat_stu_data = ResultList()
+        single_fzp_data = calibTools.ResultList()
+        concat_fzp_data = calibTools.ResultList()
+        concat_stu_data = calibTools.ResultList()
         dataList = []
 
         if Commands.analysis == 'Calc':
@@ -312,6 +201,7 @@ def main():
                 first_seed = first_step_outputs[2]
                 increments = first_step_outputs[3]
                 networks   = first_step_outputs[4]
+                otherStuff = first_step_outputs[5:]
 
         for net in networks:
             #looking for version errors in the traj files
@@ -373,7 +263,7 @@ def main():
                     #treat concat data
                     if config.output_forward_gaps:
                         vissim_data = data.forFMgap.cumul_all.raw
-                        video_data = vdata.forFMgap.cumul_all.raw
+                        video_data = outputs.makeitclean(vdata.forFMgap.cumul_all.raw, 0.5*config.fps)
 
                     if config.output_lane_change_gaps:
                         vissim_data = data.oppLCbgap.cumul_all.raw
@@ -383,9 +273,9 @@ def main():
 
                     concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat )
 
-                    dataList.append(data)
+            dataList.append(data)
 
-        write.write_traj(working_path, 'seedAnalysis', [2, config, first_seed, increments, networks, single_fzp_data, concat_fzp_data, concat_stu_data, dataList])
+        write.write_traj(working_path, 'seedAnalysis', [2, config, first_seed, increments, networks, single_fzp_data, concat_fzp_data, concat_stu_data, dataList]+otherStuff)
 
     ######################################
     #        Confidence
@@ -419,8 +309,8 @@ def main():
                 concat_stu_data = outputs[7]
                 dataList = outputs[8]
 
-        lower_confidence = ResultList()
-        upper_confidence = ResultList()
+        lower_confidence = calibTools.ResultList()
+        upper_confidence = calibTools.ResultList()
 
         for net in networks:
 
@@ -434,9 +324,9 @@ def main():
 
                 #loading video data
                 vdata = write.load_traj(traj)
-                calculateConfidenceLine(lower_confidence,upper_confidence,traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'),len(single_fzp_data.results[0].x),vissim_data,vdata,config)
+                calibTools.calculateConfidenceLine(lower_confidence,upper_confidence,traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'),len(single_fzp_data.results[0].x),vissim_data,vdata,config)
 
-        write.write_traj(working_path, 'seedAnalysis', [3, config, first_seed, increments, networks, single_fzp_data, concat_fzp_data, concat_stu_data, data, lower_confidence, upper_confidence])
+        write.write_traj(working_path, 'seedAnalysis', [3, config, first_seed, increments, networks, single_fzp_data, concat_fzp_data, concat_stu_data, dataList, lower_confidence, upper_confidence])
 
     ######################################
     #        Trace
@@ -525,7 +415,7 @@ def main():
         #for j in xrange(len(single_data)):
             #if j > 0: break
         j = 0
-        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
         if max(single_data[j].y) > current_ymax:
             current_ymax = max(single_data[j].y)
         if min(single_data[j].y) < current_ymin:
@@ -534,33 +424,23 @@ def main():
         #for k in xrange(len(concat_data)):
             #if k > 0: break
         k = 0
-        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
         if max(concat_data[k].y) > current_ymax:
             current_ymax = max(concat_data[k].y)
         if min(concat_data[k].y) < current_ymin:
             current_ymin = min(concat_data[k].y)
 
         if Commands.trace_conf is True:
-            import pdb;pdb.set_trace()
             plt.plot(lConf[k].x, lConf[k].y, color = 'k', linestyle = '--')
             plt.plot(uConf[k].x, uConf[k].y, color = 'k', linestyle = '--')
-
-        if Commands.trace_conf is True:
-            plt.plot(lConf[1].x, lConf[1].y, color = 'b', linestyle = '--')
-            plt.plot(uConf[1].x, uConf[1].y, color = 'b', linestyle = '--')
-
-        if Commands.trace_conf is True:
-            plt.plot(lConf[2].x, lConf[2].y, color = 'g', linestyle = '--')
-            plt.plot(uConf[2].x, uConf[2].y, color = 'g', linestyle = '--')
-
 
         new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float)
         new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float)
 
         ax1.set_ylim(ymin = new_ymin, ymax = new_ymax)
-        ax1.set_xlim(xmin = 0, xmax = 100)#max(data_line.x)+1,5))
+        ax1.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))
         ax1.set_yticks(np.arange(new_ymin,new_ymax+0.001,0.01))
-        ax1.set_xticks(np.arange(0,101,5))#max(data_line.x)+1,5))
+        ax1.set_xticks(np.arange(0,51,5))#max(data_line.x)+1,5))
         #ax1.set_ylabel('d statistic (K-S test)')
         ax1.set_xlabel('Replications')
         ax1.minorticks_on
@@ -588,7 +468,7 @@ def main():
         color = colors[1]
 
         j = 0
-        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
         if max(single_data[j].y) > current_ymax:
             current_ymax = max(single_data[j].y)
         if min(single_data[j].y) < current_ymin:
@@ -597,7 +477,7 @@ def main():
         #for k in xrange(len(concat_data)):
             #if k > 0: break
         k = 0
-        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
         if max(concat_data[k].y) > current_ymax:
             current_ymax = max(concat_data[k].y)
         if min(concat_data[k].y) < current_ymin:
@@ -609,12 +489,12 @@ def main():
 
 
         new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float) + 0.02
-        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.01
+        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.00
 
         ax2.set_ylim(ymin = new_ymin, ymax = new_ymax)
-        ax2.set_xlim(xmin = 0, xmax = 100)#max(data_line.x)+1,5))
+        ax2.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))
         ax2.set_yticks(np.arange(new_ymin,new_ymax+0.001,0.01))
-        ax2.set_xticks(np.arange(0,101,5))#max(data_line.x)+1,5))
+        ax2.set_xticks(np.arange(0,51,5))#max(data_line.x)+1,5))
         ax2.set_xticklabels('',  visible=False)
         #ax2.set_ylabel('d statistic (K-S test)')
         #ax2.set_xlabel('Replications')
