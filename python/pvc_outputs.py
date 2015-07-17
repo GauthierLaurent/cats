@@ -125,12 +125,8 @@ class Stats:
 
     def cleanStats(self, threshold):
         for d in xrange(len(self.distributions)):
-            self.distributons[d] = Sublvl(makeitclean(self.distributions[d].raw))
+            self.distributions[d] = Sublvl(makeitclean(self.distributions[d].raw, threshold))
         self.regen_cumul_all()
-
-    @classmethod
-    def makeStatsClean(cls, stats, threshold):
-        return stats.cleanStats(threshold)
 
 class SingleValueStats:
     def __init__(self,raw):
@@ -561,6 +557,20 @@ def makeitclean(video_forward_gaps, threshold):
         if video_forward_gaps[g] < threshold:
             video_forward_gaps.pop(g)
     return video_forward_gaps
+
+def buildFout(config, dStat_forgaps, dStat_manLCgaps, dStat_oppLCgaps):
+    '''returns a single value from the list of possible outputs'''
+    lists = []
+    if config.output_forward_gaps:
+        lists.append(dStat_forgaps)
+    if config.output_lane_change_gaps:
+        lists.append(dStat_manLCgaps)
+        lists.append(dStat_oppLCgaps)
+
+    if 'DNE' in lists:
+        return 'inf'
+    else:
+        return max(lists)
 
 def sort_fout_and_const(fout_lists):
     '''sort many outputs f1, f2, f3, etc. to keep the worst one
