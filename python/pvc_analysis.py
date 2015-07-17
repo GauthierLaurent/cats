@@ -117,7 +117,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     network[N].addVideoComparison(['TrajVersionError'])
                 else:
                     non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
-                    dist_video_data = [outputs.makestatsclean(video_data.forFMgap, 0.5*config.fps), video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
+                    video_data.forFMgap.cleanStats(0.5*config.fps)
+                    dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
                     #starting the building of the secondary values outputs
                     #for the first 3 variables, which are intergers, we use:
                     #                       PE = (M-V)/V
