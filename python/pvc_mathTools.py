@@ -57,7 +57,10 @@ def myCeilFloor(x, base=5, positive='ceil', outType=int):
             return myceil(x, base, outType)
 
 def oneBase(x):
-    math.pow(10,math.floor(math.log(x, 10)))
+    if x != 0:
+        return math.pow(10,math.floor(math.log(x, 10)))
+    else:
+        return 0
 
 def detectBase(xmin,xmax):
     return max(oneBase(abs(xmin)),oneBase(abs(xmax)))
