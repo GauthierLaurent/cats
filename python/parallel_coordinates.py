@@ -8,11 +8,39 @@ import pandas.core.common as com
 from pandas.tools.plotting import _get_standard_colors
 from pandas.compat import lrange
 import numpy as np
+import pvc_mathTools as mathTools
+
+class ToKeep:
+    def __init__(self,label,data):
+        self.label = label
+        self.data = [data]
+
+    def addData(self,data):
+        self.data.append(data)
+
+class Keep_in_mind:
+    def __init__(self):
+        self.tokeep = []
+
+    def addData(self,label,data):
+        if label in self.getLabels():
+            self.tokeep[self.getLabels().index(label)].addData(data)
+        else:
+            self.tokeep.append(ToKeep(label,data))
+
+    def getLabels(self):
+        return [kept.label for kept in self.tokeep]
+
+    def getResultByLabel(self,label):
+        return self.tokeep[self.getLabels().index(label)].data
 
 def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
                          use_columns=False, xticks=None, colormap=None,
                          axvlines=True, shrink=False, normalize=True,
-                         bounds=None, nticks = 11, **kwds):
+                         bounds=None, nticks = 11, tracepriority = None,
+                         tracepriority_linewidth = None, labelsize=16,
+                         vertical_xtickslabels=False,**kwds):
+
     """Parallel coordinates plotting.
 
     Parameters
@@ -56,7 +84,7 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
     n = len(frame)
     classes = frame[class_column].drop_duplicates()
     class_col = frame[class_column]
-            
+
     if cols is None:
         df = frame.drop(class_column, axis=1)
     else:
@@ -68,14 +96,14 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
 
     if shrink is True:
         df = (df-df.mean()) / (df.max() - df.min())
-            
-    if normalize is True:       
+
+    if normalize is True:
         if bounds is None:
             df = (df-df.min()) / (df.max() - df.min())
         else:
             lb = np.asarray(bounds[0])
             ub = np.asarray(bounds[1])
-            
+
             df = (df-lb) / (ub - lb)
 
             hide_yticks=True
@@ -84,7 +112,7 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
             yticks = []
             yticks_positions = [i*1/float(nticks-1) for i in range(nticks)]
             for b in xrange(len(lb)):
-                yticks.append([lb[b]+i*(ub[b]-lb[b])/float(nticks-1) for i in range(nticks)])
+                yticks.append([mathTools.myround(lb[b]+i*(ub[b]-lb[b])/float(nticks-1),base=mathTools.detectBase(lb[b],ub[b]),outType=float) for i in range(nticks)])
 
     # determine values to use for xticks
     if use_columns is True:
@@ -108,31 +136,61 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
                                         color=color)
 
     colors = dict(zip(classes, color_values))
-    
+
+    keep_in_mind = Keep_in_mind()
     for i in range(n):
         y = df.iloc[i].values
         kls = class_col.iat[i]
         label = com.pprint_thing(kls)
         if label not in used_legends:
             used_legends.add(label)
-            ax.plot(x, y, color=colors[kls], label=label, alpha=0.5, **kwds)
+            if label in tracepriority:
+                if tracepriority_linewidth is not None:
+                    keep_in_mind.addData(label, [x, y, colors[kls], label, tracepriority_linewidth[tracepriority.index(label)]])
+                else:
+                    keep_in_mind.addData(label, [x, y, colors[kls], label])
+            else:
+                ax.plot(x, y, color=colors[kls], label=label, alpha=0.5, **kwds)
         else:
-            ax.plot(x, y, color=colors[kls], alpha=0.5, **kwds)
+            if label in tracepriority:
+                if tracepriority_linewidth is not None:
+                    keep_in_mind.addData(label, [x, y, colors[kls], None, tracepriority_linewidth[tracepriority.index(label)]])
+                else:
+                    keep_in_mind.addData(label, [x, y, colors[kls], None])
+            else:
+                ax.plot(x, y, color=colors[kls], alpha=0.5, **kwds)
+
+    for label in reversed(tracepriority):
+        try:
+            for result in keep_in_mind.getResultByLabel(label):
+                if tracepriority_linewidth is not None:
+                    ax.plot(result[0], result[1], color=result[2], label=result[3], linewidth=result[4], alpha=0.5, **kwds)
+                else:
+                    ax.plot(result[0], result[1], color=result[2], label=result[3], alpha=0.5, **kwds)
+        except:
+            pass
 
     if axvlines:
         for i in x:
             ax.axvline(i, linewidth=2, color='black')
             if hide_yticks is True:
                 for j in xrange(len(yticks[i])):
-                    text = plt.text(i,yticks_positions[j],str(yticks[i][j]),ha='center',weight='bold')
+                    text = plt.text(i,yticks_positions[j],str(yticks[i][j]),ha='center',weight='bold', fontsize=labelsize)
                     text.set_bbox(dict(color='white', alpha=0.25))
 
     if hide_yticks is True:
         plt.setp(ax.get_yticklabels(), visible=False)
 
+    if vertical_xtickslabels is True:
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation='vertical')
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.17)
+        ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4, fontsize=labelsize)
+    else:
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.15)
+        ax.legend(loc='lower center', bbox_to_anchor=(0.5, 0.1), ncol=4, fontsize=labelsize)
+
     ax.set_xticks(x)
-    ax.set_xticklabels(df.columns)
+    ax.set_xticklabels(df.columns, fontsize=labelsize)
     ax.set_xlim(x[0], x[-1])
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=3)
     ax.grid()
     return ax
