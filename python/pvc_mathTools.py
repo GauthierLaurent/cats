@@ -44,6 +44,25 @@ def myfloor(x, base=5, outType=int):
     if outType == float:
         return base * math.floor((float(x)/base))
 
+def myCeilFloor(x, base=5, positive='ceil', outType=int):
+    if positive == 'ceil':
+        if x >= 0:
+            return myceil(x, base, outType)
+        else:
+            return myfloor(x, base, outType)
+    if positive == 'floor':
+        if x >= 0:
+            return myfloor(x, base, outType)
+        else:
+            return myceil(x, base, outType)
+
+def oneBase(x):
+    math.pow(10,math.floor(math.log(x, 10)))
+
+def detectBase(xmin,xmax):
+    return max(oneBase(abs(xmin)),oneBase(abs(xmax)))
+
+
 ##################
 # Lists tools
 ##################
