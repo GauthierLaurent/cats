@@ -214,12 +214,13 @@ class Config:
         self.decelp_constraint        = self.parse('Deceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
         self.accel0_constraint        = self.parse('Acceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
 
-
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',             'False',  c_type='bool')
         self.active_network_2         = self.parse('active_network_2',             'False',  c_type='bool')
         self.active_network_3         = self.parse('active_network_3',             'False',  c_type='bool')
         self.active_network_4         = self.parse('active_network_4',             'False',  c_type='bool')
+        self.active_network_5         = self.parse('active_network_5',             'False',  c_type='bool')
+        self.active_network_6         = self.parse('active_network_6',             'False',  c_type='bool')
 
         self.section = 'Calibration paths (fullpath = complete paths)'
         self.path_to_NOMAD	         = self.parse('fullpath_to_NOMAD',             '',       c_type='string')
@@ -229,14 +230,20 @@ class Config:
         self.path_to_inpx_file_2      = self.parse('fullpath_to_inpx_file_2',       '',       c_type='string')
         self.path_to_inpx_file_3      = self.parse('fullpath_to_inpx_file_3',       '',       c_type='string')
         self.path_to_inpx_file_4      = self.parse('fullpath_to_inpx_file_4',       '',       c_type='string')
+        self.path_to_inpx_file_5      = self.parse('fullpath_to_inpx_file_5',       '',       c_type='string')
+        self.path_to_inpx_file_6      = self.parse('fullpath_to_inpx_file_6',       '',       c_type='string')
         self.path_to_video_data_1     = self.parse('fullpath_to_video_data_1',      '',       c_type='string', c_struct='list1D')
         self.path_to_video_data_2     = self.parse('fullpath_to_video_data_2',      '',       c_type='string', c_struct='list1D')
         self.path_to_video_data_3     = self.parse('fullpath_to_video_data_3',      '',       c_type='string', c_struct='list1D')
         self.path_to_video_data_4     = self.parse('fullpath_to_video_data_4',      '',       c_type='string', c_struct='list1D')
+        self.path_to_video_data_5     = self.parse('fullpath_to_video_data_5',      '',       c_type='string', c_struct='list1D')
+        self.path_to_video_data_6     = self.parse('fullpath_to_video_data_6',      '',       c_type='string', c_struct='list1D')
         self.path_to_csv_net1         = self.parse('fullpath_to_csv_network_1',     '',       c_type='string')
         self.path_to_csv_net2         = self.parse('fullpath_to_csv_network_2',     '',       c_type='string')
         self.path_to_csv_net3         = self.parse('fullpath_to_csv_network_3',     '',       c_type='string')
         self.path_to_csv_net4         = self.parse('fullpath_to_csv_network_4',     '',       c_type='string')
+        self.path_to_csv_net5         = self.parse('fullpath_to_csv_network_5',     '',       c_type='string')
+        self.path_to_csv_net6         = self.parse('fullpath_to_csv_network_6',     '',       c_type='string')
 
         if(not os.path.isfile(config_name)):
             print('Notice: No default configuration found. Creating new ' + str(config_name))
