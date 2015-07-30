@@ -168,10 +168,7 @@ class History:
         with open(os.path.join(dirname, filename), 'w') as hist:
             #first line:
             hist.write('Itt\t|\t')
-            for net in xrange(len(networks)):
-                hist.write('Seeds, net'+str(net+1)+'\t')
-                for i in xrange(nbr_seeds-1):
-                   hist.write('\t')
+            hist.write('Seeds\t')
             hist.write('|\tpoint')
             for v in xrange(len(variables)):
                 hist.write('\t')
@@ -185,9 +182,8 @@ class History:
 
             #2nd line:
             hist.write('#\t|\t')
-            for net in xrange(len(networks)):
-                for seed in xrange(nbr_seeds):
-                    hist.write('S_'+str(seed+1)+'\t')
+            for seed in xrange(nbr_seeds):
+                hist.write('S_'+str(seed+1)+'\t')
             hist.write('|\t')
             for v in variables:
                 hist.write(str(v)+'\t')
@@ -239,7 +235,10 @@ class History:
                     hist.write('|\t')
 
             #feasibility test
-            hist.write(str(feasability)+'\t')
+            if last_num == 1:
+                hist.write('First Point\t')
+            else:
+                hist.write(str(feasability)+'\t')
             #fout
             for f in fout:
                 hist.write(str(f)+'\t')
