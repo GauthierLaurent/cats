@@ -5,6 +5,7 @@ Created on Fri Jun 05 11:47:30 2015
 @author: Laurent
 """
 import argparse, os
+import pvc_mathTools as mathTools
 
 '''
 ex, 1 graph with subgraphs: --points 1 --xlim 20 --cumul --title default values
@@ -22,17 +23,19 @@ def commands(parser):
     parser.add_argument('--title',  nargs='*',           dest='title',  default=None,        help='Text to add the the title ''Comparison of simulated and observed [type of output] [for]'' ')
     return parser.parse_args()
 
-def splitByGraph(vissimList,videoList):
+def splitByGraph(vissimList,videoList,points_to_keep):
 
     splitList = []
     video_names = []
     for i in xrange(len(vissimList.GetLabels())):
-        name = vissimList.results[i].label.split('&')[0]
-        if name in video_names:
-            splitList[video_names.index(name)].append(vissimList.results[i])
-        else:
-            splitList.append([vissimList.results[i]])
-            video_names.append(name)
+        if int(vissimList.results[i].label.split('&')[1].split('_')[-1]) in points_to_keep:
+            name = vissimList.results[i].label.split('&')[0]
+            if name in video_names:
+                splitList[video_names.index(name)].append(vissimList.results[i])
+            else:
+                splitList.append([vissimList.results[i]])
+                video_names.append(name)
+
     for j in xrange(len(videoList.GetLabels())):
         name = videoList.results[j].label.split('&')[0]
         if name in video_names:
@@ -40,6 +43,8 @@ def splitByGraph(vissimList,videoList):
         else:
             splitList.append([videoList.results[j]])
             video_names.append(name)
+
+    video_names,splitList = mathTools.sort2lists(video_names,splitList,ascending_order=True)
 
     return splitList
 
@@ -110,8 +115,6 @@ def main():
         multi_networks = False
 
     #setting video values
-
-
     for p in points_folders:
         point_path = os.path.join(Commands.cwd,p)
 
@@ -160,7 +163,10 @@ def main():
                                 video__results.addResult(write.defineLabel(traj.split(os.sep)[-1],'A13')+'&video',net.inpx_path.split(os.sep)[-1].strip('.inpx'),vd,vd/float(config.fps))
 
     if points_folders != []:
-        write.write_traj(Commands.cwd, 'tracePublishableDist', [points_folders, vissim_results, video__results])
+        if os.path.isfile(os.path.join(Commands.cwd,'tracePublishableDist.traj')):
+            write.write_traj(Commands.cwd, 'tracePublishableDist', [previous[0] + points_folders, vissim_results, video__results])
+        else:
+            write.write_traj(Commands.cwd, 'tracePublishableDist', [points_folders, vissim_results, video__results])
 
     ################################
     #        graph stuff
@@ -175,18 +181,18 @@ def main():
     else:
         title=None
 
-    if Commands.concat:
-        fig = plt.figure()
-        fig.set_size_inches(7,7)
-
     if Commands.cumul:
         histtype = 'step'
     else:
         histtype = 'stepfilled'
 
-    video_data_list = splitByGraph(vissim_results, video__results)
+    video_data_list = splitByGraph(vissim_results, video__results, Commands.pts)
 
     colors = ['r','g','b','k']
+
+    if Commands.concat:
+        fig = plt.figure()
+        fig.set_size_inches(7,3.5*len(video_data_list)/2)
 
     for j in xrange(2):
         for i in xrange(len(video_data_list)/2):
@@ -195,6 +201,7 @@ def main():
                 if not Commands.concat:
                     fig = plt.figure()
                     fig.set_size_inches(7,7)
+
 
                 for line in video_data_list[2*i+j]:
                     #cheat to hide the end of the histogram with cumulative function 1/2
@@ -247,27 +254,31 @@ def main():
                 plt.setp(ax.get_xticklabels(), fontsize=8)
                 plt.setp(ax.get_yticklabels(), fontsize=8)
 
+                box = ax.get_position()
+                ax.set_position([box.x0, box.y0 + 0.5, box.width, box.height])
+
                 if not Commands.concat:
-                    ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.3), ncol=len(video_data_list[2*i+j]), fontsize='small', frameon=False)
+                    ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.4), ncol=len(video_data_list[2*i+j]), fontsize='small', frameon=False)
                     #plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title+' for '+video_data_list[2*i+j][0].label.split('&')[0])
 
                     if Commands.cumul:
-                        plt.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim cumulative distributions for '+video_data_list[2*i+j][0].label.split('&')[0]))
+                        fig.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim cumulative distributions for '+video_data_list[2*i+j][0].label.split('&')[0]))
                     else:
-                        plt.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim distributions for '+video_data_list[2*i+j][0].label.split('&')[0]))
+                        fig.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim distributions for '+video_data_list[2*i+j][0].label.split('&')[0]))
                     plt.clf()
                     plt.close(fig)
 
 
     if Commands.concat:
         plt.subplots_adjust(hspace=Commands.hspace)
-        ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.3), ncol=len(video_data_list[2*i+j]), fontsize='small', frameon=False)
+
+        ax.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.45), ncol=len(video_data_list[2*i+j]), fontsize='small', frameon=False)
         #plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title)
 
         if Commands.cumul:
-            plt.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim cumulative distributions'))
+            fig.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim cumulative distributions'), dpi=300)
         else:
-            plt.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim distributions'))
+            fig.savefig(os.path.join(Commands.cwd, 'Publishable video and Vissim distributions'), dpi=300)
         plt.clf()
         plt.close(fig)
 
