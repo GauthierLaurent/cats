@@ -129,7 +129,7 @@ def main(argv):
             fout = outputs.sort_fout_and_const(unpacked_outputs[0])
             networks = unpacked_outputs[1]
             seeds = [store[0]+(i-1)*store[1] for i in unpacked_outputs[2]]
-            feasability = 'feasible'
+            feasability = 'Feasible'
             for net in networks:
                 if net.feasibility == 'Unfeasible':
                     feasability = 'Unfeasible'
