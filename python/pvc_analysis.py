@@ -157,8 +157,10 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     #         9           10             11         12             13         14
                     #
 
-                    #fout = outputs.buildFout(config,secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCagaps, manLCagaps
+                    fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCagaps, manLCagaps
+                    d_stat.append([fout]+vissim_data.getConstraints())
 
+                    '''
                     if config.output_forward_gaps:
                         if secondary_values[4] == 'DNE':
                             d_stat.append(['inf'] + vissim_data.getConstraints())
@@ -172,7 +174,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                         else:
                             d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
                         write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
-
+                    '''
             network[N].feasibility = vissim_data.testConstraints()
 
     vissim.stopVissim(Vissim)
