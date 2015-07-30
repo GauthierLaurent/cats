@@ -62,8 +62,8 @@ def oneBase(x):
     else:
         return 0
 
-def detectBase(xmin,xmax):
-    return max(oneBase(abs(xmin)),oneBase(abs(xmax)))
+def detectBase(xmin,xmax,n):
+    return oneBase(abs((xmax-xmin)/float(n)))
 
 
 ##################

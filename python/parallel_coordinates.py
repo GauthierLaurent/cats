@@ -112,7 +112,7 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
             yticks = []
             yticks_positions = [i*1/float(nticks-1) for i in range(nticks)]
             for b in xrange(len(lb)):
-                yticks.append([mathTools.myround(lb[b]+i*(ub[b]-lb[b])/float(nticks-1),base=mathTools.detectBase(lb[b],ub[b]),outType=float) for i in range(nticks)])
+                yticks.append([mathTools.myround(lb[b]+i*(ub[b]-lb[b])/float(nticks-1),base=mathTools.detectBase(lb[b],ub[b],nticks-1),outType=float)+0 for i in range(nticks)])  #NB: +0 is to avoid getting -0.0
 
     # determine values to use for xticks
     if use_columns is True:
