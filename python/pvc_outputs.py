@@ -485,7 +485,7 @@ def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collis
                 tmp += line
 
             try:
-                nCollisions +=  storage.countCollisionsVissim(StringIO.StringIO(tmp), lanes = lanes, collisionTimeDifference = 0.2)
+                nCollisions +=  storage.countCollisionsVissim(StringIO.StringIO(tmp), lanes = lanes, collisionTimeDifference = 0.2, lowMemory = False)
                 test_again = False
             except:
                 if maxLines > 400000:
@@ -558,14 +558,19 @@ def makeitclean(video_forward_gaps, threshold):
             video_forward_gaps.pop(g)
     return video_forward_gaps
 
-def buildFout(config, dStat_forgaps, dStat_manLCgaps, dStat_oppLCgaps):
+def buildFout(config, dStat_forgaps, dStat_oppLCgaps, dStat_manLCgaps):
     '''returns a single value from the list of possible outputs'''
     lists = []
-    if config.output_forward_gaps:
+    #add car-following gaps
+    if config.output_forward_gaps and config.cmp_for_gaps:
         lists.append(dStat_forgaps)
+
+    #add lane change information
     if config.output_lane_change_gaps:
-        lists.append(dStat_manLCgaps)
-        lists.append(dStat_oppLCgaps)
+        if config.cmp_man_lcgaps:
+            lists.append(dStat_manLCgaps)
+        if config.cmp_opp_lcgaps:
+            lists.append(dStat_oppLCgaps)
 
     if 'DNE' in lists:
         return 'inf'
@@ -1023,7 +1028,7 @@ def treat_Single_VissimOutput(filename, inputs):
     if verbose:
         print ' === Starting calculations for ' + filename + ' ===  |'
 
-    objects = storage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), config.sim_steps, nObjects = -1, warmUpLastInstant = config.warm_up_time, usePandas = True)
+    objects = storage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), config.sim_steps, nObjects = -1, warmUpLastInstant = config.warm_up_time, usePandas = True, lowMemory = False)
     outputs.addSingleOutput('flow', len(objects), filename)
 
     #lane building block
@@ -1089,7 +1094,6 @@ def treat_Single_VissimOutput(filename, inputs):
     if config.cmp_man_lcgaps:
         raw_man_LC_agaps    = []
         raw_man_LC_bgaps    = []
-
         #mandatory lane change gaps
         agaps, bgaps = laneChangeGaps(manObjDict, laneDict, objects)
         if agaps.any(): raw_man_LC_agaps = agaps.tolist()

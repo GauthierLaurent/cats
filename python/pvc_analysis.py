@@ -118,6 +118,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 else:
                     non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
                     video_data.forFMgap.cleanStats(0.5*config.fps)
+                    video_data.oppLCbgap.cleanStats(0); vissim_data.oppLCbgap.cleanStats(0)
+                    video_data.manLCbgap.cleanStats(0); vissim_data.manLCbgap.cleanStats(0)
                     dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
                     #starting the building of the secondary values outputs
                     #for the first 3 variables, which are intergers, we use:
@@ -157,24 +159,25 @@ def runVissimForCalibrationAnalysis(network, inputs):
                     #         9           10             11         12             13         14
                     #
 
-                    fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCagaps, manLCagaps
+                    fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCbgaps, manLCbgaps
                     d_stat.append([fout]+vissim_data.getConstraints())
-
-                    '''
                     if config.output_forward_gaps:
-                        if secondary_values[4] == 'DNE':
-                            d_stat.append(['inf'] + vissim_data.getConstraints())
-                        else:
-                            d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
-                        write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
+                        #if secondary_values[4] == 'DNE':
+                        #    d_stat.append(['inf'] + vissim_data.getConstraints())
+                        #else:
+                        #    d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
+                        write.plot_dists(final_inpx_path, 'car-following gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
 
                     if config.output_lane_change_gaps:
-                        if secondary_values[8] == 'DNE':        #using the before gap to calibrate
-                            d_stat.append(['inf'] + vissim_data.getConstraints())
-                        else:
-                            d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
-                        write.plot_dists(final_inpx_path, traj.split(os.sep)[-1].strip('.traj'), dist_video_data[2], dist_data[2], secondary_values[6], parameters[0], config.fps, seed_nums)
-                    '''
+                        #if secondary_values[8] == 'DNE':        #using the before gap to calibrate
+                        #    d_stat.append(['inf'] + vissim_data.getConstraints())
+                        #else:
+                        #    d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
+                        if config.cmp_opp_lcgaps:
+                            write.plot_dists(final_inpx_path, 'opportunistic lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[2], dist_data[2], secondary_values[8], parameters[0], config.fps, seed_nums)
+                        if config.cmp_man_lcgaps:
+                            write.plot_dists(final_inpx_path, 'mandatory lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[4], dist_data[4], secondary_values[12], parameters[0], config.fps, seed_nums)
+
             network[N].feasibility = vissim_data.testConstraints()
 
     vissim.stopVissim(Vissim)
