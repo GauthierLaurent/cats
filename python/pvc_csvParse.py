@@ -18,10 +18,10 @@ import StringIO, sys, os, traceback
 import nullwriter as nullwriter; oldstdout = sys.stdout;sys.stdout = nullwriter.NullWriter()
 import moving
 sys.stdout = oldstdout #Re-enable output
-  
+
 ##################
 # Data storing classes
-##################      
+##################
 class Alignments:
     '''built as a subclass of Videos - contains the raw x,y points to build
        an alignment using Traffic Intelligence'''
@@ -35,11 +35,16 @@ class Corridor:
         self.direction = data[1]
         self.link_list = data[2]
         self.to_eval   = data[3]
-        
-        
+
+class SpeedZones:
+    def __init__(self,data):
+        self.type       = data[0]
+        self.vissim_num = data[1]
+        self.speedDist  = data[1]
+
 class Variable:
     def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, desired_value = None, value_type = 'R', point = None):
-        self.include        = Variable.yesorTrue(include)     
+        self.include        = Variable.yesorTrue(include)
         self.name           = name
         self.vissim_name    = vissim_name
         self.vissim_default = Variable.floatOrBool(vissim_default)
@@ -71,12 +76,12 @@ class Variable:
                 return False
         else:
             return None
-            
+
     @staticmethod
-    def floatOrBool(stringvalue): 
+    def floatOrBool(stringvalue):
         try:
             return float(stringvalue)
-        except: 
+        except:
             if stringvalue != None:
                 if stringvalue.lower() == 'false':
                     return False
@@ -84,14 +89,14 @@ class Variable:
                     return True
             else:
                 return None
-            
+
     @staticmethod
     def floatOrNone(stringvalue):
         try:
             return float(stringvalue)
         except:
             return None
-            
+
 class Videos:
     '''contains video information'''
     def __init__(self,name, aligns, ignore):
@@ -100,10 +105,10 @@ class Videos:
         for i in aligns:
             self.alignments.append(Alignments(i))
         self.to_ignore = ignore
-        
+
 ##################
 # CSV config file data extracting tools
-##################        
+##################
 def extractAlignmentsfromCSV(dirname, inpxname):
     '''Reads alignment information for a csv named like the inpx
        CSV file must be build as:
@@ -117,7 +122,7 @@ def extractAlignmentsfromCSV(dirname, inpxname):
         f = open(os.path.join(dirname,filename[0]))
         for line in f:
             if '$Video_alignments' in line.strip(): break
-        
+
         video_names = []
         ignore = []
         sublvl = []
@@ -125,7 +130,7 @@ def extractAlignmentsfromCSV(dirname, inpxname):
         for line in f:
             if line.strip() == '':
                 if sublvl != []: brute.append(sublvl)
-                sublvl = [] 
+                sublvl = []
             if '$' in line.strip():
                 break
             if 'sqlite' in line:
@@ -136,23 +141,23 @@ def extractAlignmentsfromCSV(dirname, inpxname):
                 if len(ignore) < len(video_names) -1:
                     for add in xrange(len(video_names) -1 -len(ignore)):
                         ignore.append('')
-                
+
                 objects_to_ignore = []
                 text_list = line.lower().strip().split('#')[0].strip().strip('ignore').strip(':').replace(';','-').replace(',','-').split('-')
                 for text in text_list:
                     objects_to_ignore.append(int(text))
-                ignore.append(objects_to_ignore)                
-                
+                ignore.append(objects_to_ignore)
+
             if 'sqlite' not in line and 'ignore' not in line.lower() and line.strip() != '':
                 sublvl.append(line.strip().split('#')[0])
-                
+
         if sublvl != []: brute.append(sublvl)
         if len(ignore) < len(video_names):
             for add in xrange(len(video_names) -len(ignore)):
                 ignore.append('')
-                
+
         videos = {}
-        for vid in xrange(len(brute)): 
+        for vid in xrange(len(brute)):
             align_list = {}
             for b in xrange(len(brute[vid])):
                 name = brute[vid][b].split(';')[0]
@@ -163,15 +168,15 @@ def extractAlignmentsfromCSV(dirname, inpxname):
                 while len(inter) > 0:
                     inter = inter[0].split(',',2)
                     point.append(moving.Point(float(inter[0]),float(inter[1])))
-                    inter = inter[2:]           
+                    inter = inter[2:]
                 align_list[b] = [name, point]
             videos[vid] = Videos(video_names[vid], align_list.values(), ignore[vid])
-                
+
         return videos.values()
     else:
         print 'No vissim file named ' + str(inpxname) + ', closing program '
         sys.exit()
-           
+
 def extractDataFromVariablesCSV(filename):
     '''works inside convertParameterstoString'''
     variablesInfo = csv2rec(filename)
@@ -185,9 +190,9 @@ def extractDataFromVariablesCSV(filename):
     desiredMinV = variablesInfo['desiredmin']
     desiredMaxV = variablesInfo['desiredmax']
     desiredV    = variablesInfo['desiredvalue']
-       
+
     return vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, value_type, desiredMinV, desiredMaxV, desiredV
-    
+
 def extractNumberList(dirname, inpxname):
     '''Reads a list of intergers for a csv.
        The list may be written on multiple lines and can be separated by
@@ -200,7 +205,7 @@ def extractNumberList(dirname, inpxname):
         f = open(os.path.join(dirname,filename[0]))
         for line in f:
             if '$Ignore-Objects' in line.strip(): break
-        
+
         objects_to_ignore = []
         for line in f:
             if '$' in line.strip():
@@ -211,7 +216,7 @@ def extractNumberList(dirname, inpxname):
                 text_list = line.strip().split('#')[0].strip().replace(';','-').replace(',','-').split('-')
                 for text in text_list:
                     objects_to_ignore.append(int(text))
-        objects_to_ignore.sort()       
+        objects_to_ignore.sort()
         return objects_to_ignore
     else:
         print 'No vissim file named ' + str(inpxname) + ', closing program '
@@ -224,7 +229,7 @@ def extractParamFromCSV(dirname, filename):
              2nt   line:     VarName,VissimMin,VissimMax,DesiredMin,DesiredMax,
                              VissimName
              other lines:    stringfloat,float,float,float,string,
-             
+
              where:
                      VarName is a name given by the user and will be used to
                      write pcvtools reports
@@ -233,7 +238,7 @@ def extractParamFromCSV(dirname, filename):
                      VissimMin and VissimMax are the min and max values found in
                      the Vissim COM manual
                      DesiredMin and DesiredMax are the range to be used for the
-                     evaluation                           
+                     evaluation
     '''
 
     if filename in dirname: dirname = dirname.strip(filename)
@@ -243,20 +248,20 @@ def extractParamFromCSV(dirname, filename):
         f = open(os.path.join(dirname,files[0]))
         for line in f:
             if '$Variables' in line.strip(): break
-            
+
         brutestring = ''
         for line in f:
             if '$' in line.split('#')[0]: break
             if line.startswith('#') is False and line.strip() != '': brutestring += line.replace('\t', '').strip('\n').split('#')[0]+'\n'
-            
+
         vissimInclu, vissimNames, vissimMinVa, vissimMaxVa, vissimDefau, value_names, value_type, desiredMinV, desiredMaxV, desiredV = extractDataFromVariablesCSV(StringIO.StringIO(brutestring.replace(" ", "")))
-        
-        parameters = {}        
+
+        parameters = {}
         for i in xrange(len(vissimNames)):
             parameters[i] = Variable(vissimInclu[i], value_names[i], vissimNames[i], vissimMinVa[i], vissimMaxVa[i], vissimDefau[i], desiredMinV[i], desiredMaxV[i], desiredV[i], value_type[i])
 
         parameters = verifyDesiredRanges(parameters.values())
-        
+
         return parameters
     else:
         print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
@@ -265,7 +270,7 @@ def extractParamFromCSV(dirname, filename):
 def extractCorridorsFromCSV(dirname, inpxname, types):
     '''Reads corridor information for a csv named like the inpx
         - CSV file must be build as: Corridor_name,vissim list,traffic intelligence
-          list 
+          list
         - Both list must be separated by "-"
     '''
 
@@ -276,15 +281,15 @@ def extractCorridorsFromCSV(dirname, inpxname, types):
         f = open(os.path.join(dirname,filename[0]))
         for line in f:
             if '$Corridors' in line.strip(): break
-            
+
         brute = []
         for line in f:
             if '$' in line.strip(): break
             if line.startswith('#') is False and line.strip() != '': brute.append(line.strip().replace(' ','\t').replace('\t','').split('#')[0])
-             
+
         vissimCorridors = {}
-        trafIntCorridors = {}    
-        for b in xrange(len(brute)):        
+        trafIntCorridors = {}
+        for b in xrange(len(brute)):
             vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
             trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
 
@@ -295,22 +300,54 @@ def extractCorridorsFromCSV(dirname, inpxname, types):
     except:
         print traceback.print_exc()
         sys.exit()
-  
+
+def extractSpeedZonesFromCSV(dirname, inpxname):
+    '''Reads detector information for a csv named like the inpx
+        - CSV file must be build as:
+                ReductionZones_number,desired_speed         --> 1rst detector in vissim
+                ReductionZones_number,desired_speed         --> 2nd detector in vissim
+                ReductionZones_number,desired_speed         --> 3rd detector in vissim
+                ...
+    '''
+
+    if inpxname in dirname: dirname = dirname.strip(inpxname)
+    try:
+        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+
+        f = open(os.path.join(dirname,filename[0]))
+        for line in f:
+            if '$Detectors' in line.strip(): break
+
+        brute = []
+        for line in f:
+            if '$' in line.strip(): break
+            if line.startswith('#') is False and line.strip() != '': brute.append(line.strip().replace(' ','\t').replace('\t','').split('#')[0])
+
+        speedZones = {}
+        for b in xrange(len(brute)):
+            speedZones[b] = SpeedZones([brute[b].split(';')[0],brute[b].split(';')[1],brute[b].split(';')[2] ])
+
+        return speedZones.values()
+
+    except:
+        print traceback.print_exc()
+        sys.exit()
+
 def verifyDesiredRanges(variables):
     '''checks for coherence between bounds and desired min/max values entered
-       in the csv file loaded to build the variables''' 
+       in the csv file loaded to build the variables'''
     for i in xrange(len(variables)):
         if variables[i].vissim_min is not None:
             if variables[i].desired_min < variables[i].vissim_min:
-                print str(variables[i].name) + ' was set to have a lower bound of ' + str(variables[i].vissim_min) + ' which is lower than the vissim minimum bound. Setting the lower bound to the vissim bound' 
+                print str(variables[i].name) + ' was set to have a lower bound of ' + str(variables[i].vissim_min) + ' which is lower than the vissim minimum bound. Setting the lower bound to the vissim bound'
                 variables[i].desired_min = variables[i].vissim_min
-        
-        if variables[i].vissim_max is not None:    
+
+        if variables[i].vissim_max is not None:
             if variables[i].desired_max > variables[i].vissim_max:
-                print str(variables[i].name) + ' was set to have a upper bound of ' + str(variables[i].vissim_max) + ' which is higher than the vissim maximum bound. Setting the upper bound to the vissim bound'             
-                variables[i].desired_max = variables[i].vissim_max            
+                print str(variables[i].name) + ' was set to have a upper bound of ' + str(variables[i].vissim_max) + ' which is higher than the vissim maximum bound. Setting the upper bound to the vissim bound'
+                variables[i].desired_max = variables[i].vissim_max
     return variables
-     
+
 def verifyDesiredPoints(variables):
     '''Checks if the point contained in variable.point respects the bounds of said
        variable'''
@@ -320,13 +357,13 @@ def verifyDesiredPoints(variables):
         if variables[i].vissim_min is not None:
             if variables[i].point < variables[i].vissim_min:
                 chk = False
-        
-        if variables[i].vissim_max is not None:    
+
+        if variables[i].vissim_max is not None:
             if variables[i].point > variables[i].vissim_max:
                 chk = False
-                
+
     return chk
-  
+
 def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
     '''inserts the info for the video in the CSV file respecting, if applicable, the
        location of the $Video_alignments section and keeping, if applicable, other
@@ -341,29 +378,29 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                     list_to_append += [str(text_to_add[i][j])+',']
         list_to_append += ['\n']
         return list_to_append
-    
+
     if inpxname in dirname: dirname = dirname.strip(inpxname)
     if os.path.exists(os.path.join(dirname, os.path.splitext(inpxname)[0] + '.csv')):
-           
+
         with open(os.path.join(dirname, os.path.splitext(inpxname)[0] + '.csv'), 'r+') as f:
-            
+
             text_list = []
-            
+
             for l in f:
                 text_list.append(l)
 
             to_write_list = []
-            
+
             for line in xrange(len(text_list)):
-                if 'Video_alignments' in text_list[line]:                  
+                if 'Video_alignments' in text_list[line]:
                     #$Video_alignments does exist, we must modify this section
                     section_list = []
                     for lines in xrange(line+1,len(text_list)):
                         if '$' in text_list[lines]:
                             last_line = lines
                             break
-                        section_list.append(text_list[lines])                    
-                    
+                        section_list.append(text_list[lines])
+
                     modified_section_list = []
                     index_list = []
                     found = False
@@ -372,21 +409,21 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                             index_list.append(sec)
                         if video_name in section_list[sec]:
                             found = sec
-                            
+
                     #no video of that name found
                     if found is False:
                         modified_section_list.append('$Video_alignments\n')
                         modified_section_list += section_list[:]
                         modified_section_list.append(str(video_name)+'\n')
                         modified_section_list = add_end(modified_section_list, video_name, text_to_add)
-                                       
+
                     #name found, overwritting this section
                     else:
                         #adding the first part
                         modified_section_list.append('$Video_alignments\n')
                         modified_section_list += section_list[0:found]
 
-                        #adding the values we are interested in                                                
+                        #adding the values we are interested in
                         modified_section_list.append(str(video_name)+'\n')
                         modified_section_list = add_end(modified_section_list, video_name, text_to_add)
 
@@ -403,7 +440,7 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                             to_pop.append(j)
                     for p in reversed(to_pop):
                         modified_section_list.pop(p)
-                    
+
                     #correcting for removed section in-between empty line if the whole section was empty
                     if modified_section_list[-1] != '\n':
                         modified_section_list('\n')
@@ -412,7 +449,7 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                     to_write_list += modified_section_list
                     to_write_list += text_list[last_line:]
                     break
-                
+
                 elif line == len(text_list) -1:
                     #No section $Video_alignments found, we must create it
                     to_write_list.append(text_list[line])
@@ -429,7 +466,7 @@ def writeAlignToCSV(dirname, inpxname, video_name, text_to_add):
                     to_write_list.append(text_list[line])
 
         f.close()
-        
+
         with open(os.path.join(dirname, inpxname.strip('.inpx') + '.csv'), 'w') as f:
               for i in to_write_list:
                   f.write(i)

@@ -78,7 +78,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
             values.append(var.point)
 
         #Initializing and running the simulation
-        simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path)
+        simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path, rsr=config.output_speed_zones)
 
         if simulated is not True:
             for traj in network[N].traj_paths:

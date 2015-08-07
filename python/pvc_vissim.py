@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Thu Jul 03 11:25:24 2014
 
 @author: Laurent
-"""
+'''
 ##################
 # Import Native Libraries
 ##################
@@ -41,7 +41,7 @@ def startVissim():
     '''start an instance of Vissim. Returns the object Vissim if successfull,
        StartError otherwise'''
     try:
-        return win32com.client.dynamic.Dispatch("Vissim.Vissim.600")
+        return win32com.client.dynamic.Dispatch('Vissim.Vissim.600')
         #Note: win32com.client.dynamic.Dispatch() works both with an open or unopened vissim. It can be called multiple
         #                                         times, and will first assign already opened instances, then start new ones
         #      win32com.client.Dispatch() will ignore already opened vissim instances and start a fresh one
@@ -72,7 +72,44 @@ def stopVissim(Vissim):
     else:
         return True
 
-def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False, err_file_path=False):          #Change Lane parameters need to be added
+def getSpeedDistr(Vissim):
+    '''returns all existing speed distributions in the Vissim file'''
+    num_sd_list = []
+    SDlist = Vissim.Net.desSpeedDistributions.GetAll
+    for sd in SDlist:
+        num_sd_list.append(sd.AttValue('No'))
+
+    return num_sd_list
+
+def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'Link'):
+    '''object type can be either:
+            DSD for Desired Speed Decision
+            RSA for Reduced Speed Area
+            VC  for Vehicule composition
+    '''
+
+    if object_type == 'RSA':
+        if Vissim.Net.ReducedSpeedAreas.Count > 0:
+            RSA = Vissim.Net.ReducedSpeedAreas.ItemByKey(obj_num)
+            VDS = RSA.VehClassSpeedRed.GetAll
+            for vds in VDS:
+                vds.SetAttValue('DesSpeedDistr', dist_num)
+
+    if object_type == 'DSD':
+        if Vissim.Net.DesSpeedDecisions.Count > 0:
+            DSD = Vissim.Net.DesSpeedDecisions.ItemByKey(obj_num)
+            VDS = DSD.VehClassDesSpeedDistr.GetAll
+            for vds in VDS:
+                vds.SetAttValue('DesSpeedDistr', dist_num)
+
+    if object_type == 'VC':
+        if Vissim.Net.VehicleCompositions.Count > 0:
+            VC = Vissim.Net.VehicleCompositions.ItemByKey(obj_num)
+            VDS = VC.VehCompRelFlow.GetAll
+            for vds in VDS:
+                vds.SetAttValue('DesSpeedDistr', dist_num)
+
+def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False, rsr = False, err_file_path=False):          #Change Lane parameters need to be added
     ''' Defines the Vissim Similuation parameters
         the sim_parameters variables must be [simulationStepsPerTimeUnit,
         first_seed, nbr_runs, CarFollowModType, Simulation lenght]'''
@@ -81,26 +118,27 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
         Simulation = Vissim.Simulation
         Evaluation = Vissim.Evaluation
 
-        if Simulation.AttValue("IsRunning") is True:
+        if Simulation.AttValue('IsRunning') is True:
             Simulation.Stop()
 
         #Setting Simulation attributes
-        Simulation.SetAttValue("SimRes", sim_parameters[0])         #ODOT p.45 (56 in the pdf)
-        Simulation.SetAttValue("useMaxSimSpeed", True)
-        Simulation.SetAttValue("RandSeed", sim_parameters[1])       #Hitchhiker's Guide to the Galaxy!
-        Simulation.SetAttValue("RandSeedIncr", sim_parameters[5])
-        Simulation.SetAttValue("NumRuns", sim_parameters[2])        #To be verified
-        Simulation.SetAttValue("SimPeriod",sim_parameters[3])
+        Simulation.SetAttValue('SimRes', sim_parameters[0])         #ODOT p.45 (56 in the pdf)
+        Simulation.SetAttValue('useMaxSimSpeed', True)
+        Simulation.SetAttValue('RandSeed', sim_parameters[1])       #Hitchhiker's Guide to the Galaxy!
+        Simulation.SetAttValue('RandSeedIncr', sim_parameters[5])
+        Simulation.SetAttValue('NumRuns', sim_parameters[2])        #To be verified
+        Simulation.SetAttValue('SimPeriod',sim_parameters[3])
 
         #Setting the number of cores to use
-        Simulation.SetAttValue("NumCores",sim_parameters[4])
+        Simulation.SetAttValue('NumCores',sim_parameters[4])
 
         #Enabling the Quick Mode
-        Vissim.graphics.currentnetworkwindow.SetAttValue("QuickMode", True)
+        Vissim.graphics.currentnetworkwindow.SetAttValue('QuickMode', True)
 
         #Setting Evaluation outputs
-        Evaluation.SetAttValue("VehRecWriteFile",True)               #Enable .fzp outputs
-        if swp: Evaluation.SetAttValue("LaneChangesWriteFile",True)  #Enable .swp outputs
+        Evaluation.SetAttValue('VehRecWriteFile',True)               #Enable .fzp outputs
+        if swp: Evaluation.SetAttValue('LaneChangesWriteFile',True)  #Enable .swp outputs
+        if rsr: Evaluation.SetAttValue('VehTravTmRawWriteFile',True) #Enable .rsr outputs
 
         #Setting driving behavior attributes
         if sim_parameters[3] is not None:
