@@ -154,7 +154,7 @@ class Network:
             if getattr(config,actv_network_list[i]):
                 if getattr(config,path_to_inpx_list[i]).split(os.sep)[-1] not in inpx_list:
                     inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]] = Network(getattr(config,path_to_inpx_list[i]),getattr(config,path_to_vid__list[i]))
-                    VissimCorridors = csvParse.extractCorridorsFromCSV(getattr(config,path_to_inpx_list[i]).strip(getattr(config,path_to_csv__list[i]).split(os.sep)[-1]), getattr(config,path_to_inpx_list[i]).split(os.sep)[-1], 'vissim')
+                    VissimCorridors = csvParse.extractCorridorsFromCSV(getattr(config,path_to_inpx_list[i]).strip(getattr(config,path_to_csv__list[i]).split(os.sep)[-1]), getattr(config,path_to_inpx_list[i]).split(os.sep)[-1], data_types = 'vissim')
                     inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]].addCorridor(VissimCorridors)
                 else:
                     inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]].addtraj(getattr(config,path_to_vid__list[i]))

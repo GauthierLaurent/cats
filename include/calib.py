@@ -18,7 +18,7 @@ print would give NOMAD an erronous result of the called point
 ################################
 #        Native dependencies
 ################################
-import os, sys, multiprocessing, shutil, random, traceback, copy
+import os, sys, multiprocessing, shutil, random, traceback, copy, subprocess
 
 ################################
 #        Main
@@ -163,6 +163,9 @@ def main(argv):
     for f in fout:
         out += str(f)+' '
     print out
+
+    #cleanpointFolder
+    subprocess.Popen([sys.executable, os.path.join(os.getcwd(),'cleanPointFolder.py'), last_num], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     return 0
 

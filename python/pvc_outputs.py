@@ -262,6 +262,8 @@ class Derived_data:
         self.manLCbgap  = Stats([])
         self.forSpeeds  = Stats([])
         self.constraint = Constraints()
+        self.travTms    = [Stats([])]
+        self.delay      = [Stats([])]
 
     def addLanes(self):
         self.flow.lane = []
@@ -305,6 +307,15 @@ class Derived_data:
             getattr(self, attr_name).add_one_dist_list(value)
             getattr(getattr(self, attr_name),'distributions')[-1].addFileName(filename)
 
+        if isinstance(getattr(self, attr_name),list):
+            if isinstance(getattr(self, attr_name)[0],Stats):
+                if len(getattr(self, attr_name)) < len(value):
+                    for i in xrange(len(value) - len(getattr(self, attr_name))):
+                        getattr(self, attr_name).append(Stats([]))
+                for j in xrange(len(value)):
+                    getattr(self, attr_name)[j].add_one_dist_list(value[j])
+                    getattr(getattr(self, attr_name)[j],'distributions')[-1].addFileName(filename)
+
     def addConstraintValue(self, constraintName, value, filename):
         self.constraint.addCi(constraintName, value, filename)
 
@@ -323,6 +334,10 @@ class Derived_data:
 
         if isinstance(getattr(self, attr_name),Constraints):
             getattr(self, attr_name).popMany(index_list)
+
+        if isinstance(getattr(self, attr_name),list):
+            if isinstance(getattr(self, attr_name)[0],Stats):
+                getattr(self, attr_name)[0].popMany(index_list)
 
     def popManyOutputList(self, output_list, index_list):
         '''calls popSingleOutputList() for each output in output_list
@@ -370,6 +385,11 @@ class Derived_data:
 
             if isinstance(getattr(outputs2, attr),Constraints):
                 Constraints.concat(getattr(outputs1,attr),getattr(outputs2,attr))
+
+            if isinstance(getattr(outputs2, attr),list):
+                if isinstance(getattr(outputs2, attr)[0],Stats):
+                    for j in xrange(len(getattr(outputs2, attr))):
+                        Stats.concat(getattr(outputs1,attr)[j],getattr(outputs2,attr)[j])
 
         if hasattr(outputs2.flow,'lane'):
                 if hasattr(outputs1.flow,'lane'):
@@ -448,6 +468,59 @@ class ActiveConstraints:
     def getNumberOfConstraints(config):
         tmp = ActiveConstraints(config)
         return len([i for i in tmp.activeList if i is True])
+
+class Queue:
+    def __init__(self):
+        self.time = []
+        self.Stopedveh = []
+        self.longestQueue = 0
+        self.timeOfLonguestQueue = 0
+
+    def calculateMaxQueue(self):
+        for q in xrange(len(self.StopedVeh)):
+            if len(self.StopedVeh[q]) > self.longestQueue:
+                self.longestQueue = self.StopedVeh[q]
+                self.timeOfLonguestQueue = self.time[q]
+
+    def addVehicule(self,time,vehNbr):
+        if time not in self.time:
+            self.time.append(time)
+            self.Stopedveh.append([vehNbr])
+            self.time, self.Stopedveh = mathTools.sort2lists(self.time,self.Stopedveh)
+
+        else:
+            self.Stopedveh[self.time.index(time)].append(vehNbr)
+        self.calculateMaxQueue()
+
+class ApproachQueue:
+    def __init__(self):
+        self.laneQueues = []
+        self.laneNames  = []
+        self.longestQueue = 0
+        self.timeOfLonguestQueue = 0
+
+    def getMaxQueueForSingleLane(self,laneName):
+        return self.laneQueues[self.laneNames.index(laneName)].longestQueue
+
+    def getTimeOfMaxQueueForSingleLane(self,laneName):
+        return self.laneQueues[self.laneNames.index(laneName)].timeOfLonguestQueue
+
+    def calculateApproachMaxQueue(self):
+        for laneName in self.laneNames:
+            if self.getMaxQueueForSingleLane(laneName) > self.longestQueue:
+                self.longestQueue = self.getMaxQueueForSingleLane(laneName)
+                self.timeOfLonguestQueue = self.getTimeOfMaxQueueForSingleLane(laneName)
+
+    def addVehicule(self,time,vehNbr,laneName):
+        if laneName in self.laneNames:
+            self.laneQueues[self.laneNames.index(laneName)].addVehicule(time,vehNbr)
+        else:
+            self.laneNames.append(laneName)
+            self.laneQueues.append(Queue())
+            self.laneQueues[-1].addVehicule(time,vehNbr)
+            self.laneNames, self.laneQueues = mathTools.sort2lists(self.laneNames,self.laneQueues)
+
+        self.calculateApproachMaxQueue()
 
 def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collisionTimeDifference = 0.2):
     '''Splits the fzp in smaller fzp files to prevent overflow errors when invoking
@@ -853,6 +926,44 @@ def laneChange(objects, corridors):
 
     return oppObjDict, manObjDict, laneDict
 
+def getDelayFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True):
+    '''filename has to be a .rsr'''
+    #import pandas
+    from pandas import read_csv
+    data = read_csv(filename, delimiter=';', comment='*', header=0, skiprows = 7, low_memory = lowMemory)#, converters = myStrip)
+
+    if warmUpLastInstant is not None:
+        data = data[data['  Time']>=warmUpLastInstant]
+
+    travelTimes = {}
+    delays = {}
+    for row_index, row in data.iterrows():
+        if row['   No.'] in delays.keys():
+            delays[row['   No.']].append(row[' Delay'])
+        else:
+            delays[row['   No.']] = [row[' Delay']]
+
+        if row['   No.'] in travelTimes.keys():
+            travelTimes[row['   No.']].append(row['  Trav'])
+        else:
+            travelTimes[row['   No.']] = [row['  Trav']]
+
+    '''
+    unique_detectors = pandas.unique(data['   No.'])
+
+    meansDelay = {}
+    meansTravelTime = {}
+
+    for unique in unique_detectors:
+        meansDelay[unique] = data.loc[data['   No.'] == unique].loc[:,' Delay'].mean()
+        #data.loc[data['   No.'] == unique].loc[:,' Delay'].sum()
+        #data.loc[data['   No.'] == unique].loc[:,' Delay'].min()
+        #data.loc[data['   No.'] == unique].loc[:,' Delay'].max()
+
+        meansTravelTime[unique] = data.loc[data['   No.'] == unique].loc[:,'  Trav'].mean()
+    '''
+    return travelTimes.values(), delays.values()
+
 def extract_num_from_fzp_name(filename):
     '''returns the numerical component of a vissim fzp file'''
     return int(os.path.splitext(filename)[0].split('_')[-1])
@@ -864,117 +975,8 @@ def extract_num_from_fzp_list(filenames):
         num_list.append(extract_num_from_fzp_name(filename))
     return num_list
 
-def check_fzp_content(dirname,filename):
-    '''classifies a fzp file according to the column headers
-
-       case 1: everything is in place where traffic intelligence expects it
-       case 2: every needed information is provided, but not in the right order
-       case 3: the poslat information is missing, it will be assumed to be 0.5 everywhere
-       case 4: some important non-spoofable information is missing, raising a warning and exiting
-    '''
-    #finding the header
-    with open(os.path.join(dirname,filename)) as fzp:
-        for i in xrange(1):
-            fzp.readline()
-
-        for line in fzp:
-            if '$' not in line:
-                pass
-            else:
-                header_line = line.strip().strip('$').lower().split(';')
-                break
-
-    #classifying with available columns
-    if 'vehicle:simsec' in header_line[0] and 'no' in header_line[1] and 'lane\\link\\no' in header_line[2] and 'lane\\index' in header_line[3] and 'pos'in header_line[4] and 'poslat' in header_line[5]:
-        case = 1
-    elif 'vehicle:simsec' in header_line and 'no' in header_line and 'lane\\link\\no' in header_line and 'lane\\index' in header_line and 'pos'in header_line:
-        if 'poslat' in header_line:
-            case = 2
-        else:
-            case = 3
-    else:
-        print ('Missing information columns in the fzp files\n'
-               '\n'
-               'Make sure that all the following attributes are activated...\n'
-               'Interface name [.fzp name]:\n'
-               '     Simulation second [VEHICLE:SIMSEC],\n'
-               '     Number [NO]\n'
-               '     Lane\Link\Number [LANE\LINK\NO]\n'
-               '     Lane\Index [LANE\INDEX]\n'
-               '     Position [POS]\n'
-               '     Position (lateral) [POSLAT]\n'
-               '\n'
-               'To activate:\n'
-               '  Evaluation > Configuration > Tab: Direct Output >\n'
-               '  Row: Vehicle > Record > Click to More... > Click to Attributes\n'
-               )
-        sys.exit()
-
-    return case
-
-def false_fzp(case,dirname,filename):
-    '''Reorders Case 2 and Case 3 fzp files with required information by the
-       traffic intelligence function
-
-       Returns the name of the temporary file created
-
-       information on .fzp files can be found in section 10.8.2.1 of the manual'''
-
-    false_fzp = ''
-    with open(os.path.join(dirname,filename),'r') as fzp:
-        #skip header
-        for i in xrange(1):
-            false_fzp += fzp.readline()
-
-        for line in fzp:
-            #print line.strip()
-            if '$' not in line:
-                false_fzp += line
-            else:
-                false_fzp += line
-                break
-
-        #reorder the file
-        order = line.strip().strip('$').lower().split(';')
-        for line in fzp:
-            if line.strip() != '':
-                line_build = ''
-                line_infos = line.strip().split(';')
-                line_build += line_infos[order.index('vehicle:simsec')] + ';'
-                line_build += line_infos[order.index('no')] + ';'
-                line_build += line_infos[order.index('lane\\link\\no')] + ';'
-                line_build += line_infos[order.index('lane\\index')] + ';'
-                line_build += line_infos[order.index('pos')] + ';'
-
-                if case == 2:
-                    line_build += line_infos[order.index('poslat')]
-                elif case == 3:
-                    line_build += '0.5'
-
-                line_build += '\n'
-
-                false_fzp += line_build
-
-    with open(os.path.join(dirname,'temp_reordered_'+filename),'w') as temp_fzp:
-        for line in false_fzp:
-            temp_fzp.write(line)
-
-    return 'temp_reordered_'+filename
-
-def readTrajectoryFromFZP(dirname, filename, simulationStepsPerTimeUnit, warmUptime, **kwarg):
-    '''first checks for the compatibility of the given fzp, then process it'''
-    case = check_fzp_content(dirname,filename)
-
-    if case == 1:
-        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, filename), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit, **kwarg)
-
-    elif case ==2 or case == 3:
-        temp_fzp = false_fzp(case,dirname,filename)
-        objects = storage.loadTrajectoriesFromVissimFile(os.path.join(dirname, temp_fzp), simulationStepsPerTimeUnit, nObjects = -1, warmUpLastInstant = warmUptime*simulationStepsPerTimeUnit, **kwarg)
-
-        os.remove(os.path.join(dirname,temp_fzp))
-
-    return objects
+def calculateQueues(objects,approaches):
+        pass
 
 def randomGaussRange(low, high, n):
     out = []

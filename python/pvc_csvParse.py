@@ -29,6 +29,13 @@ class Alignments:
         self.name       = data[0]
         self.point_list = data[1]
 
+class Approach:
+    def __init__(self,data):
+        self.name      = data[0]
+        self.direction = data[1]
+        self.link_list = data[2]
+        self.to_eval   = data[3]
+
 class Corridor:
     def __init__(self,data):
         self.name      = data[0]
@@ -41,7 +48,10 @@ class SpeedZones:
         self.type       = data[0]
         self.vissim_num = data[1]
         self.speedDist  = data[1]
-
+        
+    def convertToVariable(self):
+        return Variable(include = True, name = 'SpeedZone', vissim_name = self.type & self.vissim_num, desired_value = self.speedDist, value_type = 'C')
+        
 class Variable:
     def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, desired_value = None, value_type = 'R', point = None):
         self.include        = Variable.yesorTrue(include)
@@ -55,7 +65,7 @@ class Variable:
         self.vissim_max     = Variable.floatOrNone(vissim_max)
         self.type           = Variable.defVarTypes(value_type)
         self.point          = Variable.floatOrNone(point)
-
+        
     @staticmethod
     def defVarTypes(stringvalue):
         if stringvalue.lower() == 'r' or stringvalue.lower() == 'real':
@@ -66,7 +76,9 @@ class Variable:
             return 'reject'
         if stringvalue.lower() == 'bi' or stringvalue.lower() == 'bin' or stringvalue.lower() == 'binary':
             return 'B'
-
+        if stringvalue.lower() == 'c' or stringvalue.lower() == 'cat' or stringvalue.lower() == 'category':
+            return 'C'
+            
     @staticmethod
     def yesorTrue(stringvalue):
         if stringvalue != None:
@@ -267,20 +279,25 @@ def extractParamFromCSV(dirname, filename):
         print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
         sys.exit()
 
-def extractCorridorsFromCSV(dirname, inpxname, types):
-    '''Reads corridor information for a csv named like the inpx
+def extractCorridorsFromCSV(dirname, filename, structure_type = 'corridor', data_types = 'vissim'):
+    '''Reads corridor or approach information for a csv named like the inpx
         - CSV file must be build as: Corridor_name,vissim list,traffic intelligence
           list
         - Both list must be separated by "-"
     '''
 
-    if inpxname in dirname: dirname = dirname.strip(inpxname)
-    try:
-        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+    if structure_type == 'corridor':
+        struc_type = '$Corridors'
+    if structure_type =='approach':
+        struc_type = '$Approaches'
 
-        f = open(os.path.join(dirname,filename[0]))
+    if filename in dirname: dirname = dirname.strip(filename)
+    if os.path.exists(os.path.join(dirname, filename)) or os.path.exists(os.path.join(dirname,os.path.splitext(filename)[0] + '.csv')):
+
+        files  = [f for f in os.listdir(dirname) if f == (os.path.splitext(filename)[0] + '.csv')]      #extension can be obtained as os.path.splitext(filename)[1]
+        f = open(os.path.join(dirname,files[0]))
         for line in f:
-            if '$Corridors' in line.strip(): break
+            if struc_type in line.strip(): break
 
         brute = []
         for line in f:
@@ -290,18 +307,25 @@ def extractCorridorsFromCSV(dirname, inpxname, types):
         vissimCorridors = {}
         trafIntCorridors = {}
         for b in xrange(len(brute)):
-            vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
-            trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
+            try:
+                vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
+            except:
+                pass
+            
+            try:
+                trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
+            except:
+                pass
 
-        if types == 'vissim':
+        if data_types == 'vissim':
             return vissimCorridors.values()
-        if types == 'trafint':
+        if data_types == 'trafint':
             return trafIntCorridors.values()
-    except:
-        print traceback.print_exc()
+    else:
+        print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
         sys.exit()
 
-def extractSpeedZonesFromCSV(dirname, inpxname):
+def extractSpeedZonesFromCSV(dirname, filename):
     '''Reads detector information for a csv named like the inpx
         - CSV file must be build as:
                 ReductionZones_number,desired_speed         --> 1rst detector in vissim
@@ -310,11 +334,11 @@ def extractSpeedZonesFromCSV(dirname, inpxname):
                 ...
     '''
 
-    if inpxname in dirname: dirname = dirname.strip(inpxname)
-    try:
-        filename  = [f for f in os.listdir(dirname) if f == (inpxname.strip('.inpx') + '.csv')]
+    if filename in dirname: dirname = dirname.strip(filename)
+    if os.path.exists(os.path.join(dirname, filename)) or os.path.exists(os.path.join(dirname,os.path.splitext(filename)[0] + '.csv')):
 
-        f = open(os.path.join(dirname,filename[0]))
+        files  = [f for f in os.listdir(dirname) if f == (os.path.splitext(filename)[0] + '.csv')]      #extension can be obtained as os.path.splitext(filename)[1]
+        f = open(os.path.join(dirname,files[0]))
         for line in f:
             if '$Detectors' in line.strip(): break
 
@@ -329,8 +353,8 @@ def extractSpeedZonesFromCSV(dirname, inpxname):
 
         return speedZones.values()
 
-    except:
-        print traceback.print_exc()
+    else:
+        print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
         sys.exit()
 
 def verifyDesiredRanges(variables):

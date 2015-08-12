@@ -4,7 +4,7 @@ Created on Tue Mar 03 16:30:51 2015
 
 @author: Laurent
 """
-import math, random
+import math, random, os
 
 ##################
 # Vectors tools
@@ -142,6 +142,17 @@ def addLists(P, Q, direction='left'):
         for i, x in enumerate(A):
             B[i] += x
     return B
+
+def goIntoDirs(dirpath):
+    '''returns the paths of all elements found in an entry directory'''
+    paths = []
+    elements = os.listdir(dirpath)
+    for elem in elements:
+        if os.path.isdir(os.path.join(dirpath,elem)):
+            paths += goIntoDirs(os.path.join(dirpath,elem))
+        else:
+            paths.append(os.path.join(dirpath,elem))
+    return paths
 
 ##################
 # Variable tools

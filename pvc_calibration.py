@@ -67,6 +67,13 @@ def main():
     #generating the raw variables contained in the csv
     variables = csvParse.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
 
+    #looking for SpeedZone variables
+    speedZones = csvParse.extractSpeedZonesFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
+    if len(speedZones) > 0:
+        for speed in speedZones:
+            variables.append(speed.convertToVariable())
+        variables = write.NOMAD.pushCategoricalVariablesToEnd(variables)
+
     ##looking for an input starting point
     if commands.start_point is not None:
         starting_point = commands.start_point
@@ -109,9 +116,10 @@ def main():
         #moving required inpx file to the calibration location
         shutil.copy(net.inpx_path, os.path.join(working_path, net.inpx_path.split(os.sep)[-1]))
 
-    #moving calib.py and calib.cfg
+    #moving calib.py, calib.cfg and cleanPointFolder.py
     shutil.copy(os.path.join(os.path.curdir, 'include', 'calib.py'), os.path.join(working_path, 'calib.py'))
     shutil.copy(os.path.join(os.path.curdir,'calib.cfg'), os.path.join(working_path, 'calib.cfg'))
+    shutil.copy(os.path.join(os.path.curdir, 'scripts', 'cleanPointFolder.py'), os.path.join(working_path, 'cleanPointFolder.py'))
 
     #moving a copy of the csv file (needed for visualization tools)
     shutil.copy(os.path.join(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv'), os.path.join(working_path, config.inpx_name.strip('inpx') + 'csv'))
@@ -125,11 +133,15 @@ def main():
     shutil.copy(config.path_to_NOMAD, os.path.join(working_path,'nomad.exe'))
     shutil.copy(config.path_to_NOMAD_param,os.path.join(working_path,param_file))
 
+    #if neighbor.py exists (categorical variables) then moving it as well
+    if os.path.isfile(config.path_to_NOMAD_param.strip(config.path_to_NOMAD_param.split(os.sep)[-1])+'neighbor.py'):
+        shutil.copy(config.path_to_NOMAD_param.strip(config.path_to_NOMAD_param.split(os.sep)[-1])+'neighbor.py', os.path.join(working_path,'neighbor.py') )
+
     #generating a config file to be read by calib.py
     write.write_calib(working_path, parameters, variables, networks)
 
     #creating an history file for calib.py
-    variable_names = [i.name for i in variables if i.include is True]
+    variable_names = [i.vissim_name for i in variables if i.include is True]
     write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks, outputs.ActiveConstraints.getNumberOfConstraints(config))
 
     #launching NOMADS
