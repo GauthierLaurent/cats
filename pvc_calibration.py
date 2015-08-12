@@ -66,6 +66,13 @@ def main():
 
     #generating the raw variables contained in the csv
     variables = csvParse.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
+    
+    #looking for SpeedZone variables
+    speedZones = csvParse.extractSpeedZonesFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')    
+    if len(speedZones) > 0:
+        for speed in speedZones:
+            variables.append(speed.convertToVariable())
+        variables = write.NOMAD.pushCategoricalVariablesToEnd(variables)
 
     ##looking for an input starting point
     if commands.start_point is not None:
@@ -119,17 +126,21 @@ def main():
     #making sure the param file exists and is well suited to the present task
     write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], outputs.ActiveConstraints.getConstraintsTypes(config),starting_point)
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
-
+    
     #moving NOMAD and param.txt
     param_file = config.path_to_NOMAD_param.split(os.sep)[-1]
     shutil.copy(config.path_to_NOMAD, os.path.join(working_path,'nomad.exe'))
     shutil.copy(config.path_to_NOMAD_param,os.path.join(working_path,param_file))
 
+    #if neighbor.py exists (categorical variables) then moving it as well
+    if os.path.isfile(config.path_to_NOMAD_param.strip(config.path_to_NOMAD_param.split(os.sep)[-1])+'neighbor.py'):
+        shutil.copy(config.path_to_NOMAD_param.strip(config.path_to_NOMAD_param.split(os.sep)[-1])+'neighbor.py', os.path.join(working_path,'neighbor.py') )
+
     #generating a config file to be read by calib.py
     write.write_calib(working_path, parameters, variables, networks)
 
     #creating an history file for calib.py
-    variable_names = [i.name for i in variables if i.include is True]
+    variable_names = [i.vissim_name for i in variables if i.include is True]
     write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks, outputs.ActiveConstraints.getNumberOfConstraints(config))
 
     #launching NOMADS
