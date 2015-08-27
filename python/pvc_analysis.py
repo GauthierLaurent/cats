@@ -20,10 +20,115 @@ import pvc_outputs    as outputs
 import pvc_calibTools as calibTools
 import pvc_workers    as workers
 import pvc_configure  as configure
+import pvc_csvParse   as csvParse
 
 ################################
 #        Calibration analysis
 ################################
+def analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data, parameters, config):
+
+    non_dist_data = [vissim_data.oppLCcount, vissim_data.manLCcount, vissim_data.flow]
+    dist_data = [vissim_data.forFMgap, vissim_data.oppLCagap, vissim_data.oppLCbgap, vissim_data.manLCagap, vissim_data.manLCbgap, vissim_data.forSpeeds]
+
+    #setting video values
+    for traj in network[N].traj_paths:
+
+        #loading video data
+        video_data = write.load_traj(traj)
+        if video_data == 'TrajVersionError':
+            network[N].addVideoComparison(['TrajVersionError'])
+        else:
+            non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
+            video_data.forFMgap.cleanStats(0.5*config.fps)
+            video_data.oppLCbgap.cleanStats(0); vissim_data.oppLCbgap.cleanStats(0)
+            video_data.manLCbgap.cleanStats(0); vissim_data.manLCbgap.cleanStats(0)
+            dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
+            #starting the building of the secondary values outputs
+            #for the first 3 variables, which are intergers, we use:
+            #                       PE = (M-V)/V
+            #       with:    V = number from video
+            #                M = mean from modelisation
+            # of course this would fail is V = 0, in which case we must turn to
+            #                       AE = M-V...   with V = 0: AE = M
+            #to which we will add a ' * '
+            secondary_values = []
+            for d in xrange(len(non_dist_data)):
+                if non_dist_video_data[d].mean != 0:
+                    secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-non_dist_video_data[d].mean)/non_dist_video_data[d].mean])
+                else:
+                    if non_dist_data[d].mean is not None and non_dist_data[d].mean != 0:
+                        secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])
+                    else:
+                        secondary_values.append(['0.00', '0.00*'])
+
+            #comparing video_values with output values
+            mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
+            secondary_values += calibTools.buildReportList(mean_list, d_stat_list)
+
+            #adding video comparison data to the network
+            network[N].addVideoComparison(secondary_values)
+
+            #determining main p_value
+            #
+            #at this point, secondary_value looks like:
+            #    [[oppLCgap, oppLCgap_delta], [manLCgap, manLCgap_delta], [flow, flow_delta], ...
+            #         0-0          0-1            1-0          1-1         2-0      2-1
+            #
+            #      forFMgap, forFMgap_KS_d, oppLCagap, oppLCagap_KS_d, oppLCbgap, oppLCbgap_KS_d, ...
+            #         3            4              5          6              7          8
+            #
+            #      manLCagap, manLCagap_KS_d, manLCbgap, manLCbgap_KS_d, speeds, speeds_KS_d]
+            #         9           10             11         12             13         14
+            #
+
+            fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCbgaps, manLCbgaps
+            d_stat.append([fout]+vissim_data.getConstraints())
+            if config.output_forward_gaps:
+                #if secondary_values[4] == 'DNE':
+                #    d_stat.append(['inf'] + vissim_data.getConstraints())
+                #else:
+                #    d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
+                write.plot_dists(final_inpx_path, 'car-following gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
+
+            if config.output_lane_change_gaps:
+                #if secondary_values[8] == 'DNE':        #using the before gap to calibrate
+                #    d_stat.append(['inf'] + vissim_data.getConstraints())
+                #else:
+                #    d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
+                if config.cmp_opp_lcgaps:
+                    write.plot_dists(final_inpx_path, 'opportunistic lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[2], dist_data[2], secondary_values[8], parameters[0], config.fps, seed_nums)
+                if config.cmp_man_lcgaps:
+                    write.plot_dists(final_inpx_path, 'mandatory lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[4], dist_data[4], secondary_values[12], parameters[0], config.fps, seed_nums)
+
+    return
+
+def analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config):
+
+    fout_list = []
+    secondary_values = []
+    if config.output_travel_times:
+
+        vissimNum_TTms = [TTms.info for TTms in vissim_data.travelTms]
+
+        dirname = final_inpx_path.strip(final_inpx_path.split(os.sep)[-1])
+        filename = [f for f in os.listdir(dirname) if f.endswith('.csv')][0]
+        csv_TTms = csvParse.extractDataFromCSV(dirname, filename, 'Travel Times Data')
+
+        for ttms in csv_TTms:
+            vissim_time = vissim_data.travelTms[vissimNum_TTms.index(float(ttms.vissim_num))].cumul_all.mean
+            csv_time = float(ttms.observedTT)
+
+            fout_list.append(abs(csv_time - vissim_time)/csv_time)
+            secondary_values.append([csv_time, vissim_time, abs(csv_time - vissim_time)/csv_time])
+
+    fout = max(fout_list)
+
+    network[N].addVideoComparison(secondary_values)
+
+    d_stat.append([fout]+vissim_data.getConstraints())
+
+    return
+
 def runVissimForCalibrationAnalysis(network, inputs):
     '''Note: Vissim is passed in the Network class variable 'network'
 
@@ -78,7 +183,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
             values.append(var.point)
 
         #Initializing and running the simulation
-        simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path, rsr=config.output_speed_zones)
+        simulated = vissim.initializeSimulation(Vissim, parameters, values, variables, err_file_path=final_inpx_path, rsr=config.cmp_travel_times)
 
         if simulated is not True:
             for traj in network[N].traj_paths:
@@ -87,12 +192,16 @@ def runVissimForCalibrationAnalysis(network, inputs):
             return False, network[N], ['N/A' for i in xrange(parameters[2])]
 
         else:
+            #getting needed info from vissim
+            VI = vissim.getVehicleInputs(Vissim, parameters[3])
+            VI = [csvParse.create_class(vi, 'VehiclesInputs') for vi in VI]
+
             #treating the outputs
             vissim_data = outputs.Derived_data()
             vissim_data.activateConstraints(config)
-            inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config]
+            inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config, VI]
             file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-            if len(file_list) > 1:
+            if len(file_list) > 1 and 3 == 5:
                 packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, workers.FalseCommands(), defineNbrProcess = config.nbr_process)
 
                 vissim_data = packedStatsLists[0]
@@ -105,78 +214,11 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
             seed_nums = outputs.extract_num_from_fzp_list(file_list)
 
-            non_dist_data = [vissim_data.oppLCcount, vissim_data.manLCcount, vissim_data.flow]
-            dist_data = [vissim_data.forFMgap, vissim_data.oppLCagap, vissim_data.oppLCbgap, vissim_data.manLCagap, vissim_data.manLCbgap, vissim_data.forSpeeds]
+            if config.CALIBDATA_video:
+                analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data, parameters, config)
 
-            #setting video values
-            for traj in network[N].traj_paths:
-
-                #loading video data
-                video_data = write.load_traj(traj)
-                if video_data == 'TrajVersionError':
-                    network[N].addVideoComparison(['TrajVersionError'])
-                else:
-                    non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
-                    video_data.forFMgap.cleanStats(0.5*config.fps)
-                    video_data.oppLCbgap.cleanStats(0); vissim_data.oppLCbgap.cleanStats(0)
-                    video_data.manLCbgap.cleanStats(0); vissim_data.manLCbgap.cleanStats(0)
-                    dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
-                    #starting the building of the secondary values outputs
-                    #for the first 3 variables, which are intergers, we use:
-                    #                       PE = (M-V)/V
-                    #       with:    V = number from video
-                    #                M = mean from modelisation
-                    # of course this would fail is V = 0, in which case we must turn to
-                    #                       AE = M-V...   with V = 0: AE = M
-                    #to which we will add a ' * '
-                    secondary_values = []
-                    for d in xrange(len(non_dist_data)):
-                        if non_dist_video_data[d].mean != 0:
-                            secondary_values.append([non_dist_data[d].mean, (non_dist_data[d].mean-non_dist_video_data[d].mean)/non_dist_video_data[d].mean])
-                        else:
-                            if non_dist_data[d].mean is not None and non_dist_data[d].mean != 0:
-                                secondary_values.append([non_dist_data[d].mean, str(non_dist_data[d].mean)+'*'])
-                            else:
-                                secondary_values.append(['0.00', '0.00*'])
-
-                    #comparing video_values with output values
-                    mean_list, d_stat_list = calibTools.checkCorrespondanceOfOutputs(dist_video_data, dist_data, parameters[0], config.fps)
-                    secondary_values += calibTools.buildReportList(mean_list, d_stat_list)
-
-                    #adding video comparison data to the network
-                    network[N].addVideoComparison(secondary_values)
-
-                    #determining main p_value
-                    #
-                    #at this point, secondary_value looks like:
-                    #    [[oppLCgap, oppLCgap_delta], [manLCgap, manLCgap_delta], [flow, flow_delta], ...
-                    #         0-0          0-1            1-0          1-1         2-0      2-1
-                    #
-                    #      forFMgap, forFMgap_KS_d, oppLCagap, oppLCagap_KS_d, oppLCbgap, oppLCbgap_KS_d, ...
-                    #         3            4              5          6              7          8
-                    #
-                    #      manLCagap, manLCagap_KS_d, manLCbgap, manLCbgap_KS_d, speeds, speeds_KS_d]
-                    #         9           10             11         12             13         14
-                    #
-
-                    fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCbgaps, manLCbgaps
-                    d_stat.append([fout]+vissim_data.getConstraints())
-                    if config.output_forward_gaps:
-                        #if secondary_values[4] == 'DNE':
-                        #    d_stat.append(['inf'] + vissim_data.getConstraints())
-                        #else:
-                        #    d_stat.append([secondary_values[4]] + vissim_data.getConstraints())
-                        write.plot_dists(final_inpx_path, 'car-following gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[0], dist_data[0], secondary_values[4], parameters[0], config.fps, seed_nums)
-
-                    if config.output_lane_change_gaps:
-                        #if secondary_values[8] == 'DNE':        #using the before gap to calibrate
-                        #    d_stat.append(['inf'] + vissim_data.getConstraints())
-                        #else:
-                        #    d_stat.append([secondary_values[8]] + vissim_data.getConstraints())
-                        if config.cmp_opp_lcgaps:
-                            write.plot_dists(final_inpx_path, 'opportunistic lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[2], dist_data[2], secondary_values[8], parameters[0], config.fps, seed_nums)
-                        if config.cmp_man_lcgaps:
-                            write.plot_dists(final_inpx_path, 'mandatory lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[4], dist_data[4], secondary_values[12], parameters[0], config.fps, seed_nums)
+            if config.CALIBDATA_in_csv:
+                analyseCSVData(final_inpx_path, d_stat, vissim_data, config)
 
             network[N].feasibility = vissim_data.testConstraints()
 

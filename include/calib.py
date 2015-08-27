@@ -98,6 +98,11 @@ def main(argv):
         for net in networks:
             shutil.copy(os.path.join(os.getcwd(),net.inpx_path.split(os.sep)[-1]), os.path.join(point_folderpath, net.inpx_path.split(os.sep)[-1]))
 
+            #moving any rbc file found
+            files = [f for f in os.listdir(os.getcwd()) if 'rbc' in f]
+            for f in files:
+                shutil.copy(os.path.join(os.getcwd(), f), os.path.join(point_folderpath, f))
+
     #pass data to vissim and simulate
 
     '''
