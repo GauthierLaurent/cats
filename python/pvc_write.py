@@ -22,6 +22,7 @@ import pvc_configure as configure
 import pvc_workers   as workers
 import pvc_mathTools as mathTools
 import pvc_vissim    as vissim
+import pvc_csvParse  as csvParse
 
 ##################
 # Folder tools
@@ -165,7 +166,7 @@ class History:
         return history.values()
 
     @staticmethod
-    def create_history(dirname, filename, nbr_seeds, variables, networks, nConstraints):
+    def create_history(dirname, filename, nbr_seeds, variables, networks, nConstraints, config):
         with open(os.path.join(dirname, filename), 'w') as hist:
             #first line:
             hist.write('Itt\t|\t')
@@ -191,17 +192,25 @@ class History:
             hist.write('|\t')
             for net in xrange(len(networks)):
                 for comp in xrange(len(networks[net].traj_paths)):
-                    hist.write('oppLCcount_mean\t oppLCcount_delta\t')
-                    hist.write('manLCcount_mean\t manLCcount_delta\t')
-                    hist.write('flow_mean\t flow_delta\t')
-                    hist.write('-\t')
-                    hist.write('forFMgap_mean\t forFMgap_ks_d_stat\t')
-                    hist.write('oppLCagap_mean\t oppLCagap_ks_d_stat\t')
-                    hist.write('oppLCbgap_mean\t oppLCbgap_ks_d_stat\t')
-                    hist.write('manLCagap_mean\t manLCagap_ks_d_stat\t')
-                    hist.write('manLCbgap_mean\t manLCbgap_ks_d_stat\t')
-                    hist.write('forSpeeds_mean\t forSpeeds (ks_d_stat\t')
-                    hist.write('|\t')
+                    if config.CALIBDATA_video:
+                        hist.write('oppLCcount_mean\t oppLCcount_delta\t')
+                        hist.write('manLCcount_mean\t manLCcount_delta\t')
+                        hist.write('flow_mean\t flow_delta\t')
+                        hist.write('-\t')
+                        hist.write('forFMgap_mean\t forFMgap_ks_d_stat\t')
+                        hist.write('oppLCagap_mean\t oppLCagap_ks_d_stat\t')
+                        hist.write('oppLCbgap_mean\t oppLCbgap_ks_d_stat\t')
+                        hist.write('manLCagap_mean\t manLCagap_ks_d_stat\t')
+                        hist.write('manLCbgap_mean\t manLCbgap_ks_d_stat\t')
+                        hist.write('forSpeeds_mean\t forSpeeds (ks_d_stat\t')
+                        hist.write('|\t')
+                    if config.CALIBDATA_in_csv:
+                        csv_TTms = csvParse.extractDataFromCSV(networks[net].csv_path, networks[net].csv_path.split(os.sep)[-1], 'Travel Times Data')
+                        for ttms in csv_TTms:
+                            hist.write('_'+str(ttms.vissim_num)+'_csv\t')
+                            hist.write('_'+str(ttms.vissim_num)+'_vissim\t')
+                            hist.write('_'+str(ttms.vissim_num)+'_delta\t')
+                            hist.write('|\t')
 
             hist.write('State\tfout\t')
 
@@ -328,7 +337,7 @@ class NOMAD:
             return '\n'
 
     @staticmethod
-    def verify_params(filepath, variables, constraint_types, starting_point = [], biobj = False, inpxpath = None):
+    def verify_params(filepath, variables, constraint_types, starting_point = [], biobj = False, Vissim = None):
         '''verifies the param file for Dimensions, X0, LB, and UB lenght
            Sets X0 as default parameters unless a point is specified as a list
            in starting_point'''
@@ -344,33 +353,34 @@ class NOMAD:
         #               8    0 = UPPER_BOUND     line    is present, 1 = STATS_FILE      line    has to be added
         #               9    0 = MAX_BB_EVAL     line    is present, 1 = MAX_BB_EVAL     line    has to be added
         #              10    0 = STATS_FILE      line    is present, 1 = STATS_FILE      line    has to be added
-        #              11    0 = No categorical variables present,   1 = NEIGHBORS_EXE   line    has to be added
+        #              11    0 = No categorical variables,           1 = NEIGHBORS_EXE has to be in file
+        #              12    0 = NEIGHBORS_EXE   line    is present, 1 = NEIGHBORS_EXE   line    has to be added
         #]
 
         if os.path.isfile(filepath):
-            flag = [0,0,1,1,1,1,1,1,1,1,1,0]
+            flag = [0,0,1,1,1,1,1,1,1,1,1,0,1]
             current_lines = []
             with open(filepath,'r') as current:
                 for l in current:
                     current_lines.append(l)
-                    
-            #checking for categorical variables            
+
+            #checking for categorical variables
             for var in variables:
                 catVar_list = []
                 if var.type == 'C':
                     catVar_list.append(var)
-                    
-                if len(catVar_list) > 0:
-                    flag[11] = 1
-                    
-                    speedZonesVar = sum([1 for var in catVar_list if var.name == 'SpeedZone'])
-                    
-                    if speedZonesVar > 0 and inpxpath == None:
-                        print 'Inpx file needed to extract Speed distribution choices for SpeedZones'
-                        sys.exit()
-                        
-                    NOMAD.writeNeighborsExe(len(var)-len(catVar_list), catVar_list, inpxpath=inpxpath)
-                    
+
+            if len(catVar_list) > 0:
+                flag[11] = 1
+
+                speedZonesVar = sum([1 for var in catVar_list if var.name == 'SpeedZone'])
+
+                if speedZonesVar > 0 and Vissim == None:
+                    print 'Inpx file needed to extract Speed distribution choices for SpeedZones'
+                    sys.exit()
+
+                NOMAD.writeNeighborsExe(len(variables)-len(catVar_list), catVar_list, Vissim=Vissim)
+
 
             num_dim = str(len(variables))
 
@@ -414,6 +424,9 @@ class NOMAD:
                 elif 'STATS_FILE' in current_lines[l]:
                     flag[10] = 0
 
+                elif 'NEIGHBORS_EXE' in current_lines[l]:
+                    flag[12] = 0
+
             #Adding missing lines
             if flag[2] == 1:
                 add = NOMAD.add_new_line(current_lines, l)
@@ -434,18 +447,12 @@ class NOMAD:
                           add = NOMAD.add_new_line(current_lines, l)
                           Start = current_lines[0:l+1]
                           Mid   = ['\n']+['BB_INPUT_TYPE'+add]
-                          
-                          if flag[11] == 1:
-                              Mid2 = ['\n']+['BB_NEIGHBORS_EXE \'$python neighbors.py\''+add]
-                          else:
-                              Mid2 = []
-                              
                           End   = current_lines[l+1:]
-                          current_lines = Start + Mid + Mid2 + End
+                          current_lines = Start + Mid + End
 
             if flag[5] == 1:
                 for l in xrange(len(current_lines)):
-                    if ('BB_INPUT_TYPE' in current_lines[l] and flag[11] == 0) or ('BB_NEIGHBORS_EXE' in current_lines[l] and flag[11] == 1):
+                    if 'BB_INPUT_TYPE' in current_lines[l]:
                           add = NOMAD.add_new_line(current_lines, l)
                           Start = current_lines[0:l+1]
                           Mid   = ['BB_OUTPUT_TYPE'+add]
@@ -453,9 +460,18 @@ class NOMAD:
                           current_lines = Start + Mid + End
                           flag[1] = 1
 
-            if flag[6] == 1:
+            if flag[12] == 1 and flag[11] == 1:
                 for l in xrange(len(current_lines)):
                     if 'BB_OUTPUT_TYPE' in current_lines[l]:
+                          add = NOMAD.add_new_line(current_lines, l)
+                          Start = current_lines[0:l+1]
+                          Mid   = ['\n']+['NEIGHBORS_EXE \'$python neighbors.py\''+add]
+                          End   = current_lines[l+1:]
+                          current_lines = Start + Mid + End
+
+            if flag[6] == 1:
+                for l in xrange(len(current_lines)):
+                    if ('BB_OUTPUT_TYPE' in current_lines[l] and flag[12] == 0) or ('NEIGHBORS_EXE' in current_lines[l] and flag[12] == 1):
                           add = NOMAD.add_new_line(current_lines, l)
                           Start = current_lines[0:l+1]
                           Mid   = ['\n']+['\nX0'+add]
@@ -561,60 +577,62 @@ class NOMAD:
             NOMAD.create_NOMAD_params(filepath, variables, constraint_types, starting_point, biobj)
 
     @staticmethod
-    def writeNeighborsExe(nToskip, catVar_list, inpxpath=None):
+    def writeNeighborsExe(nToskip, catVar_list, Vissim=None):
         '''writes the neighbor.py file for categorical variables'''
-        if inpxpath != None:
-            Vissim = vissim.startVissim()
-            vissim.loadNetwork(Vissim, inpxpath)
-            VisSpeedDist = vissim.getSpeedDistr()
-        
+        if Vissim != None:
+            VisSpeedDist = vissim.getSpeedDistr(Vissim)
+
+        for var in catVar_list:
+            if var.name == 'SpeedZone' and var.list == ['*']:
+                var.list = VisSpeedDist
+
         with open('neighbor.py','w') as script:
-            script.write('if __name__ == "__main__":                                                                      \n'
-                         '                                                                                                \n'
-                         '    import sys, os                                                                              \n'
-                         '    import pvc_write    as write                                                                \n'
-                         '                                                                                                \n'
-                         '    try:                                                                                        \n'
-                         '        nomad_points = write.NOMAD.read_from_NOMAD(argv[1])                                     \n'
-                         '    except:                                                                                     \n'
-                         '        sys.exit(1)                                                                             \n'
-                         '                                                                                                \n'
-                         '    #saved at script generation                                                                 \n'
-                         '    toskip = nomad_points[:'+str(nToskip)+']                                                    \n'
-                         '    possibilities = '+str([VisSpeedDist for var in catVar_list if var.name == 'SpeedZone'])+'   \n'
-                         '                                                                                                \n'
-                         '    processed_points = []                                                                       \n'
-                         '    for var in nomad_points[str(nToskip):]:                                                     \n'
-                         '                                                                                                \n'    
-                         '        #finding possibilities                                                                  \n'
-                         '        var_pos = possibilities[var]                                                            \n'
-                         '                                                                                                \n'
-                         '        #turning from 0 --> n                                                                   \n'
-                         '        if possibilities[var].index(nomad_points[var] > 0:                                      \n'
-                         '            new_low = possibilities[var][possibilities[var].index(nomad_points[var]) - 1]       \n'
-                         '                                                                                                \n'
-                         '        else:                                                                                   \n'
-                         '            new_low = possibilities[var][-1]                                                    \n'
-                         '                                                                                                \n'
-                         '        #getting number of C variables before the current one                                   \n'
-                         '        C_before = nomad_points[:nomad_points.index(var)]                                       \n'
-                         '        C_after  = nomad_points[nomad_points.index(var)+1:]                                     \n'
-                         '                                                                                                \n'
-                         '        processed_points.append(C_before + [new_low] + C_after)                                 \n'
-                         '                                                                                                \n'
-                         '    for point in processed_points:                                                              \n'
-                         '        out = ''                                                                                \n'
-                         '        for p in point:                                                                         \n'
-                         '            out += str(p)+" "                                                                   \n'
-                         '            print out                                                                           \n'
+            script.write('if __name__ == "__main__":\n'
+                         '\n'
+                         '    import sys, os\n'
+                         '    import pvc_write as write\n'
+                         '\n'
+                         '    try:\n'
+                         '        nomad_points = write.NOMAD.read_from_NOMAD(argv[1])\n'
+                         '    except:\n'
+                         '        sys.exit(1)\n'
+                         '\n'
+                         '    #saved at script generation\n'
+                         '    toskip = nomad_points[:'+str(nToskip)+']\n'
+                         '    possibilities = '+str([var.list for var in catVar_list if var.name == 'SpeedZone' and var.list in VisSpeedDist])+'\n'
+                         '\n'
+                         '    processed_points = []\n'
+                         '    for var in nomad_points['+str(nToskip)+':]:\n'
+                         '\n'
+                         '        #finding possibilities\n'
+                         '        var_pos = possibilities[var]\n'
+                         '\n'
+                         '        #turning from 0 --> n\n'
+                         '        if possibilities[var].index(nomad_points[var] > 0:\n'
+                         '            new_low = possibilities[var][possibilities[var].index(nomad_points[var]) - 1]\n'
+                         '\n'
+                         '        else:\n'
+                         '            new_low = possibilities[var][-1]\n'
+                         '\n'
+                         '        #getting number of C variables before the current one\n'
+                         '        C_before = nomad_points[:nomad_points.index(var)]\n'
+                         '        C_after  = nomad_points[nomad_points.index(var)+1:]\n'
+                         '\n'
+                         '        processed_points.append(C_before + [new_low] + C_after)\n'
+                         '\n'
+                         '    for point in processed_points:\n'
+                         '        out = ""\n'
+                         '        for p in point:\n'
+                         '            out += str(p)+" "\n'
+                         '            print out\n'
                           )
 
     @staticmethod
     def pushCategoricalVariablesToEnd(variables):
-    
+
         start = []
         end = []
-        
+
         for var in variables:
             if var.type == 'C':
                 end.append(var)
