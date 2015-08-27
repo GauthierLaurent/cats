@@ -22,6 +22,37 @@ sys.stdout = oldstdout #Re-enable output
 ##################
 # Data storing classes
 ##################
+def Struct(*args, **kwargs):
+    def init(self, *iargs, **ikwargs):
+        for k,v in kwargs.items():
+            setattr(self, k, v)
+        for i in range(len(iargs)):
+            setattr(self, args[i], iargs[i])
+        for k,v in ikwargs.items():
+            setattr(self, k, v)
+
+    name = kwargs.pop("name", "MyStruct")
+    kwargs.update(dict((k, None) for k in args))
+    return type(name, (object,), {'__init__': init, '__slots__': kwargs.keys()})
+
+def create_class(data, c_type):
+    if c_type == 'Speed Zones Data' or c_type == 'SpeedZones':
+        SpeedZones = Struct('vissim_num', 'startingSpeed', 'obj_type', 'availaibleSpeedDist')
+        return SpeedZones(vissim_num = data[0], startingSpeed = data[1], obj_type = data[2], availaibleSpeedDist = data[3].strip('[').strip(']').split(','))
+
+    if c_type == 'Travel Times Data' or c_type == 'TravelTimes':
+        TravelTimes = Struct('vissim_num', 'observedTT')
+        return TravelTimes(vissim_num = data[0], observedTT = data[1])
+
+    if c_type == 'VehiclesInputs':
+        VehiclesInputs = Struct('link', 'vissim_num', 'vehInput')
+        return VehiclesInputs(link = data[0], vissim_num = data[1], vehInput = data[2])
+
+def convertSpeedZoneToVariable(speedZone):
+    tmp = Variable(include = 'True', name = 'SpeedZone', vissim_name = str(speedZone.obj_type)+'&'+str(speedZone.vissim_num), desired_value = speedZone.startingSpeed, value_type = 'C')
+    tmp.addList(speedZone.availaibleSpeedDist)
+    return tmp
+
 class Alignments:
     '''built as a subclass of Videos - contains the raw x,y points to build
        an alignment using Traffic Intelligence'''

@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Libraries
 ##################
 ##natives
-import os, sys, StringIO, copy
+import os, sys, StringIO, copy, pandas
 import numpy as np
 import random, time
 
@@ -113,6 +113,9 @@ class Stats:
             allvalues += list(dist.raw)
         self.cumul_all = Sublvl(allvalues)
         self.cumul_all.raw.sort()
+
+    def addInfo(self,info):
+        self.info = info
 
     @classmethod
     def concat(cls, stats1, *stats):
@@ -262,7 +265,7 @@ class Derived_data:
         self.manLCbgap  = Stats([])
         self.forSpeeds  = Stats([])
         self.constraint = Constraints()
-        self.travTms    = [Stats([])]
+        self.travelTms  = [Stats([])]
         self.delay      = [Stats([])]
 
     def addLanes(self):
@@ -315,6 +318,12 @@ class Derived_data:
                 for j in xrange(len(value)):
                     getattr(self, attr_name)[j].add_one_dist_list(value[j])
                     getattr(getattr(self, attr_name)[j],'distributions')[-1].addFileName(filename)
+
+    def addInfos(self, attr_name, info_list):
+        if isinstance(getattr(self, attr_name),list):
+            if isinstance(getattr(self, attr_name)[0],Stats):
+                for i in xrange(len(info_list)):
+                    getattr(self, attr_name)[i].addInfo(info_list[i])
 
     def addConstraintValue(self, constraintName, value, filename):
         self.constraint.addCi(constraintName, value, filename)
@@ -388,8 +397,19 @@ class Derived_data:
 
             if isinstance(getattr(outputs2, attr),list):
                 if isinstance(getattr(outputs2, attr)[0],Stats):
-                    for j in xrange(len(getattr(outputs2, attr))):
-                        Stats.concat(getattr(outputs1,attr)[j],getattr(outputs2,attr)[j])
+
+                    if hasattr(getattr(outputs2, attr)[0],'info'):
+                        values1 = [getattr(outputs1, attr)[a].infos for a in xrange(len(getattr(outputs1, attr)))]
+
+                        for j in xrange(len(getattr(outputs2, attr))):
+                            if getattr(outputs2,attr)[j].info in values1:
+                                Stats.concat(getattr(outputs1,attr)[values1.index(getattr(outputs2,attr)[j].info)], getattr(outputs2,attr)[j])
+                            else:
+                                getattr(outputs1,attr).append(getattr(outputs2,attr)[j])
+
+                    else:
+                        for j in xrange(len(getattr(outputs2, attr))):
+                            Stats.concat(getattr(outputs1,attr)[j],getattr(outputs2,attr)[j])
 
         if hasattr(outputs2.flow,'lane'):
                 if hasattr(outputs1.flow,'lane'):
@@ -423,21 +443,25 @@ class ActiveConstraints:
         self.activeList.append(config.nonGen_constraint[0])
         self.activeList.append(config.decelp_constraint[0])
         self.activeList.append(config.accel0_constraint[0])
+        self.activeList.append(config.diFlow_constraint[0])
 
         self.tresholdList.append(config.collis_constraint[1])
         self.tresholdList.append(config.nonGen_constraint[1])
         self.tresholdList.append(config.decelp_constraint[1])
         self.tresholdList.append(config.accel0_constraint[1])
+        self.tresholdList.append(config.diFlow_constraint[1])
 
         self.typeList.append(config.collis_constraint[2])
         self.typeList.append(config.nonGen_constraint[2])
         self.typeList.append(config.decelp_constraint[2])
         self.typeList.append(config.accel0_constraint[2])
+        self.typeList.append(config.diFlow_constraint[2])
 
         self.nameList.append('collisions')
         self.nameList.append('nonGen')
         self.nameList.append('deceleration')
         self.nameList.append('acceleration')
+        self.nameList.append('flowPasses')
 
     def getActiveNames(self):
         return [self.nameList[i] for i in xrange(len(self.nameList)) if self.activeList[i]]
@@ -457,7 +481,11 @@ class ActiveConstraints:
 
     def calculateConstraint(self, name, value):
         '''converts num, dp and a0 errors into constraint values'''
-        return value - self.tresholdList[self.nameList.index(name)]
+        if name in self.nameList:
+            if name == 'flowPasses':
+                return value
+            else:
+                return value - self.tresholdList[self.nameList.index(name)]
 
     @staticmethod
     def getConstraintsTypes(config):
@@ -569,6 +597,34 @@ def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collis
 
     return nCollisions
 
+def compareSimAndInputFlows(linkDict, VehiculeInputs, acceptable_error):
+    value_list = []
+    target_list = []
+
+    for i in xrange(len(VehiculeInputs)):
+        if int(VehiculeInputs[i].link) in linkDict.keys():
+            value_list.append(linkDict[int(VehiculeInputs[i].link)])
+        else:
+            value_list.append(0)
+        target_list.append(VehiculeInputs[i].vehInput)
+
+    return calculateAllflowConstraint(value_list, target_list, acceptable_error)
+
+def calculateflowPassesConstraint(value, target, acceptable_error):
+    '''checks if a single flow point is reached'''
+    if value in [target*(1-float(acceptable_error)/100), target*(1+float(acceptable_error)/100)]:
+        return 0
+    else:
+        return (abs(target-value)- target*float(acceptable_error)/100)/target #relative error
+
+def calculateAllflowConstraint(value_list, target_list, acceptable_error):
+    C = 0
+    for i in xrange(len(value_list)):
+        value = calculateflowPassesConstraint(value_list[i], target_list[i], acceptable_error)
+        if value > C:
+            C = copy.deepcopy(value)
+    return C
+
 def calculate_jam_constraint(objects, threshold):
     '''From the fzp, calculates if a jam occurs'''
     jam = 0
@@ -663,7 +719,7 @@ def sort_fout_and_const(fout_lists):
             valids.append(fout_lists.index(l))
 
     #sort valids
-    if len(valids) == len(fout_lists):
+    if len(valids) == len(fout_lists) and len(valids) > 0:
         to_conserve = fout_lists[valids[0]]
         for i in valids:
             if fout_lists[i][0] > to_conserve[0]:
@@ -926,12 +982,11 @@ def laneChange(objects, corridors):
 
     return oppObjDict, manObjDict, laneDict
 
-def getDelayFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True):
+def getTTFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True, output = 'travelTimes'):
     '''filename has to be a .rsr'''
     #import pandas
     from pandas import read_csv
     data = read_csv(filename, delimiter=';', comment='*', header=0, skiprows = 7, low_memory = lowMemory)#, converters = myStrip)
-
     if warmUpLastInstant is not None:
         data = data[data['  Time']>=warmUpLastInstant]
 
@@ -962,7 +1017,23 @@ def getDelayFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True)
 
         meansTravelTime[unique] = data.loc[data['   No.'] == unique].loc[:,'  Trav'].mean()
     '''
-    return travelTimes.values(), delays.values()
+    if output == 'Delays':
+        return delays.values(), delays.keys()
+    if output == 'travelTimes':
+        return travelTimes.values(), travelTimes.keys()
+
+def getNbrOfVehByLinks(filename, low_memory = True):
+    linkDict = {}
+
+    data = pandas.read_csv(filename, delimiter=';', comment='*', header=0, skiprows = 1, low_memory = low_memory)
+
+    Nums = pandas.unique(data['LANE\LINK\NO'])
+    for No in Nums:
+
+        tmp = data[data['LANE\LINK\NO']==No]
+        linkDict[No] = len(pandas.unique(tmp['NO']))
+
+    return linkDict
 
 def extract_num_from_fzp_name(filename):
     '''returns the numerical component of a vissim fzp file'''
@@ -976,7 +1047,7 @@ def extract_num_from_fzp_list(filenames):
     return num_list
 
 def calculateQueues(objects,approaches):
-        pass
+        pass    #v = 3km/h à mettre dans config
 
 def randomGaussRange(low, high, n):
     out = []
@@ -1026,6 +1097,7 @@ def treat_Single_VissimOutput(filename, inputs):
     corridors                  = inputs[2]
     outputs                    = inputs[3]
     config                     = inputs[4]
+    VehiculeInputs             = inputs[5]
 
     if verbose:
         print ' === Starting calculations for ' + filename + ' ===  |'
@@ -1054,14 +1126,16 @@ def treat_Single_VissimOutput(filename, inputs):
                     elif s > lanes[str(lane)][1]:
                         lanes[str(lane)][1] = s
 
-
     #lane change count by type
     oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
 
     if verbose:
         print ' == Lane change compilation done ==  |' + str(time.clock())
 
-    #constraint
+    #constraints
+    #if config.diFlow_constraint[0]:
+    linkDict = getNbrOfVehByLinks(os.path.join(folderpath,filename), low_memory = False)
+    outputs.addConstraintValue('flowPasses', compareSimAndInputFlows(linkDict, VehiculeInputs, config.diFlow_constraint[1]), filename)
     outputs.addConstraintValue('collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
 
     if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
@@ -1079,6 +1153,7 @@ def treat_Single_VissimOutput(filename, inputs):
     outputs.addSingleOutput('oppLCcount', sum([len(oppObjDict[i]) for i in oppObjDict]), filename)
     outputs.addSingleOutput('manLCcount', sum([len(manObjDict[i]) for i in manObjDict]), filename)
 
+    #Forward GAPS
     if config.cmp_for_gaps:
         raw_forward_gaps = []
         raw_forward_speeds = []
@@ -1093,6 +1168,7 @@ def treat_Single_VissimOutput(filename, inputs):
         outputs.addSingleOutput('forFMgap', raw_forward_gaps, filename)
         outputs.addSingleOutput('forSpeeds', raw_forward_speeds, filename)
 
+    #Mandatory lane changes headway acceptance
     if config.cmp_man_lcgaps:
         raw_man_LC_agaps    = []
         raw_man_LC_bgaps    = []
@@ -1105,6 +1181,7 @@ def treat_Single_VissimOutput(filename, inputs):
         outputs.addSingleOutput('manLCagap', raw_man_LC_agaps, filename)
         outputs.addSingleOutput('manLCbgap', raw_man_LC_bgaps, filename)
 
+    #Opportunistic lane changes headway acceptance
     if config.cmp_opp_lcgaps:
         raw_opp_LC_agaps    = []
         raw_opp_LC_bgaps    = []
@@ -1117,6 +1194,12 @@ def treat_Single_VissimOutput(filename, inputs):
             print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
         outputs.addSingleOutput('oppLCagap', raw_opp_LC_agaps, filename)
         outputs.addSingleOutput('oppLCbgap', raw_opp_LC_bgaps, filename)
+
+    if config.cmp_travel_times:
+        if os.path.isfile(os.path.join(folderpath,filename.strip('.fzp')+'.rsr')):
+            travelTimes, keys = getTTFromVissimFile(os.path.join(folderpath,filename.strip('.fzp')+'.rsr'), warmUpLastInstant = config.warm_up_time, lowMemory = False)
+            outputs.addSingleOutput('travelTms', travelTimes, filename)
+            outputs.addInfos('travelTms',keys)
 
     if verbose:
         print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
