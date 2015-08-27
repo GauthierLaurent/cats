@@ -29,13 +29,6 @@ class Alignments:
         self.name       = data[0]
         self.point_list = data[1]
 
-class Approach:
-    def __init__(self,data):
-        self.name      = data[0]
-        self.direction = data[1]
-        self.link_list = data[2]
-        self.to_eval   = data[3]
-
 class Corridor:
     def __init__(self,data):
         self.name      = data[0]
@@ -43,15 +36,6 @@ class Corridor:
         self.link_list = data[2]
         self.to_eval   = data[3]
 
-class SpeedZones:
-    def __init__(self,data):
-        self.type       = data[0]
-        self.vissim_num = data[1]
-        self.speedDist  = data[1]
-        
-    def convertToVariable(self):
-        return Variable(include = True, name = 'SpeedZone', vissim_name = self.type & self.vissim_num, desired_value = self.speedDist, value_type = 'C')
-        
 class Variable:
     def __init__(self, include = None, name = None, vissim_name = None, vissim_min = None, vissim_max = None, vissim_default = None, desired_min = None, desired_max = None, desired_value = None, value_type = 'R', point = None):
         self.include        = Variable.yesorTrue(include)
@@ -65,7 +49,7 @@ class Variable:
         self.vissim_max     = Variable.floatOrNone(vissim_max)
         self.type           = Variable.defVarTypes(value_type)
         self.point          = Variable.floatOrNone(point)
-        
+
     @staticmethod
     def defVarTypes(stringvalue):
         if stringvalue.lower() == 'r' or stringvalue.lower() == 'real':
@@ -78,7 +62,7 @@ class Variable:
             return 'B'
         if stringvalue.lower() == 'c' or stringvalue.lower() == 'cat' or stringvalue.lower() == 'category':
             return 'C'
-            
+
     @staticmethod
     def yesorTrue(stringvalue):
         if stringvalue != None:
@@ -108,6 +92,9 @@ class Variable:
             return float(stringvalue)
         except:
             return None
+
+    def addList(self,dataList):
+        self.list = dataList
 
 class Videos:
     '''contains video information'''
@@ -311,7 +298,7 @@ def extractCorridorsFromCSV(dirname, filename, structure_type = 'corridor', data
                 vissimCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[2].split('-')], [int(s) for s in brute[b].split(';')[3].split('-')] ])
             except:
                 pass
-            
+
             try:
                 trafIntCorridors[b] = Corridor([ brute[b].split(';')[0], brute[b].split(';')[1], [int(s) for s in brute[b].split(';')[4].split('-')], [int(s) for s in brute[b].split(';')[5].split('-')] ])
             except:
@@ -325,13 +312,16 @@ def extractCorridorsFromCSV(dirname, filename, structure_type = 'corridor', data
         print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
         sys.exit()
 
-def extractSpeedZonesFromCSV(dirname, filename):
+def extractDataFromCSV(dirname, filename, data_type):
     '''Reads detector information for a csv named like the inpx
         - CSV file must be build as:
-                ReductionZones_number,desired_speed         --> 1rst detector in vissim
-                ReductionZones_number,desired_speed         --> 2nd detector in vissim
-                ReductionZones_number,desired_speed         --> 3rd detector in vissim
+                data_number,desired_value         --> 1rst thing calculated in vissim
+                data_number,desired_value         --> 2nd thing calculated in vissim
+                data_number,desired_value         --> 3rd thing calculated in vissim
                 ...
+        data_type:   Speed Zones Data
+                     Travel Times Data
+                     Approach
     '''
 
     if filename in dirname: dirname = dirname.strip(filename)
@@ -340,18 +330,18 @@ def extractSpeedZonesFromCSV(dirname, filename):
         files  = [f for f in os.listdir(dirname) if f == (os.path.splitext(filename)[0] + '.csv')]      #extension can be obtained as os.path.splitext(filename)[1]
         f = open(os.path.join(dirname,files[0]))
         for line in f:
-            if '$Detectors' in line.strip(): break
+            if '$'+str(data_type) in line.strip(): break
 
         brute = []
         for line in f:
             if '$' in line.strip(): break
             if line.startswith('#') is False and line.strip() != '': brute.append(line.strip().replace(' ','\t').replace('\t','').split('#')[0])
 
-        speedZones = {}
+        data = {}
         for b in xrange(len(brute)):
-            speedZones[b] = SpeedZones([brute[b].split(';')[0],brute[b].split(';')[1],brute[b].split(';')[2] ])
+            data[b] = create_class(brute[b].split(';'), data_type)
 
-        return speedZones.values()
+        return data.values()
 
     else:
         print 'No vissim file or csv file named ' + str(filename) + ' were found, closing program '
