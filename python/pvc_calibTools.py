@@ -114,9 +114,10 @@ def checkCorrespondanceOfTwoLists(video_value, calculated_value, simulationSteps
 #        Network Calibration class
 ################################
 class Network:
-    def __init__(self,inpx_path,traj_path_list):
+    def __init__(self,inpx_path,traj_path_list,csv_path):
         self.inpx_path = inpx_path
         self.feasability = 'Unfeasible'
+        self.csv_path = csv_path
 
         if isinstance(traj_path_list, list):
             self.traj_paths = traj_path_list
@@ -153,7 +154,7 @@ class Network:
         for i in xrange(len(actv_network_list)):
             if getattr(config,actv_network_list[i]):
                 if getattr(config,path_to_inpx_list[i]).split(os.sep)[-1] not in inpx_list:
-                    inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]] = Network(getattr(config,path_to_inpx_list[i]),getattr(config,path_to_vid__list[i]))
+                    inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]] = Network(getattr(config,path_to_inpx_list[i]),getattr(config,path_to_vid__list[i]), getattr(config,path_to_csv__list[i]))
                     VissimCorridors = csvParse.extractCorridorsFromCSV(getattr(config,path_to_inpx_list[i]).strip(getattr(config,path_to_csv__list[i]).split(os.sep)[-1]), getattr(config,path_to_inpx_list[i]).split(os.sep)[-1], data_types = 'vissim')
                     inpx_list[getattr(config,path_to_inpx_list[i]).split(os.sep)[-1]].addCorridor(VissimCorridors)
                 else:

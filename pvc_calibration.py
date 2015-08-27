@@ -8,6 +8,11 @@
 to import a starting point, call with -p __list of points separated by spaces__
 ex: -p 1.0 -2.0 3.0 4.5 6
 '''
+
+#Dev Stuff:
+import sys, os
+sys.path = [p.replace('pvc_tools','pvc_tools_dev') if os.path.join('pvc_tools', os.sep, 'python') in p else p for p in sys.path]
+
 ################################################################################
 
 def main():
@@ -68,11 +73,15 @@ def main():
     variables = csvParse.extractParamFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
 
     #looking for SpeedZone variables
-    speedZones = csvParse.extractSpeedZonesFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv')
-    if len(speedZones) > 0:
-        for speed in speedZones:
-            variables.append(speed.convertToVariable())
-        variables = write.NOMAD.pushCategoricalVariablesToEnd(variables)
+    if config.cmp_speedZones:
+        speedZones = csvParse.extractDataFromCSV(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv', data_type = 'Speed Zones Data')
+        if len(speedZones) > 0:
+            if len(networks) > 1:
+                print 'cannot have more than 1 network if Speed Zones are used in the calibration process'
+                sys.exit()
+            for speed in speedZones:
+                variables.append(csvParse.convertSpeedZoneToVariable(speed))
+            variables = write.NOMAD.pushCategoricalVariablesToEnd(variables)
 
     ##looking for an input starting point
     if commands.start_point is not None:
@@ -105,16 +114,22 @@ def main():
     #preparing networks for calibration
     for net in networks:
 
-        #looking for version errors in the traj files
-        for traj in net.traj_paths:
-            video_data_list = write.load_traj(traj)
-            if video_data_list == 'TrajVersionError':
-                print 'traj file ' +str(traj.split(os.sep)[-1]) + 'yielded incorect version number'
-                running = vissim.isVissimRunning(True)
-                return
+        if config.CALIBDATA_video:
+            #looking for version errors in the traj files
+            for traj in net.traj_paths:
+                video_data_list = write.load_traj(traj)
+                if video_data_list == 'TrajVersionError':
+                    print 'traj file ' +str(traj.split(os.sep)[-1]) + 'yielded incorect version number'
+                    running = vissim.isVissimRunning(True)
+                    return
 
         #moving required inpx file to the calibration location
         shutil.copy(net.inpx_path, os.path.join(working_path, net.inpx_path.split(os.sep)[-1]))
+
+        #moving any rbc file found
+        files = [f for f in os.listdir(net.inpx_path.strip(net.inpx_path.split(os.sep)[-1])) if 'rbc' in f]
+        for f in files:
+            shutil.copy(os.path.join(net.inpx_path.strip(net.inpx_path.split(os.sep)[-1]), f), os.path.join(working_path, f))
 
     #moving calib.py, calib.cfg and cleanPointFolder.py
     shutil.copy(os.path.join(os.path.curdir, 'include', 'calib.py'), os.path.join(working_path, 'calib.py'))
@@ -125,8 +140,16 @@ def main():
     shutil.copy(os.path.join(config.path_to_csv, config.inpx_name.strip('inpx') + 'csv'), os.path.join(working_path, config.inpx_name.strip('inpx') + 'csv'))
 
     #making sure the param file exists and is well suited to the present task
-    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], outputs.ActiveConstraints.getConstraintsTypes(config),starting_point)
+    if len(speedZones) > 0:
+        Vissim = vissim.startVissim()
+        vissim.loadNetwork(Vissim, networks[0].inpx_path)
+    else:
+        Vissim = None
+    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], outputs.ActiveConstraints.getConstraintsTypes(config),starting_point,Vissim=Vissim)
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
+
+    if Vissim is not None:
+        vissim.stopVissim(Vissim)
 
     #moving NOMAD and param.txt
     param_file = config.path_to_NOMAD_param.split(os.sep)[-1]
@@ -142,7 +165,7 @@ def main():
 
     #creating an history file for calib.py
     variable_names = [i.vissim_name for i in variables if i.include is True]
-    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks, outputs.ActiveConstraints.getNumberOfConstraints(config))
+    write.History.create_history(working_path, 'calib_history.txt',  config.nbr_runs, variable_names, networks, outputs.ActiveConstraints.getNumberOfConstraints(config), config)
 
     #launching NOMADS
     try:
