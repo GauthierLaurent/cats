@@ -79,6 +79,7 @@ def list1D(item, i_type='int'):
         if(i_type == 'float'):  return [float(x) for x in item]
         elif(i_type == 'bool'): return [str2bool(x) for x in item]
         elif(i_type == 'BIS'): return [str2bool(item[0]),int(item[1]),item[2]]
+        elif(i_type == 'BFS'): return [str2bool(item[0]),float(item[1]),item[2]]
         elif(i_type == 'int'):
             if(len(list(set(item))) != len(item)): allowDuplicates = True
             else:                                  allowDuplicates = False
@@ -197,24 +198,32 @@ class Config:
         self.section = 'Statistical precision'
         self.desired_pct_error        = self.parse('desired_pct_error',    '20' ,     c_type='float')
 
-        self.section = 'Calibration'
+        self.section = 'Calibration - data'
+        self.CALIBDATA_video          = self.parse('use_video_data_for_calibration', 'False',   c_type='bool')
+        self.CALIBDATA_in_csv         = self.parse('use_csv_data_for_calibration',   'False',   c_type='bool')
+
+        self.section = 'Calibration - calculations'
+        self.cmp_man_lcgaps           = self.parse('Compute_mandatory_LC_gaps',    'False',  c_type='bool')
+        self.cmp_opp_lcgaps           = self.parse('Compute_opportunistic_LC_gaps','False',  c_type='bool')
+        self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'False',  c_type='bool')
+        self.cmp_travel_times         = self.parse('Compute_travel_times',         'False',  c_type='bool')
+        self.cmp_speedZones           = self.parse('Compute_speed_zones',          'False',  c_type='bool')
+
+        self.section = 'Calibration - fout'
         self.output_forward_gaps      = self.parse('calib_forward_gaps',           'True',   c_type='bool')
         self.output_lane_change_gaps  = self.parse('calib_lane_change_gaps',       'False',  c_type='bool')
         self.output_lane_change_count = self.parse('calib_lane_change_count',      'False',  c_type='bool')
         self.output_speed_zones       = self.parse('calib_speed_zones',            'False',  c_type='bool')
+        self.output_travel_times      = self.parse('calib_travel_times',           'False',  c_type='bool')
         self.NOMAD_solution_filename  = self.parse('NOMAD_solution_filename',      '',       c_type='string')
-        self.jam_const_thresh         = self.parse('Jam_constraint_threshold',     '0',      c_type='float')
-        self.jam_calcu_thresh         = self.parse('Jam_calculation_threshold',    '5',      c_type='float')
-        self.cmp_man_lcgaps           = self.parse('Compute_mandatory_LC_gaps',    'True',   c_type='bool')
-        self.cmp_opp_lcgaps           = self.parse('Compute_opportunistic_LC_gaps','True',   c_type='bool')
-        self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'True',   c_type='bool')
-        self.cmp_travel_times         = self.parse('Compute_travel_times',         'True',   c_type='bool')
 
+        self.section = 'Calibration - constraints'
         self.fzp_maxLines             = self.parse('MaxLine_for_collisions_calc', '6000000', c_type='int')
         self.collis_constraint        = self.parse('Collisions_constraint',       '[True, 0, EB]',  c_type='BIS')
         self.nonGen_constraint        = self.parse('Vehic_nongen_constraint',     '[True, 10, EB]', c_type='BIS')
         self.decelp_constraint        = self.parse('Deceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
         self.accel0_constraint        = self.parse('Acceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
+        self.diFlow_constraint        = self.parse('Passing_flow_constraint',     '[True, 10, EB]', c_type='BFS')
 
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',             'False',  c_type='bool')
@@ -330,6 +339,8 @@ class Config:
             else:                     return self.config.getboolean(self.section, key)
         elif(c_type == 'BIS'):
             return list1D(self.config.get(self.section, key), i_type='BIS')
+        elif(c_type == 'BFS'):
+            return list1D(self.config.get(self.section, key), i_type='BFS')
         else:
             if(c_struct == 'list1D'): return list1D(self.config.get(self.section, key), i_type='string')
             else:                     return self.config.get(self.section, key)
