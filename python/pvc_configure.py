@@ -78,8 +78,9 @@ def list1D(item, i_type='int'):
     if(len(item) > 0):
         if(i_type == 'float'):  return [float(x) for x in item]
         elif(i_type == 'bool'): return [str2bool(x) for x in item]
-        elif(i_type == 'BIS'): return [str2bool(item[0]),int(item[1]),item[2]]
-        elif(i_type == 'BFS'): return [str2bool(item[0]),float(item[1]),item[2]]
+        elif(i_type == 'BIS'):  return [str2bool(item[0]),int(item[1]),item[2]]
+        elif(i_type == 'BIIS'): return [str2bool(item[0]),int(item[1]),int(item[2]),item[3]]
+        elif(i_type == 'BFS'):  return [str2bool(item[0]),float(item[1]),item[2]]
         elif(i_type == 'int'):
             if(len(list(set(item))) != len(item)): allowDuplicates = True
             else:                                  allowDuplicates = False
@@ -112,6 +113,9 @@ def list2D(item, i_type='int'):
             if(i_type == 'float'):  item.append([float(x) for x in parsingx])
             elif(i_type == 'bool'): item.append([str2bool(x) for x in parsingx])
             elif(i_type == 'int'):  item.append([int(x) for x in parsingx])
+            elif(i_type == 'BIS'):  item.append([str2bool(item[0]),int(item[1]),item[2]])
+            elif(i_type == 'BIIS'): item.append([str2bool(item[0]),int(item[1]),int(item[2]),item[3]])
+            elif(i_type == 'BFS'):  item.append([str2bool(item[0]),float(item[1]),item[2]])
             else:                   item.append([x for x in parsingx])
         return item
     else:
@@ -219,11 +223,15 @@ class Config:
 
         self.section = 'Calibration - constraints'
         self.fzp_maxLines             = self.parse('MaxLine_for_collisions_calc', '6000000', c_type='int')
-        self.collis_constraint        = self.parse('Collisions_constraint',       '[True, 0, EB]',  c_type='BIS')
-        self.nonGen_constraint        = self.parse('Vehic_nongen_constraint',     '[True, 10, EB]', c_type='BIS')
-        self.decelp_constraint        = self.parse('Deceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
-        self.accel0_constraint        = self.parse('Acceleration_constraint',     '[True, 0, EB]',  c_type='BIS')
-        self.diFlow_constraint        = self.parse('Passing_flow_constraint',     '[True, 10, EB]', c_type='BFS')
+        self.collis_constraint        = self.parse('Collisions_constraint',       '[False, 0, EB]',  c_type='BIS')
+        self.nonGen_constraint        = self.parse('Vehic_nongen_constraint',     '[False, 10, EB]', c_type='BIS')
+        self.decelp_constraint        = self.parse('Deceleration_constraint',     '[False, 0, EB]',  c_type='BIS')
+        self.accel0_constraint        = self.parse('Acceleration_constraint',     '[False, 0, EB]',  c_type='BIS')
+        self.diFlow_constraint        = self.parse('Passing_flow_constraint',     '[False, 10, EB]', c_type='BFS')
+        self.saturation_values        = self.parse('Saturation_constraint',       '[[False, 16, 1600, PB],[False, 16, 1600, PB]]', c_type='BIIS', c_struct='list2D')
+        self.saturation_max_tiv       = self.parse('Saturation_MAX_TIV',          '15',     c_type='int')
+        self.saturation_min_nb_tiv    = self.parse('Saturation_Min_NB_TIV',       '4',      c_type='int')
+        self.saturation_centile       = self.parse('Saturation_percentile',       '15',     c_type='int')
 
         self.section = 'Networks'
         self.active_network_1         = self.parse('active_network_1',             'False',  c_type='bool')
@@ -339,6 +347,9 @@ class Config:
             else:                     return self.config.getboolean(self.section, key)
         elif(c_type == 'BIS'):
             return list1D(self.config.get(self.section, key), i_type='BIS')
+        elif(c_type == 'BIIS'):
+            if (c_struct == 'list2D'): return list2D(self.config.get(self.section, key))
+            else:                      return list1D(self.config.get(self.section, key), i_type='BIIS')
         elif(c_type == 'BFS'):
             return list1D(self.config.get(self.section, key), i_type='BFS')
         else:

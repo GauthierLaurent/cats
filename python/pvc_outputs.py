@@ -463,6 +463,12 @@ class ActiveConstraints:
         self.nameList.append('acceleration')
         self.nameList.append('flowPasses')
 
+        for i in xrange(len(config.saturation_values)):
+            self.activeList.append(config.saturation_values[i][0])
+            self.tresholdList.append(config.saturation_values[i][2])
+            self.typeList.append(config.saturation_values[i][3])
+            self.nameList.append('saturation_'+str(i))
+
     def getActiveNames(self):
         return [self.nameList[i] for i in xrange(len(self.nameList)) if self.activeList[i]]
 
@@ -758,6 +764,37 @@ def forwardGaps(objects, s, lane):
     #    if gaps[g] >= 30:
     #        gaps.pop(g)
     return gaps, speeds
+
+def saturationFlow(objects, s, lane, centile, max_tiv, min_nb_tiv):
+    gaps, speeds = forwardGaps(objects, s, lane)
+
+    saturation_flow = []
+    #spliting TIV in sublists, if gaps are below a certain gap threshold, they are considered
+    #part of the same group and are given a incremental value given by an interger contained in
+    #"counter". Otherwise, they are labels as -1 (a dead zone in terms of vehicular flow):
+    #
+    #       caract_gaps = [1,1,1,1,-1,-1,-1,-1,2,2,2,-1,-1,-1,-1,3,3,3,3,3,3,3,...]
+    #
+    caract_gaps = []
+    counter = 0
+    for gap in gaps:
+        if gap > max_tiv:
+            caract_gaps.append(-1)
+            counter += 1
+        else:
+            gap.append(counter)
+
+    #For each of those sublists that have a lenght greater than min_nb_tiv, we calculate
+    #the saturation flow by taking the inverse of the mean of every gaps that are below the
+    #15th percentile
+    for num in np.unique(caract_gaps):
+        num_gaps = np.asarray(gaps)[np.asarray(caract_gaps) == num]
+
+        if len(num_gaps) >= min_nb_tiv:
+            below_15 = num_gaps[num_gaps <= np.percentile(num_gaps, 15)]
+            saturation_flow.append(1/below_15.mean())
+
+    return saturation_flow
 
 def laneChangeGaps(listDict, laneDict, objects):
     '''Determines the width of lane change gaps for a list of objects who make
@@ -1146,6 +1183,14 @@ def treat_Single_VissimOutput(filename, inputs):
     outputs.addConstraintValue('nonGen', num, filename)
     outputs.addConstraintValue('deceleration', dp, filename)
     outputs.addConstraintValue('acceleration', a0, filename)
+
+    #saturation volume constraint
+    for i in xrange(len(config.saturation_values)):
+        for index,lane in enumerate(lanes):
+            if lane.split('_')[0] == config.saturation_values[i][1]:
+                s = (0.5*lanes[str(lane)][1]-0.5*lanes[str(lane)][0])
+                outputs.addConstraintValue('saturation_'+str(i), saturationFlow(objects, s, lane, config.saturation_centile, config.saturation_max_tiv, config.saturation_min_nb_tiv), filename)
+
 
     if verbose:
         print ' == Constraints calculations done ==  |' + str(time.clock())
