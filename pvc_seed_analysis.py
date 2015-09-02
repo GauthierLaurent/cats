@@ -252,26 +252,68 @@ def main():
                         vissim_data = data.forFMgap.distributions[-1].raw
                         video_data = outputs.makeitclean(vdata.forFMgap.distributions[-1].raw, 0.5*config.fps)
 
+                        d_stat_1 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                        single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_tiv', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_1)
+                    else:
+                        d_stat_1 = None
+
                     if config.output_lane_change_gaps:
-                        vissim_data = data.oppLCbgap.distributions[-1].raw
-                        video_data = vdata.oppLCbgap.distributions[-1].raw
+                        if config.cmp_opp_lcgaps:
+                            vissim_data = data.oppLCbgap.distributions[-1].raw
+                            video_data = vdata.oppLCbgap.distributions[-1].raw
 
-                    d_stat = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            d_stat_2 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_opp', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_2)
+                        else:
+                            d_stat_2 = None
 
-                    single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat)
+                        if config.cmp_man_lcgaps:
+                            vissim_data = data.oppLCbgap.distributions[-1].raw
+                            video_data = vdata.oppLCbgap.distributions[-1].raw
+
+                            d_stat_3 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_man', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_3)
+                        else:
+                            d_stat_3 = None
+                    else:
+                        d_stat_2 = None
+                        d_stat_3 = None
+
+                    fout = outputs.buildFout(config, d_stat_1, d_stat_2, d_stat_3)
+                    single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_fout', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, fout)
 
                     #treat concat data
                     if config.output_forward_gaps:
                         vissim_data = data.forFMgap.cumul_all.raw
                         video_data = outputs.makeitclean(vdata.forFMgap.cumul_all.raw, 0.5*config.fps)
 
+                        d_stat_1 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                        concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_tiv', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_1)
+
                     if config.output_lane_change_gaps:
-                        vissim_data = data.oppLCbgap.cumul_all.raw
-                        video_data = vdata.oppLCbgap.cumul_all.raw
+                        if config.cmp_opp_lcgaps:
+                            vissim_data = data.oppLCbgap.cumul_all.raw
+                            video_data = vdata.oppLCbgap.cumul_all.raw
 
-                    d_stat = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            d_stat_2 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_opp', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_2)
+                        else:
+                            d_stat_2 = None
 
-                    concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat )
+                        if config.cmp_man_lcgaps:
+                            vissim_data = data.manLCbgap.cumul_all.raw
+                            video_data = vdata.manLCbgap.cumul_all.raw
+
+                            d_stat_3 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_man', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_3)
+                        else:
+                            d_stat_3 = None
+                    else:
+                        d_stat_2 = None
+                        d_stat_3 = None
+
+                    fout = outputs.buildFout(config, d_stat_1, d_stat_2, d_stat_3)
+                    concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_fout', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, fout)
 
             dataList.append(data)
 
@@ -402,12 +444,12 @@ def main():
         current_ymin = 1.0
 
         #getting the infos for that network
-        single_data = single_fzp_data.GetResultForNetLabel(nets[0])
-        concat_data = concat_fzp_data.GetResultForNetLabel(nets[0])
+        single_data = single_fzp_data.GetResultForNetLabel(nets[0], nets[0]+'_fout')
+        concat_data = concat_fzp_data.GetResultForNetLabel(nets[0], nets[0]+'_fout')
 
         if Commands.trace_conf is True:
-            lConf = lower_confidence.GetResultForNetLabel(nets[0])
-            uConf = upper_confidence.GetResultForNetLabel(nets[0])
+            lConf = lower_confidence.GetResultForNetLabel(nets[0], nets[0]+'_fout')
+            uConf = upper_confidence.GetResultForNetLabel(nets[0], nets[0]+'_fout')
 
         #we assign a color per network
         color = colors[0]
@@ -457,12 +499,12 @@ def main():
         current_ymin = 1.0
 
         #getting the infos for that network
-        single_data = single_fzp_data.GetResultForNetLabel(nets[1])
-        concat_data = concat_fzp_data.GetResultForNetLabel(nets[1])
+        single_data = single_fzp_data.GetResultForNetLabel(nets[1], nets[1]+'_fout')
+        concat_data = concat_fzp_data.GetResultForNetLabel(nets[1], nets[1]+'_fout')
 
         if Commands.trace_conf is True:
-            lConf = lower_confidence.GetResultForNetLabel(nets[1])
-            uConf = upper_confidence.GetResultForNetLabel(nets[1])
+            lConf = lower_confidence.GetResultForNetLabel(nets[1], nets[1]+'_fout')
+            uConf = upper_confidence.GetResultForNetLabel(nets[1], nets[1]+'_fout')
 
         #we assign a color per network
         color = colors[1]
@@ -488,8 +530,8 @@ def main():
             plt.plot(uConf[k].x, uConf[k].y, color = 'k', linestyle = '--')
 
 
-        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float) + 0.02
-        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.00
+        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float) + 0.01
+        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.02
 
         ax2.set_ylim(ymin = new_ymin, ymax = new_ymax)
         ax2.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))
@@ -511,7 +553,7 @@ def main():
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), frameon=False, ncol=2, prop = fontP)
         ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -1.45), frameon=False, ncol=2, prop = fontP)
 
-        fig.text(0.70, 0.83,'Simulated with:\nDefault values\nFirst seed = '+str(first_seed)+'\nIncrementation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
+        fig.text(0.20, 0.83,'Simulated with:\nDefault values\nFirst seed = '+str(first_seed)+'\nIncrementation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
 
 
         '''
