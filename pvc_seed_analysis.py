@@ -7,11 +7,12 @@ Created on Mon Mar 16 16:59:41 2015
 call ex: -a Trace --dir C:\Users\lab\Desktop\vissim_files\A13\Combined_06_10_11_12\Seed_test_Analysis_1
 """
 def commands(parser):
-    parser.add_argument('-p',    type=float, nargs='*',                             dest='start_point', default = None, help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
-    parser.add_argument('--dir',                                                    dest='dir',         default='',     help='Directory (Must be provided if Calc or Trace mode are activated)')
-    parser.add_argument('-a',    choices = ['Sim', 'Calc', 'Conf', 'Trace', 'All'], dest='analysis',    default='All',  help='"Sim" only runs relevant siulations, "Calc" calculates data in the fzp files, "Trace" produces the graphics, "All" runs all of modes one after the others')
-    parser.add_argument('-t',    action='store_true',                               dest='trace_conf',  default=False,  help='Trace option, enables the ploting of confidence intervals (requires the intervals to be computed first)')
-    parser.add_argument('-r',                                                       dest='nbr_runs',    default=100,    help='Number of simulations to perform. Default = 100')
+    parser.add_argument('-p',    type=float, nargs='*',                             dest='start_point', default = None,   help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
+    parser.add_argument('--dir',                                                    dest='dir',         default='',       help='Directory (Must be provided if Calc or Trace mode are activated)')
+    parser.add_argument('-a',    choices = ['Sim', 'Calc', 'Conf', 'Trace', 'All'], dest='analysis',    default='All',    help='"Sim" only runs relevant siulations, "Calc" calculates data in the fzp files, "Trace" produces the graphics, "All" runs all of modes one after the others')
+    parser.add_argument('-t',    action='store_true',                               dest='trace_conf',  default=False,    help='Trace option, enables the ploting of confidence intervals (requires the intervals to be computed first)')
+    parser.add_argument('-r',                                                       dest='nbr_runs',    default=100  ,    help='Number of simulations to perform. Default = 100')
+    parser.add_argument('-l',    choices = ['french', 'english'],                   dest='language',    default='french', help='Choose the language displayed in the graphics. Default = french')
     return parser.parse_args()
 
 def main():
@@ -424,7 +425,10 @@ def main():
 
         #that's only to have the axis label shared by both subplot...
         ax4 = fig.add_subplot(1,1,1)
-        ax4.set_ylabel('d statistic (K-S test)')
+        if Commands.language == 'french':
+            ax4.set_ylabel('valeur d (test de K-S)')
+        if Commands.language == 'english':
+            ax4.set_ylabel('d statistic (K-S test)')
         ax4.set_xticklabels('', visible=False)
         ax4.set_yticklabels('', visible=False)
         box = ax4.get_position()
@@ -457,7 +461,10 @@ def main():
         #for j in xrange(len(single_data)):
             #if j > 0: break
         j = 0
-        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'french':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = u'Valeur pour le vidéo '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'english':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
         if max(single_data[j].y) > current_ymax:
             current_ymax = max(single_data[j].y)
         if min(single_data[j].y) < current_ymin:
@@ -466,7 +473,10 @@ def main():
         #for k in xrange(len(concat_data)):
             #if k > 0: break
         k = 0
-        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'french':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = u'Données concaténées pour le vidéo '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'english':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
         if max(concat_data[k].y) > current_ymax:
             current_ymax = max(concat_data[k].y)
         if min(concat_data[k].y) < current_ymin:
@@ -484,7 +494,10 @@ def main():
         ax1.set_yticks(np.arange(new_ymin,new_ymax+0.001,0.01))
         ax1.set_xticks(np.arange(0,51,5))#max(data_line.x)+1,5))
         #ax1.set_ylabel('d statistic (K-S test)')
-        ax1.set_xlabel('Replications')
+        if Commands.language == 'french':
+            ax1.set_xlabel(u'Réplications')
+        if Commands.language == 'english':
+            ax1.set_xlabel('Replications')
         ax1.minorticks_on
         ax1.grid(True, which='both')
 
@@ -510,7 +523,10 @@ def main():
         color = colors[1]
 
         j = 0
-        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'french':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = u'Valeur pour le vidéo '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'english':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
         if max(single_data[j].y) > current_ymax:
             current_ymax = max(single_data[j].y)
         if min(single_data[j].y) < current_ymin:
@@ -519,7 +535,10 @@ def main():
         #for k in xrange(len(concat_data)):
             #if k > 0: break
         k = 0
-        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'french':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = u'Données concaténées pour le vidéo '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'english':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
         if max(concat_data[k].y) > current_ymax:
             current_ymax = max(concat_data[k].y)
         if min(concat_data[k].y) < current_ymin:
@@ -553,7 +572,10 @@ def main():
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), frameon=False, ncol=2, prop = fontP)
         ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -1.45), frameon=False, ncol=2, prop = fontP)
 
-        fig.text(0.20, 0.83,'Simulated with:\nDefault values\nFirst seed = '+str(first_seed)+'\nIncrementation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
+        if Commands.language == 'french':
+            fig.text(0.20, 0.83,u'Simulé avec:\nValeurs par défaut\nNombre aléatoire d\'amorce= '+str(first_seed)+u'\nIncrémentation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
+        if Commands.language == 'english':
+            fig.text(0.20, 0.83,'Simulated with:\nDefault values\nFirst seed = '+str(first_seed)+'\nIncrementation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
 
 
         '''
