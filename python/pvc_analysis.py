@@ -65,7 +65,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 return False, network[N], ['N/A' for i in xrange(parameters[2])], 'Unfeasible'
 
         #load the network
-        load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]), err_file=True)
+        load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]), err_file_path=final_inpx_path)
 
         #check for network loading error
         if load is not True:
@@ -301,11 +301,11 @@ def monteCarlo_vissim(valuesVector, inputs):
                 running = True
 
             #loading the network
-            loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
+            loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename), err_file_path=folderpath)
 
             if loaded != 'LoadNetError':
                 #Vissim initialisation and simulation running
-                vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp)
+                vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp, err_file_path=folderpath)
 
         out_valuesVector.append([valuesVector[value], folderpath, lowerbound])
 
@@ -505,7 +505,7 @@ def OAT_sensitivity(values, inputs, default = False):
                         continue
 
                 else:
-                    loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
+                    loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename), err_file_path=folderpath)
 
                     if loaded == 'LoadNetError':
                         if default is True:
@@ -520,7 +520,7 @@ def OAT_sensitivity(values, inputs, default = False):
                         running = True
 
                         #Vissim initialisation and simulation running
-                        simulated = vissim.initializeSimulation(Vissim, sim_parameters, corrected_values, parameters, commands.save_swp)
+                        simulated = vissim.initializeSimulation(Vissim, sim_parameters, corrected_values, parameters, commands.save_swp,err_file_path=folderpath)
 
                         if simulated is not True:
                             text.append([value_name, corrected_values,''.join(str(simulated))])    #printing the exception in the csv file

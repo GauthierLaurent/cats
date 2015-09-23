@@ -48,7 +48,7 @@ def startVissim():
     except:
         return 'StartError'
 
-def loadNetwork(Vissim, InpxPath, err_file=False):
+def loadNetwork(Vissim, InpxPath, err_file_path=False):
     '''start a Vissim network. Returns True if successfull, LoadNetError otherwise
        The filename MUST have a capital first letter'''
     if Vissim is not False and Vissim is not 'StartError':
@@ -56,8 +56,8 @@ def loadNetwork(Vissim, InpxPath, err_file=False):
             Vissim.LoadNet (InpxPath)
             return True
         except:
-            if err_file is True:
-                with open(os.path.join(InpxPath, 'loadNetwork.err'),'w') as err:
+            if err_file_path is not False:
+                with open(os.path.join(err_file_path, 'loadNetwork.err'),'w') as err:
                     err.write(traceback.format_exc())
             return 'LoadNetError'
 
