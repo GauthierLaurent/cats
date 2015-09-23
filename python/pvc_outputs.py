@@ -243,6 +243,7 @@ class Constraints:
             for FileConst in const.files:
                 if FileConst not in const1.files:
                     const1.files.append(FileConst)
+                    const1.regenMaster()
                 else:
                     for ci in xrange(len(FileConst.constraints)):
                         name = FileConst.names[ci]
