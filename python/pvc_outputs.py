@@ -221,15 +221,18 @@ class Constraints:
                 self.files[self.getFilenames().index(filename)].addCi(ci,name)
             else:
                 self.files += [FileConstraint()]
-                self.files[-1].setAll(self.actives.getActiveNames(),self.actives.getThresholdList(),ci,name,filename)
+                self.files[-1].setAll(self.actives.getActiveNames(),self.actives.getActiveThresholdList(),ci,name,filename)
             self.regenMaster()
 
     def regenMaster(self):
-        array = [f.constraints for f in self.files]
-        if isinstance(map(None, *array)[0],tuple):
-            self.master = [max(row) for row in map(None, *array)]
+        if self.files == []:
+            self.master = list(-1*np.asarray(self.actives.getActiveThresholdList()))
         else:
-            self.master = [row for row in map(None, *array)]
+            array = [f.constraints for f in self.files]
+            if isinstance(map(None, *array)[0],tuple):
+                self.master = [max(row) for row in map(None, *array)]
+            else:
+                self.master = [row for row in map(None, *array)]
 
     def popOne(self, i):
         self.files.pop(i)
@@ -246,6 +249,7 @@ class Constraints:
             for FileConst in const.files:
                 if FileConst not in const1.files:
                     const1.files.append(FileConst)
+                    const1.regenMaster()
                 else:
                     for ci in xrange(len(FileConst.constraints)):
                         name = FileConst.names[ci]
@@ -422,6 +426,7 @@ class Derived_data:
 
     def activateConstraints(self,config):
         self.constraint.actives.activate(config)
+        self.constraint.regenMaster()
 
 ##################
 ### Constraints
@@ -474,6 +479,9 @@ class ActiveConstraints:
 
     def getThresholdList(self):
         return self.tresholdList
+
+    def getActiveThresholdList(self):
+        return [self.tresholdList[i] for i in xrange(len(self.tresholdList)) if self.activeList[i]]
 
     def getInfoByName(self,name,key = None):
         '''If key is provided, returns the value of constraint "name" for the
@@ -1190,7 +1198,6 @@ def treat_Single_VissimOutput(filename, inputs):
             if lane.split('_')[0] == config.saturation_values[i][1]:
                 s = (0.5*lanes[str(lane)][1]-0.5*lanes[str(lane)][0])
                 outputs.addConstraintValue('saturation_'+str(i), saturationFlow(objects, s, lane, config.saturation_centile, config.saturation_max_tiv, config.saturation_min_nb_tiv), filename)
-
 
     if verbose:
         print ' == Constraints calculations done ==  |' + str(time.clock())
