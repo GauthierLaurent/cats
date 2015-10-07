@@ -448,12 +448,12 @@ def main():
         current_ymin = 1.0
 
         #getting the infos for that network
-        single_data = single_fzp_data.GetResultForNetLabel(nets[0], nets[0]+'_fout')
-        concat_data = concat_fzp_data.GetResultForNetLabel(nets[0], nets[0]+'_fout')
+        single_data = single_fzp_data.GetResultForNetLabel(nets[3], nets[3]+'_fout')
+        concat_data = concat_fzp_data.GetResultForNetLabel(nets[3], nets[3]+'_fout')
 
         if Commands.trace_conf is True:
-            lConf = lower_confidence.GetResultForNetLabel(nets[0], nets[0]+'_fout')
-            uConf = upper_confidence.GetResultForNetLabel(nets[0], nets[0]+'_fout')
+            lConf = lower_confidence.GetResultForNetLabel(nets[3], nets[3]+'_fout')
+            uConf = upper_confidence.GetResultForNetLabel(nets[3], nets[3]+'_fout')
 
         #we assign a color per network
         color = colors[0]
@@ -486,8 +486,8 @@ def main():
             plt.plot(lConf[k].x, lConf[k].y, color = 'k', linestyle = '--')
             plt.plot(uConf[k].x, uConf[k].y, color = 'k', linestyle = '--')
 
-        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float)
-        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float)
+        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float)-0.01
+        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float)-0.01
 
         ax1.set_ylim(ymin = new_ymin, ymax = new_ymax)
         ax1.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))
@@ -512,12 +512,12 @@ def main():
         current_ymin = 1.0
 
         #getting the infos for that network
-        single_data = single_fzp_data.GetResultForNetLabel(nets[1], nets[1]+'_fout')
-        concat_data = concat_fzp_data.GetResultForNetLabel(nets[1], nets[1]+'_fout')
+        single_data = single_fzp_data.GetResultForNetLabel(nets[2], nets[2]+'_fout')
+        concat_data = concat_fzp_data.GetResultForNetLabel(nets[2], nets[2]+'_fout')
 
         if Commands.trace_conf is True:
-            lConf = lower_confidence.GetResultForNetLabel(nets[1], nets[1]+'_fout')
-            uConf = upper_confidence.GetResultForNetLabel(nets[1], nets[1]+'_fout')
+            lConf = lower_confidence.GetResultForNetLabel(nets[2], nets[2]+'_fout')
+            uConf = upper_confidence.GetResultForNetLabel(nets[2], nets[2]+'_fout')
 
         #we assign a color per network
         color = colors[1]
@@ -550,7 +550,7 @@ def main():
 
 
         new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float) + 0.01
-        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.02
+        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.01
 
         ax2.set_ylim(ymin = new_ymin, ymax = new_ymax)
         ax2.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))

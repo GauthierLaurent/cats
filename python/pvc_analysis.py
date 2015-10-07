@@ -118,8 +118,8 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 else:
                     non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
                     video_data.forFMgap.cleanStats(0.5*config.fps)
-                    video_data.oppLCbgap.cleanStats(0); vissim_data.oppLCbgap.cleanStats(0)
-                    video_data.manLCbgap.cleanStats(0); vissim_data.manLCbgap.cleanStats(0)
+                    video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0.5*config.fps)
+                    video_data.manLCbgap.cleanStats(0.5*config.fps); vissim_data.manLCbgap.cleanStats(0.5*config.fps)
                     dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
                     #starting the building of the secondary values outputs
                     #for the first 3 variables, which are intergers, we use:
