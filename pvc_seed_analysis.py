@@ -7,11 +7,12 @@ Created on Mon Mar 16 16:59:41 2015
 call ex: -a Trace --dir C:\Users\lab\Desktop\vissim_files\A13\Combined_06_10_11_12\Seed_test_Analysis_1
 """
 def commands(parser):
-    parser.add_argument('-p',    type=float, nargs='*',                             dest='start_point', default = None, help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
-    parser.add_argument('--dir',                                                    dest='dir',         default='',     help='Directory (Must be provided if Calc or Trace mode are activated)')
-    parser.add_argument('-a',    choices = ['Sim', 'Calc', 'Conf', 'Trace', 'All'], dest='analysis',    default='All',  help='"Sim" only runs relevant siulations, "Calc" calculates data in the fzp files, "Trace" produces the graphics, "All" runs all of modes one after the others')
-    parser.add_argument('-t',    action='store_true',                               dest='trace_conf',  default=False,  help='Trace option, enables the ploting of confidence intervals (requires the intervals to be computed first)')
-    parser.add_argument('-r',                                                       dest='nbr_runs',    default=100,    help='Number of simulations to perform. Default = 100')
+    parser.add_argument('-p',    type=float, nargs='*',                             dest='start_point', default = None,   help='list of float (integers will be converted) | make sure the number of floats entered correspond to the number of variables to be analysed')
+    parser.add_argument('--dir',                                                    dest='dir',         default='',       help='Directory (Must be provided if Calc or Trace mode are activated)')
+    parser.add_argument('-a',    choices = ['Sim', 'Calc', 'Conf', 'Trace', 'All'], dest='analysis',    default='All',    help='"Sim" only runs relevant siulations, "Calc" calculates data in the fzp files, "Trace" produces the graphics, "All" runs all of modes one after the others')
+    parser.add_argument('-t',    action='store_true',                               dest='trace_conf',  default=False,    help='Trace option, enables the ploting of confidence intervals (requires the intervals to be computed first)')
+    parser.add_argument('-r',                                                       dest='nbr_runs',    default=100  ,    help='Number of simulations to perform. Default = 100')
+    parser.add_argument('-l',    choices = ['french', 'english'],                   dest='language',    default='french', help='Choose the language displayed in the graphics. Default = french')
     return parser.parse_args()
 
 def main():
@@ -252,26 +253,68 @@ def main():
                         vissim_data = data.forFMgap.distributions[-1].raw
                         video_data = outputs.makeitclean(vdata.forFMgap.distributions[-1].raw, 0.5*config.fps)
 
+                        d_stat_1 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                        single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_tiv', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_1)
+                    else:
+                        d_stat_1 = None
+
                     if config.output_lane_change_gaps:
-                        vissim_data = data.oppLCbgap.distributions[-1].raw
-                        video_data = vdata.oppLCbgap.distributions[-1].raw
+                        if config.cmp_opp_lcgaps:
+                            vissim_data = data.oppLCbgap.distributions[-1].raw
+                            video_data = vdata.oppLCbgap.distributions[-1].raw
 
-                    d_stat = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            d_stat_2 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_opp', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_2)
+                        else:
+                            d_stat_2 = None
 
-                    single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat)
+                        if config.cmp_man_lcgaps:
+                            vissim_data = data.oppLCbgap.distributions[-1].raw
+                            video_data = vdata.oppLCbgap.distributions[-1].raw
+
+                            d_stat_3 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_man', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_3)
+                        else:
+                            d_stat_3 = None
+                    else:
+                        d_stat_2 = None
+                        d_stat_3 = None
+
+                    fout = outputs.buildFout(config, d_stat_1, d_stat_2, d_stat_3)
+                    single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_fout', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, fout)
 
                     #treat concat data
                     if config.output_forward_gaps:
                         vissim_data = data.forFMgap.cumul_all.raw
                         video_data = outputs.makeitclean(vdata.forFMgap.cumul_all.raw, 0.5*config.fps)
 
+                        d_stat_1 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                        concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_tiv', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_1)
+
                     if config.output_lane_change_gaps:
-                        vissim_data = data.oppLCbgap.cumul_all.raw
-                        video_data = vdata.oppLCbgap.cumul_all.raw
+                        if config.cmp_opp_lcgaps:
+                            vissim_data = data.oppLCbgap.cumul_all.raw
+                            video_data = vdata.oppLCbgap.cumul_all.raw
 
-                    d_stat = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            d_stat_2 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_opp', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_2)
+                        else:
+                            d_stat_2 = None
 
-                    concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj'), net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat )
+                        if config.cmp_man_lcgaps:
+                            vissim_data = data.manLCbgap.cumul_all.raw
+                            video_data = vdata.manLCbgap.cumul_all.raw
+
+                            d_stat_3 = calibTools.checkCorrespondanceOfTwoLists(video_data, vissim_data, config.sim_steps, config.fps)
+                            single_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_man', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, d_stat_3)
+                        else:
+                            d_stat_3 = None
+                    else:
+                        d_stat_2 = None
+                        d_stat_3 = None
+
+                    fout = outputs.buildFout(config, d_stat_1, d_stat_2, d_stat_3)
+                    concat_fzp_data.addResult(traj.split(os.sep)[-1].strip('.traj')+'_fout', net.inpx_path.split(os.sep)[-1].strip('.inpx'), file_list.index(files) + 1, fout)
 
             dataList.append(data)
 
@@ -382,7 +425,10 @@ def main():
 
         #that's only to have the axis label shared by both subplot...
         ax4 = fig.add_subplot(1,1,1)
-        ax4.set_ylabel('d statistic (K-S test)')
+        if Commands.language == 'french':
+            ax4.set_ylabel('valeur d (test de K-S)')
+        if Commands.language == 'english':
+            ax4.set_ylabel('d statistic (K-S test)')
         ax4.set_xticklabels('', visible=False)
         ax4.set_yticklabels('', visible=False)
         box = ax4.get_position()
@@ -402,12 +448,12 @@ def main():
         current_ymin = 1.0
 
         #getting the infos for that network
-        single_data = single_fzp_data.GetResultForNetLabel(nets[0])
-        concat_data = concat_fzp_data.GetResultForNetLabel(nets[0])
+        single_data = single_fzp_data.GetResultForNetLabel(nets[3], nets[3]+'_fout')
+        concat_data = concat_fzp_data.GetResultForNetLabel(nets[3], nets[3]+'_fout')
 
         if Commands.trace_conf is True:
-            lConf = lower_confidence.GetResultForNetLabel(nets[0])
-            uConf = upper_confidence.GetResultForNetLabel(nets[0])
+            lConf = lower_confidence.GetResultForNetLabel(nets[3], nets[3]+'_fout')
+            uConf = upper_confidence.GetResultForNetLabel(nets[3], nets[3]+'_fout')
 
         #we assign a color per network
         color = colors[0]
@@ -415,7 +461,10 @@ def main():
         #for j in xrange(len(single_data)):
             #if j > 0: break
         j = 0
-        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'french':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = u'Valeur pour le vidéo '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'english':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
         if max(single_data[j].y) > current_ymax:
             current_ymax = max(single_data[j].y)
         if min(single_data[j].y) < current_ymin:
@@ -424,7 +473,10 @@ def main():
         #for k in xrange(len(concat_data)):
             #if k > 0: break
         k = 0
-        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'french':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = u'Données concaténées pour le vidéo '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'english':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
         if max(concat_data[k].y) > current_ymax:
             current_ymax = max(concat_data[k].y)
         if min(concat_data[k].y) < current_ymin:
@@ -434,15 +486,18 @@ def main():
             plt.plot(lConf[k].x, lConf[k].y, color = 'k', linestyle = '--')
             plt.plot(uConf[k].x, uConf[k].y, color = 'k', linestyle = '--')
 
-        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float)
-        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float)
+        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float)-0.01
+        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float)-0.01
 
         ax1.set_ylim(ymin = new_ymin, ymax = new_ymax)
         ax1.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))
         ax1.set_yticks(np.arange(new_ymin,new_ymax+0.001,0.01))
         ax1.set_xticks(np.arange(0,51,5))#max(data_line.x)+1,5))
         #ax1.set_ylabel('d statistic (K-S test)')
-        ax1.set_xlabel('Replications')
+        if Commands.language == 'french':
+            ax1.set_xlabel(u'Réplications')
+        if Commands.language == 'english':
+            ax1.set_xlabel('Replications')
         ax1.minorticks_on
         ax1.grid(True, which='both')
 
@@ -457,18 +512,21 @@ def main():
         current_ymin = 1.0
 
         #getting the infos for that network
-        single_data = single_fzp_data.GetResultForNetLabel(nets[1])
-        concat_data = concat_fzp_data.GetResultForNetLabel(nets[1])
+        single_data = single_fzp_data.GetResultForNetLabel(nets[2], nets[2]+'_fout')
+        concat_data = concat_fzp_data.GetResultForNetLabel(nets[2], nets[2]+'_fout')
 
         if Commands.trace_conf is True:
-            lConf = lower_confidence.GetResultForNetLabel(nets[1])
-            uConf = upper_confidence.GetResultForNetLabel(nets[1])
+            lConf = lower_confidence.GetResultForNetLabel(nets[2], nets[2]+'_fout')
+            uConf = upper_confidence.GetResultForNetLabel(nets[2], nets[2]+'_fout')
 
         #we assign a color per network
         color = colors[1]
 
         j = 0
-        plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'french':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = u'Valeur pour le vidéo '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
+        if Commands.language == 'english':
+            plt.scatter(single_data[j].x, single_data[j].y, color = color, label = 'Single data point for video '+str(write.defineLabel(single_data[j].label,'A13')), linestyle = linestyles[j])
         if max(single_data[j].y) > current_ymax:
             current_ymax = max(single_data[j].y)
         if min(single_data[j].y) < current_ymin:
@@ -477,7 +535,10 @@ def main():
         #for k in xrange(len(concat_data)):
             #if k > 0: break
         k = 0
-        plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'french':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = u'Données concaténées pour le vidéo '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
+        if Commands.language == 'english':
+            plt.plot(concat_data[k].x, concat_data[k].y, color = color, label = 'Concatenated data for video '+str(write.defineLabel(concat_data[k].label,'A13')), linestyle = linestyles[k])
         if max(concat_data[k].y) > current_ymax:
             current_ymax = max(concat_data[k].y)
         if min(concat_data[k].y) < current_ymin:
@@ -488,8 +549,8 @@ def main():
             plt.plot(uConf[k].x, uConf[k].y, color = 'k', linestyle = '--')
 
 
-        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float) + 0.02
-        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.00
+        new_ymax = mathTools.myceil(current_ymax,base=0.01,outType=float) + 0.01
+        new_ymin = mathTools.myfloor(current_ymin,base=0.01,outType=float) - 0.01
 
         ax2.set_ylim(ymin = new_ymin, ymax = new_ymax)
         ax2.set_xlim(xmin = 0, xmax = 50)#max(data_line.x)+1,5))
@@ -511,7 +572,10 @@ def main():
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), frameon=False, ncol=2, prop = fontP)
         ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -1.45), frameon=False, ncol=2, prop = fontP)
 
-        fig.text(0.70, 0.83,'Simulated with:\nDefault values\nFirst seed = '+str(first_seed)+'\nIncrementation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
+        if Commands.language == 'french':
+            fig.text(0.20, 0.83,u'Simulé avec:\nValeurs par défaut\nNombre aléatoire d\'amorce= '+str(first_seed)+u'\nIncrémentation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
+        if Commands.language == 'english':
+            fig.text(0.20, 0.83,'Simulated with:\nDefault values\nFirst seed = '+str(first_seed)+'\nIncrementation = '+str(increments),style='italic',bbox=dict(boxstyle='Square,pad=0.3', fc='w'),fontsize=9)
 
 
         '''

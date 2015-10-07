@@ -183,7 +183,7 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
 
     if vertical_xtickslabels is True:
         plt.setp(ax.xaxis.get_majorticklabels(), rotation='vertical')
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.17)
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.20)
         ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4, fontsize=labelsize)
     else:
         plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.15)

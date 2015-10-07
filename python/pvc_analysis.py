@@ -40,8 +40,7 @@ def analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data
         else:
             non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
             video_data.forFMgap.cleanStats(0.5*config.fps)
-            video_data.oppLCbgap.cleanStats(0); vissim_data.oppLCbgap.cleanStats(0)
-            video_data.manLCbgap.cleanStats(0); vissim_data.manLCbgap.cleanStats(0)
+            video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0)
             dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
             #starting the building of the secondary values outputs
             #for the first 3 variables, which are intergers, we use:
@@ -125,9 +124,10 @@ def analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config):
 
     network[N].addVideoComparison(secondary_values)
 
-    d_stat.append([fout]+vissim_data.getConstraints())
+    d_stat.append([fout]+vissim_data.getConstraint                    video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0.5*config.fps)
 
     return
+
 
 def runVissimForCalibrationAnalysis(network, inputs):
     '''Note: Vissim is passed in the Network class variable 'network'
@@ -170,7 +170,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
                 return False, network[N], ['N/A' for i in xrange(parameters[2])], 'Unfeasible'
 
         #load the network
-        load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]), err_file=True)
+        load = vissim.loadNetwork(Vissim, os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]), err_file_path=final_inpx_path)
 
         #check for network loading error
         if load is not True:
@@ -198,7 +198,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
             #treating the outputs
             vissim_data = outputs.Derived_data()
-            vissim_data.activateConstraints(config)
+            vissim_data.act                    video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0.5*config.fps)
             inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config, VI]
             file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
             if len(file_list) > 1 and 3 == 5:
@@ -219,6 +219,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
             if config.CALIBDATA_in_csv:
                 analyseCSVData(final_inpx_path, d_stat, vissim_data, config)
+
 
             network[N].feasibility = vissim_data.testConstraints()
 
@@ -343,11 +344,11 @@ def monteCarlo_vissim(valuesVector, inputs):
                 running = True
 
             #loading the network
-            loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
+            loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename), err_file_path=folderpath)
 
             if loaded != 'LoadNetError':
                 #Vissim initialisation and simulation running
-                vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp)
+                vissim.initializeSimulation(Vissim, sim_parameters, valuesVector[value], parameters, commands.save_swp, err_file_path=folderpath)
 
         out_valuesVector.append([valuesVector[value], folderpath, lowerbound])
 
@@ -547,7 +548,7 @@ def OAT_sensitivity(values, inputs, default = False):
                         continue
 
                 else:
-                    loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename))
+                    loaded = vissim.loadNetwork(Vissim, os.path.join(folderpath, filename), err_file_path=folderpath)
 
                     if loaded == 'LoadNetError':
                         if default is True:
@@ -562,7 +563,7 @@ def OAT_sensitivity(values, inputs, default = False):
                         running = True
 
                         #Vissim initialisation and simulation running
-                        simulated = vissim.initializeSimulation(Vissim, sim_parameters, corrected_values, parameters, commands.save_swp)
+                        simulated = vissim.initializeSimulation(Vissim, sim_parameters, corrected_values, parameters, commands.save_swp,err_file_path=folderpath)
 
                         if simulated is not True:
                             text.append([value_name, corrected_values,''.join(str(simulated))])    #printing the exception in the csv file

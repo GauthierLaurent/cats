@@ -170,7 +170,7 @@ def main(argv):
     print out
 
     #cleanpointFolder
-    subprocess.Popen([sys.executable, os.path.join(os.getcwd(),'cleanPointFolder.py'), last_num], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    #subprocess.Popen([sys.executable, os.path.join(os.getcwd(),'cleanPointFolder.py'), last_num], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     return 0
 

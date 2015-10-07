@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:25:24 2014
 # Import Native Libraries
 ##################
 
-import psutil, sys, os, traceback, pandas
+import psutil, sys, os, traceback
 import win32com.client
 
 ##################
@@ -48,7 +48,7 @@ def startVissim():
     except:
         return 'StartError'
 
-def loadNetwork(Vissim, InpxPath, err_file=False):
+def loadNetwork(Vissim, InpxPath, err_file_path=False):
     '''start a Vissim network. Returns True if successfull, LoadNetError otherwise
        The filename MUST have a capital first letter'''
     if Vissim is not False and Vissim is not 'StartError':
@@ -56,8 +56,8 @@ def loadNetwork(Vissim, InpxPath, err_file=False):
             Vissim.LoadNet (InpxPath)
             return True
         except:
-            if err_file is True:
-                with open(os.path.join(InpxPath.strip(InpxPath.split[os.sep][-1]), 'loadNetwork.err'),'w') as err:
+            if err_file_path is not False:
+                with open(os.path.join(err_file_path, 'loadNetwork.err'),'w') as err:
                     err.write(traceback.format_exc())
             return 'LoadNetError'
 
@@ -81,38 +81,13 @@ def getSpeedDistr(Vissim):
 
     return num_sd_list
 
-def getVehicleInputs(Vissim, simtime):
-    '''returns all existing vehicule inputs in the Vissim file'''
-    num_vi_list = []
-    VIlist = Vissim.Net.VehicleInputs.GetAll
-    for vi in VIlist:
-        link = vi.AttValue('Link')
-        No   = vi.AttValue('No')
-        Veh  = 0
-
-        #reconstructing total volume that should be seen in the simulation,
-        #accounting for simulation lenght
-        TIlist = vi.TimeintVehVols.GetAll
-        for ti in TIlist:
-            vol   = ti.AttValue('Volume')
-            start = ti.TimeInt.AttValue('Start')
-            end   = ti.TimeInt.AttValue('End')
-
-            if end > 10^10:
-                end = simtime
-
-            Veh += vol*(end-start)/float(3600)
-
-        num_vi_list.append([link,No,Veh])
-
-    return num_vi_list
-
-def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'DSD'):
+def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'Link'):
     '''object type can be either:
             DSD for Desired Speed Decision
             RSA for Reduced Speed Area
             VC  for Vehicule composition
     '''
+
     if object_type == 'RSA':
         if Vissim.Net.ReducedSpeedAreas.Count > 0:
             RSA = Vissim.Net.ReducedSpeedAreas.ItemByKey(obj_num)
@@ -130,7 +105,7 @@ def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'DSD'):
     if object_type == 'VC':
         if Vissim.Net.VehicleCompositions.Count > 0:
             VC = Vissim.Net.VehicleCompositions.ItemByKey(obj_num)
-            VDS = VC.VehCompRelFlows.GetAll
+            VDS = VC.VehCompRelFlow.GetAll
             for vds in VDS:
                 vds.SetAttValue('DesSpeedDistr', dist_num)
 
@@ -171,11 +146,6 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
                 for variable in xrange(len(parameters)):
                     if caracterizedParameter('DrivingBehaviors', parameters[variable]):
                         Vissim.Net.DrivingBehaviors[i].SetAttValue(parameters[variable].vissim_name,values[variable])
-
-        #setting speed zones
-        for variable in xrange(len(parameters)):
-            if parameters[variable].name == 'SpeedZone':
-                setReducedSpeedAreas(Vissim, parameters[variable].vissim_name.split('&')[1], values[variable], object_type = parameters[variable].vissim_name.split('&')[0])
 
         #Saving variable changes
         Vissim.SaveNet()

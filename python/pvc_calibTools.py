@@ -357,9 +357,9 @@ class ResultList:
     def GetNetLabels(self):
         return [result.netLabel for result in self.results]
 
-    def GetResultForNetLabel(self,netLabel):
+    def GetResultForNetLabel(self,netLabel,label):
         out = []
         for result in self.results:
-            if result.netLabel == netLabel:
+            if result.netLabel == netLabel and result.label == label:
                 out.append(result)
         return out
