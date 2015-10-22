@@ -104,6 +104,9 @@ class Variable:
         else:
             return None
 
+    def addList(self,dataList):
+        self.list = dataList
+
     @staticmethod
     def floatOrBool(stringvalue):
         try:
@@ -123,9 +126,6 @@ class Variable:
             return float(stringvalue)
         except:
             return None
-
-    def addList(self,dataList):
-        self.list = dataList
 
 class Videos:
     '''contains video information'''
@@ -350,6 +350,7 @@ def extractDataFromCSV(dirname, filename, data_type):
                 data_number,desired_value         --> 2nd thing calculated in vissim
                 data_number,desired_value         --> 3rd thing calculated in vissim
                 ...
+
         data_type:   Speed Zones Data
                      Travel Times Data
                      Approach

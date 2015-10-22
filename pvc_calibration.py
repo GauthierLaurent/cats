@@ -8,11 +8,6 @@
 to import a starting point, call with -p __list of points separated by spaces__
 ex: -p 1.0 -2.0 3.0 4.5 6
 '''
-
-#Dev Stuff:
-import sys, os
-sys.path = [p.replace('pvc_tools','pvc_tools_dev') if os.path.join('pvc_tools', os.sep, 'python') in p else p for p in sys.path]
-
 ################################################################################
 
 def main():
@@ -145,7 +140,7 @@ def main():
         vissim.loadNetwork(Vissim, networks[0].inpx_path)
     else:
         Vissim = None
-    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], outputs.ActiveConstraints.getConstraintsTypes(config),starting_point,Vissim=Vissim)
+    write.NOMAD.verify_params(config.path_to_NOMAD_param, [i for i in variables if i.include is True], outputs.ActiveConstraints.getActiveConstraintsTypes(config),starting_point,Vissim=Vissim)
     write.NOMAD.set_BB_path(config.path_to_NOMAD_param, 'calib.py')
 
     if Vissim is not None:

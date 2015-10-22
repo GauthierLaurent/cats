@@ -113,9 +113,9 @@ def list2D(item, i_type='int'):
             if(i_type == 'float'):  item.append([float(x) for x in parsingx])
             elif(i_type == 'bool'): item.append([str2bool(x) for x in parsingx])
             elif(i_type == 'int'):  item.append([int(x) for x in parsingx])
-            elif(i_type == 'BIS'):  item.append([str2bool(item[0]),int(item[1]),item[2]])
-            elif(i_type == 'BIIS'): item.append([str2bool(item[0]),int(item[1]),int(item[2]),item[3]])
-            elif(i_type == 'BFS'):  item.append([str2bool(item[0]),float(item[1]),item[2]])
+            elif(i_type == 'BIS'):  item.append([str2bool(parsingx[0]),int(parsingx[1]),parsingx[2]])
+            elif(i_type == 'BIIS'): item.append([str2bool(parsingx[0]),int(parsingx[1]),int(parsingx[2]),parsingx[3]])
+            elif(i_type == 'BFS'):  item.append([str2bool(parsingx[0]),float(parsingx[1]),parsingx[2]])
             else:                   item.append([x for x in parsingx])
         return item
     else:
@@ -212,6 +212,7 @@ class Config:
         self.cmp_for_gaps             = self.parse('Compute_forward_gaps',         'False',  c_type='bool')
         self.cmp_travel_times         = self.parse('Compute_travel_times',         'False',  c_type='bool')
         self.cmp_speedZones           = self.parse('Compute_speed_zones',          'False',  c_type='bool')
+        self.cmp_files                = self.parse('Compute_queues',               'False',  c_type='bool')
 
         self.section = 'Calibration - fout'
         self.output_forward_gaps      = self.parse('calib_forward_gaps',           'True',   c_type='bool')
@@ -228,8 +229,8 @@ class Config:
         self.decelp_constraint        = self.parse('Deceleration_constraint',     '[False, 0, EB]',  c_type='BIS')
         self.accel0_constraint        = self.parse('Acceleration_constraint',     '[False, 0, EB]',  c_type='BIS')
         self.diFlow_constraint        = self.parse('Passing_flow_constraint',     '[False, 10, EB]', c_type='BFS')
-        self.saturation_values        = self.parse('Saturation_constraint',       '[[False, 16, 1600, PB],[False, 16, 1600, PB]]', c_type='BIIS', c_struct='list2D')
-        self.saturation_max_tiv       = self.parse('Saturation_MAX_TIV',          '15',     c_type='int')
+        self.saturation_values        = self.parse('Saturation_constraint',       '[[False, 16, 1600, PB]]', c_type='BIIS', c_struct='list2D')
+        self.saturation_max_tiv       = self.parse('Saturation_MAX_TIV_(sec)',    '10',     c_type='int')
         self.saturation_min_nb_tiv    = self.parse('Saturation_Min_NB_TIV',       '4',      c_type='int')
         self.saturation_centile       = self.parse('Saturation_percentile',       '15',     c_type='int')
 
@@ -348,7 +349,7 @@ class Config:
         elif(c_type == 'BIS'):
             return list1D(self.config.get(self.section, key), i_type='BIS')
         elif(c_type == 'BIIS'):
-            if (c_struct == 'list2D'): return list2D(self.config.get(self.section, key))
+            if (c_struct == 'list2D'): return list2D(self.config.get(self.section, key), i_type='BIIS')
             else:                      return list1D(self.config.get(self.section, key), i_type='BIIS')
         elif(c_type == 'BFS'):
             return list1D(self.config.get(self.section, key), i_type='BFS')

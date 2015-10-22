@@ -8,9 +8,10 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Libraries
 ##################
 ##natives
-import os, sys, StringIO, copy, pandas
+import os, sys, StringIO, copy, pandas, tempfile
 import numpy as np
 import random, time
+from contextlib import contextmanager
 
 ##internals
 import pvc_mathTools as mathTools
@@ -221,7 +222,7 @@ class Constraints:
                 self.files[self.getFilenames().index(filename)].addCi(ci,name)
             else:
                 self.files += [FileConstraint()]
-                self.files[-1].setAll(self.actives.getActiveNames(),self.actives.getThresholdList(),ci,name,filename)
+                self.files[-1].setAll(self.actives.getActiveNames(),[-1* t for t in self.actives.getActiveThresholdList()],ci,name,filename)
             self.regenMaster()
 
     def regenMaster(self):
@@ -448,21 +449,25 @@ class ActiveConstraints:
         self.activeList.append(config.nonGen_constraint[0])
         self.activeList.append(config.decelp_constraint[0])
         self.activeList.append(config.accel0_constraint[0])
+        self.activeList.append(config.diFlow_constraint[0])
 
         self.tresholdList.append(config.collis_constraint[1])
         self.tresholdList.append(config.nonGen_constraint[1])
         self.tresholdList.append(config.decelp_constraint[1])
         self.tresholdList.append(config.accel0_constraint[1])
+        self.tresholdList.append(config.diFlow_constraint[1])
 
         self.typeList.append(config.collis_constraint[2])
         self.typeList.append(config.nonGen_constraint[2])
         self.typeList.append(config.decelp_constraint[2])
         self.typeList.append(config.accel0_constraint[2])
+        self.typeList.append(config.diFlow_constraint[2])
 
         self.nameList.append('collisions')
         self.nameList.append('nonGen')
         self.nameList.append('deceleration')
         self.nameList.append('acceleration')
+        self.nameList.append('flowPasses')
 
         for i in xrange(len(config.saturation_values)):
             self.activeList.append(config.saturation_values[i][0])
@@ -491,12 +496,24 @@ class ActiveConstraints:
 
     def calculateConstraint(self, name, value):
         '''converts num, dp and a0 errors into constraint values'''
-        return value - self.tresholdList[self.nameList.index(name)]
+        if name in self.nameList:
+            if name == 'flowPasses':
+                return value
+                #TODO
+            elif 'saturation' in name:
+                return calculateflowPassesConstraint(value, self.tresholdList[self.nameList.index(name)], 10)
+            else:
+                return value - self.tresholdList[self.nameList.index(name)]
 
     @staticmethod
     def getConstraintsTypes(config):
         tmp = ActiveConstraints(config)
         return tmp.typeList
+
+    @staticmethod
+    def getActiveConstraintsTypes(config):
+        tmp = ActiveConstraints(config)
+        return [tmp.typeList[i] for i in xrange(len(tmp.typeList)) if tmp.activeList[i]]
 
     @staticmethod
     def getNumberOfConstraints(config):
@@ -603,7 +620,11 @@ def smartCountCollisionsVissim(dirname, filename, maxLines, lanes = None, collis
 
     return nCollisions
 
-def saturationFlow(objects, s, lane, centile, max_tiv, min_nb_tiv):
+def saturationFlowDistribution(objects, s, lane, centile, max_tiv, min_nb_tiv, simSecPerTimeUnit):
+    '''calculates the maximum flow (85th percentile) for each flow peak on a given lane
+
+       returns a list of the peaks - list is empty if no tiv under the min tiv is detected'''
+
     gaps, speeds = forwardGaps(objects, s, lane)
 
     saturation_flow = []
@@ -616,11 +637,11 @@ def saturationFlow(objects, s, lane, centile, max_tiv, min_nb_tiv):
     caract_gaps = []
     counter = 0
     for gap in gaps:
-        if gap > max_tiv:
+        if gap > max_tiv*simSecPerTimeUnit:
             caract_gaps.append(-1)
             counter += 1
         else:
-            gap.append(counter)
+            caract_gaps.append(counter)
 
     #For each of those sublists that have a lenght greater than min_nb_tiv, we calculate
     #the saturation flow by taking the inverse of the mean of every gaps that are below the
@@ -629,10 +650,45 @@ def saturationFlow(objects, s, lane, centile, max_tiv, min_nb_tiv):
         num_gaps = np.asarray(gaps)[np.asarray(caract_gaps) == num]
 
         if len(num_gaps) >= min_nb_tiv:
-            below_15 = num_gaps[num_gaps <= np.percentile(num_gaps, 15)]
-            saturation_flow.append(1/below_15.mean())
+            below_centile = num_gaps[num_gaps <= np.percentile(num_gaps, centile)]
+            saturation_flow.append(1/below_centile.mean()*3600)
 
     return saturation_flow
+
+def saturationFlow(objects, s, lane, centile, max_tiv, min_nb_tiv, simSecPerTimeUnit):
+    tiv_list = saturationFlowDistribution(objects, s, lane, centile, max_tiv, min_nb_tiv, simSecPerTimeUnit)
+    if len(tiv_list) > 0:
+        return max(tiv_list)
+    else:
+        return 0
+
+def compareSimAndInputFlows(linkDict, VehiculeInputs, acceptable_error):
+    value_list = []
+    target_list = []
+
+    for i in xrange(len(VehiculeInputs)):
+        if int(VehiculeInputs[i].link) in linkDict.keys():
+            value_list.append(linkDict[int(VehiculeInputs[i].link)])
+        else:
+            value_list.append(0)
+        target_list.append(VehiculeInputs[i].vehInput)
+
+    return calculateAllflowConstraint(value_list, target_list, acceptable_error)
+
+def calculateflowPassesConstraint(value, target, acceptable_error):
+    '''checks if a single flow point is reached'''
+    if value in [target*(1-float(acceptable_error)/100), target*(1+float(acceptable_error)/100)]:
+        return 0
+    else:
+        return (abs(target-value)- target*float(acceptable_error)/100)/target #relative error
+
+def calculateAllflowConstraint(value_list, target_list, acceptable_error):
+    C = 0
+    for i in xrange(len(value_list)):
+        value = calculateflowPassesConstraint(value_list[i], target_list[i], acceptable_error)
+        if value > C:
+            C = copy.deepcopy(value)
+    return C
 
 def calculate_jam_constraint(objects, threshold):
     '''From the fzp, calculates if a jam occurs'''
@@ -728,7 +784,7 @@ def sort_fout_and_const(fout_lists):
             valids.append(fout_lists.index(l))
 
     #sort valids
-    if len(valids) == len(fout_lists):
+    if len(valids) == len(fout_lists) and len(valids) > 0:
         to_conserve = fout_lists[valids[0]]
         for i in valids:
             if fout_lists[i][0] > to_conserve[0]:
@@ -991,7 +1047,7 @@ def laneChange(objects, corridors):
 
     return oppObjDict, manObjDict, laneDict
 
-def getDelayFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True):
+def getTTFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True, output = 'travelTimes'):
     '''filename has to be a .rsr'''
     #import pandas
     from pandas import read_csv
@@ -1013,21 +1069,10 @@ def getDelayFromVissimFile(filename, warmUpLastInstant = None, lowMemory = True)
         else:
             travelTimes[row['   No.']] = [row['  Trav']]
 
-    '''
-    unique_detectors = pandas.unique(data['   No.'])
-
-    meansDelay = {}
-    meansTravelTime = {}
-
-    for unique in unique_detectors:
-        meansDelay[unique] = data.loc[data['   No.'] == unique].loc[:,' Delay'].mean()
-        #data.loc[data['   No.'] == unique].loc[:,' Delay'].sum()
-        #data.loc[data['   No.'] == unique].loc[:,' Delay'].min()
-        #data.loc[data['   No.'] == unique].loc[:,' Delay'].max()
-
-        meansTravelTime[unique] = data.loc[data['   No.'] == unique].loc[:,'  Trav'].mean()
-    '''
-    return travelTimes.values(), delays.values()
+    if output == 'Delays':
+        return delays.values(), delays.keys()
+    if output == 'travelTimes':
+        return travelTimes.values(), travelTimes.keys()
 
 def extract_num_from_fzp_name(filename):
     '''returns the numerical component of a vissim fzp file'''
@@ -1041,7 +1086,7 @@ def extract_num_from_fzp_list(filenames):
     return num_list
 
 def calculateQueues(objects,approaches):
-        pass
+        pass    #v = 3km/h à mettre dans config
 
 def randomGaussRange(low, high, n):
     out = []
@@ -1083,6 +1128,33 @@ def treatVissimOutputs(files, inputs):
 
     return outputs
 
+def remove_unwanted_lanes(filename, links):
+    stack  = ''
+    linkCountDict = {}
+
+    inputfile = open(filename, 'r')
+
+    line = storage.readline(inputfile, '*$')
+
+    while len(line) > 0:
+        data = line.strip().split(';')
+        objNum = int(data[1])
+        link = data[2]
+        if link in links:
+            stack += line+'\n'
+
+        line = storage.readline(inputfile, '*$')
+
+    return stack, linkCountDict
+
+@contextmanager
+def tempinput(data):
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(data)
+    temp.close()
+    yield temp.name
+    os.unlink(temp.name)
+
 def treat_Single_VissimOutput(filename, inputs):
     '''Treat outputs in the given folder '''
 
@@ -1091,19 +1163,35 @@ def treat_Single_VissimOutput(filename, inputs):
     corridors                  = inputs[2]
     outputs                    = inputs[3]
     config                     = inputs[4]
+    VehiculeInputs             = inputs[5]
 
     if verbose:
         print ' === Starting calculations for ' + filename + ' ===  |'
 
-    objects = storage.loadTrajectoriesFromVissimFile(os.path.join(folderpath,filename), config.sim_steps, nObjects = -1, warmUpLastInstant = config.warm_up_time, usePandas = True, lowMemory = False)
-    outputs.addSingleOutput('flow', len(objects), filename)
-
-    #lane building block
+    #building to eval lanes
     to_eval = []
     for j in xrange(len(corridors)):
         to_eval += corridors[j].to_eval
+    for s in xrange(len(config.saturation_values)):
+        if config.saturation_values[s][1] not in to_eval:
+            to_eval.append(config.saturation_values[s][1])
+    #for v in xrange(len(VehiculeInputs)):
+    #    if int(VehiculeInputs[v].link) not in to_eval:
+    #        to_eval.append(VehiculeInputs[v].link)
+    #TODO: add alignments
 
+    #split outputs
+    tmp_str, linkDict = remove_unwanted_lanes(os.path.join(folderpath,filename), [str(ln) for ln in to_eval])
+
+    print '0'
+    with tempinput(tmp_str) as tempFilename:
+        objects = storage.loadTrajectoriesFromVissimFile(tempFilename, config.sim_steps, nObjects = -1, warmUpLastInstant = config.warm_up_time, usePandas = False, lowMemory = False)
+    outputs.addSingleOutput('flow', len(objects), filename)
+    import pdb;pdb.set_trace()
+    print '1'
+    #lane building block
     lanes = {}
+    all_lanes = {}
     for o in objects:
         o.curvilinearVelocities = o.curvilinearPositions.differentiate(True)
         for i in xrange(len(o.curvilinearPositions.lanes)):
@@ -1119,7 +1207,15 @@ def treat_Single_VissimOutput(filename, inputs):
                     elif s > lanes[str(lane)][1]:
                         lanes[str(lane)][1] = s
 
+            if lane not in all_lanes:
+                all_lanes[lane] = [s, s]
+            else:
+                if s < all_lanes[str(lane)][0]:
+                    all_lanes[str(lane)][0] = s
+                elif s > all_lanes[str(lane)][1]:
+                    all_lanes[str(lane)][1] = s
 
+    import pdb;pdb.set_trace()
     #lane change count by type
     oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
 
@@ -1127,8 +1223,12 @@ def treat_Single_VissimOutput(filename, inputs):
         print ' == Lane change compilation done ==  |' + str(time.clock())
 
     #constraint
-    outputs.addConstraintValue('collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
-
+    if 'flowPasses' in outputs.getActiveConstraintNames():
+        outputs.addConstraintValue('flowPasses', compareSimAndInputFlows(linkDict, VehiculeInputs, config.diFlow_constraint[1]), filename)
+    if 'collisions' in outputs.getActiveConstraintNames():
+        outputs.addConstraintValue('collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
+    print '2'
+    import pdb;pdb.set_trace()
     if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
         num, dp, a0 = read_error_file(folderpath, filename.strip('.fzp')+'.err')
     else:
@@ -1137,20 +1237,33 @@ def treat_Single_VissimOutput(filename, inputs):
     outputs.addConstraintValue('nonGen', num, filename)
     outputs.addConstraintValue('deceleration', dp, filename)
     outputs.addConstraintValue('acceleration', a0, filename)
-
+    print '3'
+    import pdb;pdb.set_trace()
     #saturation volume constraint
+    #
+    #the calculation is done lane by lane and we return the maximum observed on any lane of the link at any given point in the simulation
+    lane_saturation_flow = [ [] for i in xrange(len(config.saturation_values))]
+    lanes_to_process = [config.saturation_values[i][1] for i in xrange(len(config.saturation_values))]
     for i in xrange(len(config.saturation_values)):
-        for index,lane in enumerate(lanes):
-            if lane.split('_')[0] == config.saturation_values[i][1]:
-                s = (0.5*lanes[str(lane)][1]-0.5*lanes[str(lane)][0])
-                outputs.addConstraintValue('saturation_'+str(i), saturationFlow(objects, s, lane, config.saturation_centile, config.saturation_max_tiv, config.saturation_min_nb_tiv), filename)
+        for index,lane in enumerate(all_lanes):
+            if int(lane.split('_')[0]) in lanes_to_process:
+                s = (0.5*all_lanes[str(lane)][1]-0.5*all_lanes[str(lane)][0])
+                lane_saturation_flow[lanes_to_process.index(int(lane.split('_')[0]))].append(saturationFlow(objects, s, lane, config.saturation_centile, config.saturation_max_tiv, config.saturation_min_nb_tiv, config.sim_steps))
+
+    for i in xrange(len(lane_saturation_flow)):
+        if len(lane_saturation_flow[i]) > 0:
+            outputs.addConstraintValue('saturation_'+str(i), max(lane_saturation_flow[i]), filename)
+        else:
+            outputs.addConstraintValue('saturation_'+str(i), 0, filename)
 
     if verbose:
         print ' == Constraints calculations done ==  |' + str(time.clock())
 
     outputs.addSingleOutput('oppLCcount', sum([len(oppObjDict[i]) for i in oppObjDict]), filename)
     outputs.addSingleOutput('manLCcount', sum([len(manObjDict[i]) for i in manObjDict]), filename)
-
+    print '4'
+    import pdb;pdb.set_trace()
+    #Forward GAPS
     if config.cmp_for_gaps:
         raw_forward_gaps = []
         raw_forward_speeds = []
@@ -1165,6 +1278,7 @@ def treat_Single_VissimOutput(filename, inputs):
         outputs.addSingleOutput('forFMgap', raw_forward_gaps, filename)
         outputs.addSingleOutput('forSpeeds', raw_forward_speeds, filename)
 
+    #Mandatory lane changes headway acceptance
     if config.cmp_man_lcgaps:
         raw_man_LC_agaps    = []
         raw_man_LC_bgaps    = []
@@ -1177,6 +1291,7 @@ def treat_Single_VissimOutput(filename, inputs):
         outputs.addSingleOutput('manLCagap', raw_man_LC_agaps, filename)
         outputs.addSingleOutput('manLCbgap', raw_man_LC_bgaps, filename)
 
+    #Opportunistic lane changes headway acceptance
     if config.cmp_opp_lcgaps:
         raw_opp_LC_agaps    = []
         raw_opp_LC_bgaps    = []
@@ -1189,6 +1304,12 @@ def treat_Single_VissimOutput(filename, inputs):
             print ' == Opportunistic lane change gaps calculation done ==  |' + str(time.clock())
         outputs.addSingleOutput('oppLCagap', raw_opp_LC_agaps, filename)
         outputs.addSingleOutput('oppLCbgap', raw_opp_LC_bgaps, filename)
+
+    if config.cmp_travel_times:
+        if os.path.isfile(os.path.join(folderpath,filename.strip('.fzp')+'.rsr')):
+            travelTimes, keys = getTTFromVissimFile(os.path.join(folderpath,filename.strip('.fzp')+'.rsr'), warmUpLastInstant = config.warm_up_time, lowMemory = False)
+            outputs.addSingleOutput('travelTms', travelTimes, filename)
+            outputs.addInfos('travelTms',keys)
 
     if verbose:
         print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'

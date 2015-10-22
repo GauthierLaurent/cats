@@ -354,8 +354,7 @@ class NOMAD:
         #               9    0 = MAX_BB_EVAL     line    is present, 1 = MAX_BB_EVAL     line    has to be added
         #              10    0 = STATS_FILE      line    is present, 1 = STATS_FILE      line    has to be added
         #              11    0 = No categorical variables,           1 = NEIGHBORS_EXE has to be in file
-        #              12    0 = NEIGHBORS_EXE   line    is present, 1 = NEIGHBORS_EXE   line    has to be added
-        #]
+        #              12    0 = NEIGHBORS_EXE   line    is present, 1 = NEIGHBORS_EXE   line    has to be added        #]
 
         if os.path.isfile(filepath):
             flag = [0,0,1,1,1,1,1,1,1,1,1,0,1]
@@ -471,7 +470,7 @@ class NOMAD:
 
             if flag[6] == 1:
                 for l in xrange(len(current_lines)):
-                    if ('BB_OUTPUT_TYPE' in current_lines[l] and flag[12] == 0) or ('NEIGHBORS_EXE' in current_lines[l] and flag[12] == 1):
+                    if 'BB_OUTPUT_TYPE' in current_lines[l]:
                           add = NOMAD.add_new_line(current_lines, l)
                           Start = current_lines[0:l+1]
                           Mid   = ['\n']+['\nX0'+add]

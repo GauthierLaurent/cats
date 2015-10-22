@@ -40,7 +40,8 @@ def analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data
         else:
             non_dist_video_data = [video_data.oppLCcount, video_data.manLCcount, video_data.flow]
             video_data.forFMgap.cleanStats(0.5*config.fps)
-            video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0)
+            video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0.5*config.fps)
+            video_data.manLCbgap.cleanStats(0.5*config.fps); vissim_data.manLCbgap.cleanStats(0.5*config.fps)
             dist_video_data = [video_data.forFMgap, video_data.oppLCagap, video_data.oppLCbgap, video_data.manLCagap, video_data.manLCbgap, video_data.forSpeeds]
             #starting the building of the secondary values outputs
             #for the first 3 variables, which are intergers, we use:
@@ -99,7 +100,7 @@ def analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data
                 if config.cmp_man_lcgaps:
                     write.plot_dists(final_inpx_path, 'mandatory lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[4], dist_data[4], secondary_values[12], parameters[0], config.fps, seed_nums)
 
-    return
+    return d_stat, network, d_stat
 
 def analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config):
 
@@ -117,17 +118,16 @@ def analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config):
             vissim_time = vissim_data.travelTms[vissimNum_TTms.index(float(ttms.vissim_num))].cumul_all.mean
             csv_time = float(ttms.observedTT)
 
-            fout_list.append(abs(csv_time - vissim_time)/csv_time)
+            fout_list.append(abs(csv_time - vissim_time)/csv_time*100)
             secondary_values.append([csv_time, vissim_time, abs(csv_time - vissim_time)/csv_time])
 
     fout = max(fout_list)
 
     network[N].addVideoComparison(secondary_values)
 
-    d_stat.append([fout]+vissim_data.getConstraint                    video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0.5*config.fps)
+    d_stat.append([fout]+vissim_data.getConstraints())
 
-    return
-
+    return d_stat, network, d_stat
 
 def runVissimForCalibrationAnalysis(network, inputs):
     '''Note: Vissim is passed in the Network class variable 'network'
@@ -198,7 +198,7 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
             #treating the outputs
             vissim_data = outputs.Derived_data()
-            vissim_data.act                    video_data.oppLCbgap.cleanStats(0.5*config.fps); vissim_data.oppLCbgap.cleanStats(0.5*config.fps)
+            vissim_data.activateConstraints(config)
             inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config, VI]
             file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
             if len(file_list) > 1 and 3 == 5:
@@ -215,11 +215,10 @@ def runVissimForCalibrationAnalysis(network, inputs):
             seed_nums = outputs.extract_num_from_fzp_list(file_list)
 
             if config.CALIBDATA_video:
-                analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data, parameters, config)
+                d_stat, network, d_stat = analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data, parameters, config)
 
             if config.CALIBDATA_in_csv:
-                analyseCSVData(final_inpx_path, d_stat, vissim_data, config)
-
+                d_stat, network, d_stat = analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config)
 
             network[N].feasibility = vissim_data.testConstraints()
 

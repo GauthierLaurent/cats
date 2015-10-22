@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:25:24 2014
 # Import Native Libraries
 ##################
 
-import psutil, sys, os, traceback
+import psutil, sys, os, traceback, pandas
 import win32com.client
 
 ##################
@@ -57,7 +57,7 @@ def loadNetwork(Vissim, InpxPath, err_file_path=False):
             return True
         except:
             if err_file_path is not False:
-                with open(os.path.join(err_file_path, 'loadNetwork.err'),'w') as err:
+                with open(os.path.join(InpxPath.strip(InpxPath.split[os.sep][-1]), 'loadNetwork.err'),'w') as err:
                     err.write(traceback.format_exc())
             return 'LoadNetError'
 
@@ -81,7 +81,33 @@ def getSpeedDistr(Vissim):
 
     return num_sd_list
 
-def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'Link'):
+def getVehicleInputs(Vissim, simtime):
+    '''returns all existing vehicule inputs in the Vissim file'''
+    num_vi_list = []
+    VIlist = Vissim.Net.VehicleInputs.GetAll
+    for vi in VIlist:
+        link = vi.AttValue('Link')
+        No   = vi.AttValue('No')
+        Veh  = 0
+
+        #reconstructing total volume that should be seen in the simulation,
+        #accounting for simulation lenght
+        TIlist = vi.TimeintVehVols.GetAll
+        for ti in TIlist:
+            vol   = ti.AttValue('Volume')
+            start = ti.TimeInt.AttValue('Start')
+            end   = ti.TimeInt.AttValue('End')
+
+            if end > 10^10:
+                end = simtime
+
+            Veh += vol*(end-start)/float(3600)
+
+        num_vi_list.append([link,No,Veh])
+
+    return num_vi_list
+
+def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'DSD'):
     '''object type can be either:
             DSD for Desired Speed Decision
             RSA for Reduced Speed Area
@@ -105,7 +131,7 @@ def setReducedSpeedAreas(Vissim, obj_num, dist_num, object_type = 'Link'):
     if object_type == 'VC':
         if Vissim.Net.VehicleCompositions.Count > 0:
             VC = Vissim.Net.VehicleCompositions.ItemByKey(obj_num)
-            VDS = VC.VehCompRelFlow.GetAll
+            VDS = VC.VehCompRelFlows.GetAll
             for vds in VDS:
                 vds.SetAttValue('DesSpeedDistr', dist_num)
 
@@ -146,6 +172,11 @@ def initializeSimulation(Vissim, sim_parameters, values, parameters, swp = False
                 for variable in xrange(len(parameters)):
                     if caracterizedParameter('DrivingBehaviors', parameters[variable]):
                         Vissim.Net.DrivingBehaviors[i].SetAttValue(parameters[variable].vissim_name,values[variable])
+
+        #setting speed zones
+        for variable in xrange(len(parameters)):
+            if parameters[variable].name == 'SpeedZone':
+                setReducedSpeedAreas(Vissim, parameters[variable].vissim_name.split('&')[1], values[variable], object_type = parameters[variable].vissim_name.split('&')[0])
 
         #Saving variable changes
         Vissim.SaveNet()
@@ -212,58 +243,83 @@ class linkTo:
         self.relation    = relation
 
 class vissimParameters:
-    def __init__(self,vissim_name,vissim_min, vissim_max, vissim_default, param_type, value_type):
+    def __init__(self,vissim_name,vissim_min, vissim_max, vissim_default, value_type, param_type, included_in):
         self.vissim_name    = vissim_name
         self.vissim_min     = vissim_min
         self.vissim_max     = vissim_max
         self.vissim_default = vissim_default
         self.param_type     = param_type
         self.ValueType      = value_type
+        self.included_in    = included_in
+        self.linkedTo       = []
 
     def set_link(self, linked_variable, relation):
         #relation = 'greater' or 'lower'
-        self.linkedTo = linkTo(linked_variable, relation)
+        self.linkedTo.append(linkTo(linked_variable, relation))
 
 def vissimDictionnary():
     values = {}
 
     #Wiedemann 74
-    values['W74ax']     = vissimParameters('W74ax',      0.0,   None,    2.0,   'DrivingBehaviors', 'R')
-    values['W74bxAdd']  = vissimParameters('W74bxAdd',   0.0,   None,    2.0,   'DrivingBehaviors', 'R')
-    values['W74bxMult'] = vissimParameters('W74bxMult',  0.0,   None,    3.0,   'DrivingBehaviors', 'R')
+    values['W74ax']     = vissimParameters('W74ax',      0.0,   None,    2.0,  'R',   'DrivingBehaviors', 'Net')
+    values['W74bxAdd']  = vissimParameters('W74bxAdd',   0.0,   None,    2.0,  'R',   'DrivingBehaviors', 'Net')
+    values['W74bxMult'] = vissimParameters('W74bxMult',  0.0,   None,    3.0,  'R',   'DrivingBehaviors', 'Net')
 
     #Wiedemann 99
-    values['W99cc0']    = vissimParameters('W99cc0',     0.0,   None,    1.5,   'DrivingBehaviors', 'R')
-    values['W99cc1']    = vissimParameters('W99cc1',    None,   None,    0.9,   'DrivingBehaviors', 'R')
-    values['W99cc2']    = vissimParameters('W99cc2',     0.0,   None,    4.0,   'DrivingBehaviors', 'R')
-    values['W99cc3']    = vissimParameters('W99cc3',    None,   None,   -8.0,   'DrivingBehaviors', 'R')
-    values['W99cc4']    = vissimParameters('W99cc4',    None,   None,   -0.35,  'DrivingBehaviors', 'R')
-    values['W99cc5']    = vissimParameters('W99cc5',    None,   None,    0.35,  'DrivingBehaviors', 'R')
-    values['W99cc6']    = vissimParameters('W99cc6',    None,   None,   11.44,  'DrivingBehaviors', 'R')
-    values['W99cc7']    = vissimParameters('W99cc7',    None,   None,    0.25,  'DrivingBehaviors', 'R')
-    values['W99cc8']    = vissimParameters('W99cc8',    None,   None,    3.5 ,  'DrivingBehaviors', 'R')
-    values['W99cc9']    = vissimParameters('W99cc9',    None,   None,    1.5 ,  'DrivingBehaviors', 'R')
+    values['W99cc0']    = vissimParameters('W99cc0',     0.0,   None,    1.5,  'R',  'DrivingBehaviors', 'Net')
+    values['W99cc1']    = vissimParameters('W99cc1',    None,   None,    0.9,  'R',  'DrivingBehaviors', 'Net')
+    values['W99cc2']    = vissimParameters('W99cc2',     0.0,   None,    4.0,  'R',  'DrivingBehaviors', 'Net')
+    values['W99cc3']    = vissimParameters('W99cc3',    None,   None,   -8.0,  'R',  'DrivingBehaviors', 'Net')
+    values['W99cc4']    = vissimParameters('W99cc4',    None,   None,   -0.35, 'R',  'DrivingBehaviors', 'Net')
+    values['W99cc5']    = vissimParameters('W99cc5',    None,   None,    0.35, 'R',  'DrivingBehaviors', 'Net')
+    values['W99cc6']    = vissimParameters('W99cc6',    None,   None,   11.44, 'R',  'DrivingBehaviors', 'Net')
+    values['W99cc7']    = vissimParameters('W99cc7',    None,   None,    0.25, 'R',  'DrivingBehaviors', 'Net')
+    values['W99cc8']    = vissimParameters('W99cc8',    None,   None,    3.5 , 'R',  'DrivingBehaviors', 'Net')
+    values['W99cc9']    = vissimParameters('W99cc9',    None,   None,    1.5 , 'R',  'DrivingBehaviors', 'Net')
 
     #general following behavior
-    values['LookAheadDistMin']   = vissimParameters('LookAheadDistMin',    0.0,   999999,    0.0,  'DrivingBehaviors',  'R'); values['LookAheadDistMin'].set_link('LookAheadDistMax','lower')
-    values['LookAheadDistMax']   = vissimParameters('LookAheadDistMax',    0.0,   999999,  250.0,  'DrivingBehaviors',  'R'); values['LookAheadDistMax'].set_link('LookAheadDistMin','greater')
-    values['ObsrvdVehs']         = vissimParameters('ObsrvdVehs',          0.0,   999999,    2.0,  'DrivingBehaviors',  'I')
-    values['LookBackDistMin']    = vissimParameters('LookBackDistMin',     0.0,   999999,    0.0,  'DrivingBehaviors',  'R'); values['LookBackDistMin'].set_link('LookBackDistMax','lower')
-    values['LookBackDistMax']    = vissimParameters('LookBackDistMax',     0.0,   999999,  150.0,  'DrivingBehaviors',  'R'); values['LookBackDistMax'].set_link('LookBackDistMin','greater')
+    values['LookAheadDistMin']   = vissimParameters('LookAheadDistMin',    0.0,   999999,    0.0,  'R',  'DrivingBehaviors',  'Net'); values['LookAheadDistMin'].set_link('LookAheadDistMax','lower')
+    values['LookAheadDistMax']   = vissimParameters('LookAheadDistMax',    0.0,   999999,  250.0,  'R',  'DrivingBehaviors',  'Net'); values['LookAheadDistMax'].set_link('LookAheadDistMin','greater')
+    values['ObsrvdVehs']         = vissimParameters('ObsrvdVehs',          0.0,   999999,    2.0,  'I',  'DrivingBehaviors',  'Net')
+    values['LookBackDistMin']    = vissimParameters('LookBackDistMin',     0.0,   999999,    0.0,  'R',  'DrivingBehaviors',  'Net'); values['LookBackDistMin'].set_link('LookBackDistMax','lower')
+    values['LookBackDistMax']    = vissimParameters('LookBackDistMax',     0.0,   999999,  150.0,  'R',  'DrivingBehaviors',  'Net'); values['LookBackDistMax'].set_link('LookBackDistMin','greater')
 
     #general lane change
-    values['MaxDecelOwn']        = vissimParameters('MaxDecelOwn',       -10.0,  -0.02,    -4.0,  'DrivingBehaviors',  'R')
-    values['DecelRedDistOwn']    = vissimParameters('DecelRedDistOwn',     0.0,   None,   100.0,  'DrivingBehaviors',  'R')
-    values['AccDecelOwn']        = vissimParameters('AccDecelOwn',       -10.0,   -1.0,    -1.0,  'DrivingBehaviors',  'R')
-    values['MaxDecelTrail']      = vissimParameters('MaxDecelTrail',     -10.0,  -0.02,    -3.0,  'DrivingBehaviors',  'R')
-    values['DecelRedDistTrail']  = vissimParameters('DecelRedDistTrail',   0.0,   None,   100.0,  'DrivingBehaviors',  'R')
-    values['AccDecelTrail']      = vissimParameters('AccDecelTrail',     -10.0,   -1.0,    -1.0,  'DrivingBehaviors',  'R')
-    values['DiffusTm']           = vissimParameters('DiffusTm',           None,   None,    60.0,  'DrivingBehaviors',  'R')
-    values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,     0.5,  'DrivingBehaviors',  'R')
-    values['SafDistFactLnChg']   = vissimParameters('SafDistFactLnChg',   None,   None,     0.6,  'DrivingBehaviors',  'R')
-    values['CoopLnChg']          = vissimParameters('CoopLnChg',          None,   None,    False, 'DrivingBehaviors',  'B')
-    values['CoopLnChgSpeedDiff'] = vissimParameters('CoopLnChgSpeedDiff', None,   None,     3.0,  'DrivingBehaviors',  'R')
-    values['CoopLnChgCollTm']    = vissimParameters('CoopLnChgCollTm',    None,   None,    10.0,  'DrivingBehaviors',  'R')
-    values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,    -3.0,  'DrivingBehaviors',  'R')
+    values['MaxDecelOwn']        = vissimParameters('MaxDecelOwn',       -10.0,  -0.02,     -4.0,  'R',  'DrivingBehaviors',  'Net')
+    values['DecelRedDistOwn']    = vissimParameters('DecelRedDistOwn',     0.0,   None,    100.0,  'R',  'DrivingBehaviors',  'Net')
+    values['AccDecelOwn']        = vissimParameters('AccDecelOwn',       -10.0,   -1.0,     -1.0,  'R',  'DrivingBehaviors',  'Net')
+    values['MaxDecelTrail']      = vissimParameters('MaxDecelTrail',     -10.0,  -0.02,     -3.0,  'R',  'DrivingBehaviors',  'Net')
+    values['DecelRedDistTrail']  = vissimParameters('DecelRedDistTrail',   0.0,   None,    100.0,  'R',  'DrivingBehaviors',  'Net')
+    values['AccDecelTrail']      = vissimParameters('AccDecelTrail',     -10.0,   -1.0,     -1.0,  'R',  'DrivingBehaviors',  'Net')
+    values['DiffusTm']           = vissimParameters('DiffusTm',           None,   None,     60.0,  'R',  'DrivingBehaviors',  'Net')
+    values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,      0.5,  'R',  'DrivingBehaviors',  'Net')
+    values['SafDistFactLnChg']   = vissimParameters('SafDistFactLnChg',   None,   None,      0.6,  'R',  'DrivingBehaviors',  'Net')
+    values['CoopLnChg']          = vissimParameters('CoopLnChg',          None,   None,     False, 'B',  'DrivingBehaviors',  'Net')
+    values['CoopLnChgSpeedDiff'] = vissimParameters('CoopLnChgSpeedDiff', None,   None,      3.0,  'R',  'DrivingBehaviors',  'Net')
+    values['CoopLnChgCollTm']    = vissimParameters('CoopLnChgCollTm',    None,   None,     10.0,  'R',  'DrivingBehaviors',  'Net')
+    values['MinHdwy']            = vissimParameters('MinHdwy',            None,   None,     -3.0,  'R',  'DrivingBehaviors',  'Net')
 
+    values['DesSpeedDistr']      = vissimParameters('DesSpeedDistr',      'N/A',  'N/A',   'N/A', 'SpeedDistribution', '-'); values['DesSpeedDistr'].set_link('ReducedSpeedAreas','includedIn'); values['DesSpeedDistr'].set_link('VehClassDesSpeedDistr','includedIn'); values['DesSpeedDistr'].set_link('VehCompRelFlows','includedIn')
+
+
+    #if object_type == 'RSA':
+    #    if Vissim.Net.ReducedSpeedAreas.Count > 0:
+    #        RSA = Vissim.Net.ReducedSpeedAreas.ItemByKey(obj_num)
+    #        VDS = RSA.VehClassSpeedRed.GetAll
+    #        for vds in VDS:
+    #            vds.SetAttValue('DesSpeedDistr', dist_num)
+
+    #if object_type == 'DSD':
+    #    if Vissim.Net.DesSpeedDecisions.Count > 0:
+    #        DSD = Vissim.Net.DesSpeedDecisions.ItemByKey(obj_num)
+    #        VDS = DSD.VehClassDesSpeedDistr.GetAll
+    #        for vds in VDS:
+    #            vds.SetAttValue('DesSpeedDistr', dist_num)
+
+    #if object_type == 'VC':
+    #    if Vissim.Net.VehicleCompositions.Count > 0:
+    #        VC = Vissim.Net.VehicleCompositions.ItemByKey(obj_num)
+    #        VDS = VC.VehCompRelFlows.GetAll
+    #        for vds in VDS:
+    #            vds.SetAttValue('DesSpeedDistr', dist_num)
     return values
