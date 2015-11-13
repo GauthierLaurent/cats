@@ -15,8 +15,9 @@ import pvc_csvParse as csvParse
 
 #Command parser
 def commands(parser):
-    parser.add_argument('--dir',                dest='cwd',    default=os.getcwd(), help='Directory (Optional: default is current working directory)')
-    parser.add_argument('--csv',                dest='csv',    required=True,       help='Name of the CSV file associated with the inpx')
+    parser.add_argument('--dir',                             dest='cwd',       default=os.getcwd(), help='Directory (Optional: default is current working directory)')
+    parser.add_argument('--csv',                             dest='csv',       required=True,       help='Name of the CSV file associated with the inpx')
+    parser.add_argument('--translate',  action='store_true', dest='translate', default=False,       help='Translate the legend in french')
     return parser.parse_args()
 
 #Main code
@@ -34,7 +35,7 @@ line = tmp.loc[(tmp[cols] <= 0).all(1),'fout'].argmin()         #line with the l
 
                     #in one line...     tmp.loc[(tmp[[c for c in tmp.columns.tolist() if c.startswith('C')]] <= 0).all(1),'fout'].argmin()
 #changing the value in the big data frame
-data.loc[line,'State'] = 'Best point'
+data.loc[line,'State'] = 'Best Point'
 
 #keeping only the columns we want to trace
 columns = [var.name for var in variables] + ['State']
@@ -43,5 +44,10 @@ data = data[columns]
 lower_bounds = [var.desired_min for var in variables if var.include is True]
 upper_bounds = [var.desired_max for var in variables if var.include is True]
 
-parallel_coordinates.parallel_coordinates(data.dropna(subset=['State']), 'State', color = ['#993399','b','g','r'], normalize=True, bounds = [lower_bounds, upper_bounds], vertical_xtickslabels=True, tracepriority=['First Point','Best Point','Feasible','Unfeasible'], tracepriority_linewidth=[10, 10, 1, 1])
+if Commands.translate:
+    translate_dict = {'Best Point':'Meilleur point','Feasible':u'Réalisable','Unfeasible':u'Non réalisable','First Point':'Premier point'}
+else:
+    translate_dict = None
+
+parallel_coordinates.parallel_coordinates(data.dropna(subset=['State']), 'State', color = ['#FF8000','b','g','#FF00FF'], normalize=True, bounds = [lower_bounds, upper_bounds], vertical_xtickslabels=True, tracepriority=['First Point','Best Point','Feasible','Unfeasible'], tracepriority_linewidth=[4, 4, 1, 1], translate=Commands.translate, translate_dict=translate_dict)
 plt.show()

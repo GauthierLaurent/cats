@@ -34,12 +34,19 @@ class Keep_in_mind:
     def getResultByLabel(self,label):
         return self.tokeep[self.getLabels().index(label)].data
 
+def getTranslation(text, translate, translate_dict):
+    if translate is True and text is not None:
+        return translate_dict[text]
+    else:
+        return text
+
 def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
                          use_columns=False, xticks=None, colormap=None,
                          axvlines=True, shrink=False, normalize=True,
                          bounds=None, nticks = 11, tracepriority = None,
                          tracepriority_linewidth = None, labelsize=16,
-                         vertical_xtickslabels=False,**kwds):
+                         vertical_xtickslabels=False, translate=False,
+                         translate_dict=None,**kwds):
 
     """Parallel coordinates plotting.
 
@@ -141,32 +148,32 @@ def parallel_coordinates(frame, class_column, cols=None, ax=None, color=None,
     for i in range(n):
         y = df.iloc[i].values
         kls = class_col.iat[i]
-        label = com.pprint_thing(kls)
-        if label not in used_legends:
-            used_legends.add(label)
-            if label in tracepriority:
+        ilabel = com.pprint_thing(kls)
+        if ilabel not in used_legends:
+            used_legends.add(ilabel)
+            if ilabel in tracepriority:
                 if tracepriority_linewidth is not None:
-                    keep_in_mind.addData(label, [x, y, colors[kls], label, tracepriority_linewidth[tracepriority.index(label)]])
+                    keep_in_mind.addData(ilabel, [x, y, colors[kls], ilabel, tracepriority_linewidth[tracepriority.index(ilabel)]])
                 else:
-                    keep_in_mind.addData(label, [x, y, colors[kls], label])
+                    keep_in_mind.addData(ilabel, [x, y, colors[kls], ilabel])
             else:
-                ax.plot(x, y, color=colors[kls], label=label, alpha=0.5, **kwds)
+                ax.plot(x, y, color=colors[kls], label=getTranslation(ilabel, translate, translate_dict), alpha=0.5, **kwds)
         else:
-            if label in tracepriority:
+            if ilabel in tracepriority:
                 if tracepriority_linewidth is not None:
-                    keep_in_mind.addData(label, [x, y, colors[kls], None, tracepriority_linewidth[tracepriority.index(label)]])
+                    keep_in_mind.addData(ilabel, [x, y, colors[kls], None, tracepriority_linewidth[tracepriority.index(ilabel)]])
                 else:
-                    keep_in_mind.addData(label, [x, y, colors[kls], None])
+                    keep_in_mind.addData(ilabel, [x, y, colors[kls], None])
             else:
                 ax.plot(x, y, color=colors[kls], alpha=0.5, **kwds)
 
-    for label in reversed(tracepriority):
+    for ilabel in reversed(tracepriority):
         try:
-            for result in keep_in_mind.getResultByLabel(label):
+            for result in keep_in_mind.getResultByLabel(ilabel):
                 if tracepriority_linewidth is not None:
-                    ax.plot(result[0], result[1], color=result[2], label=result[3], linewidth=result[4], alpha=0.5, **kwds)
+                    ax.plot(result[0], result[1], color=result[2], label=getTranslation(result[3], translate, translate_dict), linewidth=result[4], alpha=0.5, **kwds)
                 else:
-                    ax.plot(result[0], result[1], color=result[2], label=result[3], alpha=0.5, **kwds)
+                    ax.plot(result[0], result[1], color=result[2], label=getTranslation(result[3], translate, translate_dict), alpha=0.5, **kwds)
         except:
             pass
 
