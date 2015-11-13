@@ -7,6 +7,7 @@ Created on Fri Jun 05 11:47:30 2015
 '''
 ex, 1 graph with subgraphs: --points 1 --xlim 20 --cumul --title default values
     1 graph per video:      --points 739 --xlim 20 --concat --cumul --title calibrated values
+    1 graph in english      --xlim 10 --cumul --points 1 910 --lang english --type Follow
 '''
 
 import argparse, os
@@ -20,6 +21,7 @@ def commands(parser):
     parser.add_argument('--dir',                         dest='cwd',            default=os.getcwd(), help='Directory (Optional: default is current working directory)')
     parser.add_argument('--cumul',  action='store_true', dest='cumul',          default=False,       help='If called, the cumulative distributions will be traced')
     parser.add_argument('--concat', action='store_false',dest='concat',         default=True,        help='If called, individual graphs will be traced for every video')
+    parser.add_argument('--row',    type=int,            dest='row',            default=2,           help='For concatenated graphs, number of graphs in a row')
     parser.add_argument('--hspace', type=float,          dest='hspace',         default=0.2,         help='Horizontal space between subplots')
     parser.add_argument('--xlim',   type=int,            dest='xlim',           default=30,          help='Limit of the x-axis when plotting the data. Default = 30')
     parser.add_argument('--title',  nargs='*',           dest='title',          default=None,        help='Text to add the the title ''Comparison of simulated and observed [type of output] [for]'' ')
@@ -107,10 +109,10 @@ def trace(Commands, vissim_results, video__results, graph_type):
 
     if Commands.concat:
         fig = plt.figure()
-        fig.set_size_inches(7,3.5*len(video_data_list)/2)
+        fig.set_size_inches(3.5*Commands.row,3.5*len(video_data_list)/Commands.row)
 
-    for j in xrange(2):
-        for i in xrange(len(video_data_list)/2):
+    for j in xrange(Commands.row):
+        for i in xrange(len(video_data_list)/Commands.row):
             if (2*i+j) <= len(video_data_list):
 
                 if not Commands.concat:
@@ -118,7 +120,7 @@ def trace(Commands, vissim_results, video__results, graph_type):
                     fig.set_size_inches(7,7)
 
 
-                for line in video_data_list[2*i+j]:
+                for line in video_data_list[Commands.row*i+j]:
                     #cheat to hide the end of the histogram with cumulative function 1/2
                     if Commands.cumul:
                         line.y.append(70)
@@ -128,15 +130,15 @@ def trace(Commands, vissim_results, video__results, graph_type):
                         bins = 10000
 
                     if Commands.concat:
-                        ax = fig.add_subplot(len(video_data_list)/2,2,(2*i+j)+1)
+                        ax = fig.add_subplot(len(video_data_list)/Commands.row,Commands.row,(Commands.row*i+j)+1)
                     else:
                         ax = fig.add_subplot(1,1,1)
 
-                    ax.hist(line.y, normed=True, histtype=histtype, cumulative=Commands.cumul, bins = bins, color = colors[video_data_list[2*i+j].index(line)], alpha=0.6, label=getLabel(line.label, Commands))
+                    ax.hist(line.y, normed=True, histtype=histtype, cumulative=Commands.cumul, bins = bins, color = colors[video_data_list[Commands.row*i+j].index(line)], alpha=0.6, label=getLabel(line.label, Commands))
 
                 ax.grid(True, which='both')
                 if Commands.concat:
-                    ax.set_title(video_data_list[2*i+j][0].label.split('&')[0], fontsize='small')
+                    ax.set_title(video_data_list[Commands.row*i+j][0].label.split('&')[0], fontsize='small')
 
                 #cheat to hide the end of the histogram with cumulative function 2/2
                 if Commands.cumul:
@@ -163,12 +165,12 @@ def trace(Commands, vissim_results, video__results, graph_type):
 
                 if Commands.concat:
                     #making only the border labels appear
-                    if i == len(video_data_list)/2-1:
+                    if i == len(video_data_list)/Commands.row-1:
                         ax.set_xlabel(xlabel, fontsize='small')
                     else:
                         ax.set_xticklabels('',  visible=False)
 
-                    if (2*i+j)%2 == 0:
+                    if (Commands.row*i+j)%Commands.row == 0:
                         ax.set_ylabel(ylabel, fontsize='small')
                     else:
                         ax.set_yticklabels('', visible=False)
@@ -184,20 +186,20 @@ def trace(Commands, vissim_results, video__results, graph_type):
                 ax.set_position([box.x0, box.y0 + 0.5, box.width, box.height])
 
                 if not Commands.concat:
-                    ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.4), ncol=len(video_data_list[2*i+j]), fontsize='small', frameon=False)
+                    ax.legend(loc='lower center', bbox_to_anchor=(0.0, -0.4), ncol=len(video_data_list[Commands.row*i+j]), fontsize='small', frameon=False)
                     #plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title+' for '+video_data_list[2*i+j][0].label.split('&')[0])
 
                     if Commands.cumul:
                         if Commands.language == 'french':
-                            name = 'Publishable video and Vissim cumulative distributions for '+graph_type+' for '+video_data_list[2*i+j][0].label.split('&')[0]+'_fr'
+                            name = 'Publishable video and Vissim cumulative distributions for '+graph_type+' for '+video_data_list[Commands.row*i+j][0].label.split('&')[0]+'_fr'
                         else:
-                            name = 'Publishable video and Vissim cumulative distributions for '+graph_type+' for '+video_data_list[2*i+j][0].label.split('&')[0]+'_en'
+                            name = 'Publishable video and Vissim cumulative distributions for '+graph_type+' for '+video_data_list[Commands.row*i+j][0].label.split('&')[0]+'_en'
                         fig.savefig(os.path.join(Commands.cwd, name), dpi=600)
                     else:
                         if Commands.language == 'french':
-                            'Publishable video and Vissim distributions for '+graph_type+' for '+video_data_list[2*i+j][0].label.split('&')[0]+'_fr'
+                            'Publishable video and Vissim distributions for '+graph_type+' for '+video_data_list[Commands.row*i+j][0].label.split('&')[0]+'_fr'
                         else:
-                            'Publishable video and Vissim distributions for '+graph_type+' for '+video_data_list[2*i+j][0].label.split('&')[0]+'_en'
+                            'Publishable video and Vissim distributions for '+graph_type+' for '+video_data_list[Commands.row*i+j][0].label.split('&')[0]+'_en'
                         fig.savefig(os.path.join(Commands.cwd, name), dpi=600)
                     plt.clf()
                     plt.close(fig)
@@ -206,7 +208,7 @@ def trace(Commands, vissim_results, video__results, graph_type):
     if Commands.concat:
         plt.subplots_adjust(hspace=Commands.hspace)
 
-        ax.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.45), ncol=len(video_data_list[2*i+j]), fontsize='small', frameon=False)
+        ax.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.45), ncol=len(video_data_list[Commands.row*i+j]), fontsize='small', frameon=False)
         #plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title)
 
         if Commands.cumul:
