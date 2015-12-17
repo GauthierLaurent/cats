@@ -109,7 +109,7 @@ def trace(Commands, vissim_results, video__results, graph_type):
 
     if Commands.concat:
         fig = plt.figure()
-        fig.set_size_inches(3.5*Commands.row,3.5*len(video_data_list)/Commands.row)
+        fig.set_size_inches(3.5*Commands.row+1,3.5*len(video_data_list)/Commands.row)
 
     for j in xrange(Commands.row):
         for i in xrange(len(video_data_list)/Commands.row):
@@ -208,7 +208,14 @@ def trace(Commands, vissim_results, video__results, graph_type):
     if Commands.concat:
         plt.subplots_adjust(hspace=Commands.hspace)
 
-        ax.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.45), ncol=len(video_data_list[Commands.row*i+j]), fontsize='small', frameon=False)
+        if Commands.row == 2:
+            anchor_x = -0.1
+            anchor_y = -0.45
+        if Commands.row == 3:
+            anchor_x = -0.6
+            anchor_y = -0.3
+
+        ax.legend(loc='lower center', bbox_to_anchor=(anchor_x, anchor_y), ncol=len(video_data_list[Commands.row*i+j]), fontsize='small', frameon=False)
         #plt.suptitle('Comparison of simulated and observed '+dist_type+' distributions'+title)
 
         if Commands.cumul:
