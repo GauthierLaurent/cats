@@ -121,8 +121,8 @@ def main():
         #moving required inpx file to the calibration location
         shutil.copy(net.inpx_path, os.path.join(working_path, net.inpx_path.split(os.sep)[-1]))
 
-        #moving any rbc file found
-        files = [f for f in os.listdir(net.inpx_path.strip(net.inpx_path.split(os.sep)[-1])) if 'rbc' in f]
+        #moving any rbc or sig file found
+        files = [f for f in os.listdir(net.inpx_path.strip(net.inpx_path.split(os.sep)[-1])) if '.rbc' in f or '.sig' in f]
         for f in files:
             shutil.copy(os.path.join(net.inpx_path.strip(net.inpx_path.split(os.sep)[-1]), f), os.path.join(working_path, f))
 
@@ -150,6 +150,9 @@ def main():
     param_file = config.path_to_NOMAD_param.split(os.sep)[-1]
     shutil.copy(config.path_to_NOMAD, os.path.join(working_path,'nomad.exe'))
     shutil.copy(config.path_to_NOMAD_param,os.path.join(working_path,param_file))
+
+    #moving sqlite3.exe
+    shutil.copy(os.path.join(config.path_to_Sqlite3, 'sqlite3.exe'), os.path.join(working_path,'sqlite3.exe'))
 
     #if neighbor.py exists (categorical variables) then moving it as well
     if os.path.isfile(config.path_to_NOMAD_param.strip(config.path_to_NOMAD_param.split(os.sep)[-1])+'neighbor.py'):

@@ -81,7 +81,7 @@ def analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data
             #         9           10             11         12             13         14
             #
 
-            fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12]) #forward_gaps, oppLCbgaps, manLCbgaps
+            fout = outputs.buildFout(config, secondary_values[4], secondary_values[8], secondary_values[12], None) #forward_gaps, oppLCbgaps, manLCbgaps
             d_stat.append([fout]+vissim_data.getConstraints())
             if config.output_forward_gaps:
                 #if secondary_values[4] == 'DNE':
@@ -100,7 +100,7 @@ def analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data
                 if config.cmp_man_lcgaps:
                     write.plot_dists(final_inpx_path, 'mandatory lane change gaps for ' + str(traj.split(os.sep)[-1].strip('.traj')), dist_video_data[4], dist_data[4], secondary_values[12], parameters[0], config.fps, seed_nums)
 
-    return d_stat, network, d_stat
+    return d_stat, network
 
 def analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config):
 
@@ -127,13 +127,10 @@ def analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config):
 
     d_stat.append([fout]+vissim_data.getConstraints())
 
-    return d_stat, network, d_stat
+    return d_stat, network
 
 def runVissimForCalibrationAnalysis(network, inputs):
-    '''Note: Vissim is passed in the Network class variable 'network'
-
-       One instance of runVissimForCalibrationAnalysis is started for each studied
-       Network
+    '''
     '''
 
     #unpacking inputs
@@ -159,6 +156,9 @@ def runVissimForCalibrationAnalysis(network, inputs):
 
             final_inpx_path = os.path.join(point_folderpath,os.path.splitext(network[N].inpx_path.split(os.sep)[-1])[0])
             shutil.move(os.path.join(point_folderpath,network[N].inpx_path.split(os.sep)[-1]),os.path.join(final_inpx_path,network[N].inpx_path.split(os.sep)[-1]))
+
+            #copy sqlite3.exe to the final_inpx_path
+            shutil.copy(os.path.join(point_folderpath, 'sqlite3.exe'), os.path.join(final_inpx_path, 'sqlite3.exe'))
 
         else:
             final_inpx_path = copy.deepcopy(point_folderpath)
@@ -195,13 +195,14 @@ def runVissimForCalibrationAnalysis(network, inputs):
             #getting needed info from vissim
             VI = vissim.getVehicleInputs(Vissim, parameters[3])
             VI = [csvParse.create_class(vi, 'VehiclesInputs') for vi in VI]
+            SH = vissim.getSignalHeads(Vissim)
 
             #treating the outputs
             vissim_data = outputs.Derived_data()
             vissim_data.activateConstraints(config)
-            inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config, VI]
+            inputs = [final_inpx_path, False, network[N].corridors, vissim_data, config, VI, SH]
             file_list = [f for f in os.listdir(final_inpx_path) if f.endswith('fzp')]
-            if len(file_list) > 1 and 3 == 5:
+            if len(file_list) > 1:
                 packedStatsLists = workers.createWorkers(file_list, outputs.treatVissimOutputs, inputs, workers.FalseCommands(), defineNbrProcess = config.nbr_process)
 
                 vissim_data = packedStatsLists[0]
@@ -215,14 +216,25 @@ def runVissimForCalibrationAnalysis(network, inputs):
             seed_nums = outputs.extract_num_from_fzp_list(file_list)
 
             if config.CALIBDATA_video:
-                d_stat, network, d_stat = analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data, parameters, config)
+                d_stat, network = analyseVideoData(final_inpx_path, seed_nums, d_stat, network, N, vissim_data, parameters, config)
 
             if config.CALIBDATA_in_csv:
-                d_stat, network, d_stat = analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config)
+                d_stat, network = analyseCSVData(final_inpx_path, d_stat, network, N, vissim_data, config)
 
             network[N].feasibility = vissim_data.testConstraints()
 
+        #TODO: delete sqlite3.exe in the network folder...
+        #os.remove(os.path.join(folderpath, 'sqlite3.exe'))
+
+    #stop Vissim
     vissim.stopVissim(Vissim)
+
+    #remove sqlite3.exe from the point folder
+    if os.path.isfile(os.path.join(point_folderpath, 'sqlite3.exe')):
+        os.remove(os.path.join(point_folderpath, 'sqlite3.exe'))
+
+    #save data in a serialized file
+    write.write_traj(point_folderpath, 'derived_data', [vissim_data, seed_nums, parameters])
 
     return d_stat, network, seed_nums
 

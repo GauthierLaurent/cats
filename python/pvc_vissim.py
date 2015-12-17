@@ -81,6 +81,15 @@ def getSpeedDistr(Vissim):
 
     return num_sd_list
 
+def getSignalHeads(Vissim):
+    '''returns [No, link-lane, Position] for all existing signal heads in the Vissim file'''
+    signals_list = []
+    signals = Vissim.Net.SignalHeads.GetAll
+    for sh in signals:
+        signals_list.append([sh.AttValue('No'), sh.AttValue('Lane'), sh.AttValue('Pos')])
+
+    return signals_list
+
 def getVehicleInputs(Vissim, simtime):
     '''returns all existing vehicule inputs in the Vissim file'''
     num_vi_list = []
