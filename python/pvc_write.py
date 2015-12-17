@@ -9,7 +9,7 @@ Created on Thu Jul 03 11:32:08 2014
 # Import Libraries
 ##################
 #Native
-import os, time, shutil, re, traceback, sys
+import os, time, shutil, re, traceback, sys, random
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plb
 from matplotlib import rcParams
@@ -136,6 +136,80 @@ class Content:
             self.C_0    = 'nan'
             self.C_1    = 'nan'
             self.C_2    = 'nan'
+
+class Sqlite:
+
+    @staticmethod
+    def parse_fzp_header(dirname, filename):
+
+        order = []
+        fzp = open(os.path.join(dirname, filename),'r')
+
+        for line in fzp:
+            if line.startswith('$'):
+                if line.strip() == '$VISION':
+                    pass
+                else:
+                    order = line.strip().replace('$','').split(';')
+            elif line.startswith('*'):
+                pass
+            else:
+                break
+        fzp.close()
+
+        return order
+
+    @staticmethod
+    def match_headers(fzp_order):
+
+        sqlite_order = []
+        for i in fzp_order:
+            if i =='VEHICLE:SIMSEC':
+                sqlite_order.append('t real')
+            elif i =='NO':
+                sqlite_order.append('trajectory_id integer')
+            elif i =='LANE\\LINK\\NO':
+                sqlite_order.append('link_id integer')
+            elif i =='LANE\\INDEX':
+                sqlite_order.append('lane_id integer')
+            elif i =='POS':
+                sqlite_order.append('s_coordinate real')
+            elif i =='POSLAT':
+                sqlite_order.append('y_coordinate real')
+            elif i =='SPEED':
+                sqlite_order.append('speed real')
+            else:
+                sqlite_order.append(i+' varchar')
+
+        return sqlite_order
+
+    @staticmethod
+    def create_table(dirname, filename):
+
+        #get fzp header order
+        fzp_order = Sqlite.parse_fzp_header(dirname, filename)
+
+        #derive sqlite header
+        sqlite_order = Sqlite.match_headers(fzp_order)
+
+        #random 5 digit number
+        rand = ''
+        for i in xrange(5):
+            rand += str(random.randint(0,9))
+
+        with open(os.path.join(dirname, 'create_table_'+rand+'.sql'),'w') as create_table:
+            create_table.write('.separator ";"\n'
+                                'create table if not exists curvilinear_positions (')
+
+            for i in sqlite_order:
+                create_table.write(i + ',\n')
+
+            create_table.write('PRIMARY KEY (t, trajectory_id)\n'
+                                ');\n'
+                                '.import '+filename+' curvilinear_positions\n'
+                                'delete from curvilinear_positions where trajectory_id is null or trajectory_id = "NO";\n')
+
+        return 'create_table_'+str(rand)+'.sql', rand
 
 class History:
     '''stores all history related functions for easy access'''

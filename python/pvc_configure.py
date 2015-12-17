@@ -176,6 +176,8 @@ class Config:
         self.inpx_name                = self.parse('inpx_name',            '',        c_type='string')
         self.path_to_trafint          = self.parse('path_to_trafint',      '',        c_type='string')
         self.path_to_csv              = self.parse('path_to_csv',          '',        c_type='string')
+        self.path_to_Sqlite3          = self.parse('path_to_sqlite3',      '',        c_type='string')
+        self.delete_simulated_data    = self.parse('delete_simulated_data','False',   c_type='bool')
 
         self.section = 'Video'
         self.path_to_sqlite           = self.parse('path_to_sqlite',       '',        c_type='string')

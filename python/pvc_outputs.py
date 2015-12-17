@@ -8,7 +8,7 @@ Created on Thu Jul 03 11:38:05 2014
 # Import Libraries
 ##################
 ##natives
-import os, sys, StringIO, copy, pandas, tempfile
+import os, sys, StringIO, copy, pandas, tempfile, subprocess
 import numpy as np
 import random, time
 from contextlib import contextmanager
@@ -16,6 +16,7 @@ from contextlib import contextmanager
 ##internals
 import pvc_mathTools as mathTools
 import pvc_workers   as workers
+import pvc_write     as write
 
 ##################
 # Import Traffic Intelligence
@@ -647,11 +648,11 @@ def saturationFlowDistribution(objects, s, lane, centile, max_tiv, min_nb_tiv, s
     #the saturation flow by taking the inverse of the mean of every gaps that are below the
     #15th percentile
     for num in np.unique(caract_gaps):
-        num_gaps = np.asarray(gaps)[np.asarray(caract_gaps) == num]
+        if num != -1:
+            num_gaps = np.asarray(gaps)[np.asarray(caract_gaps) == num]/simSecPerTimeUnit
 
-        if len(num_gaps) >= min_nb_tiv:
-            below_centile = num_gaps[num_gaps <= np.percentile(num_gaps, centile)]
-            saturation_flow.append(1/below_centile.mean()*3600)
+            if len(num_gaps) >= min_nb_tiv:
+                saturation_flow.append(1/np.percentile(num_gaps, centile)*3600)
 
     return saturation_flow
 
@@ -752,7 +753,7 @@ def makeitclean(video_forward_gaps, threshold):
             video_forward_gaps.pop(g)
     return video_forward_gaps
 
-def buildFout(config, dStat_forgaps, dStat_oppLCgaps, dStat_manLCgaps):
+def buildFout(config, dStat_forgaps, dStat_oppLCgaps, dStat_manLCgaps, ttms):
     '''returns a single value from the list of possible outputs'''
     lists = []
     #add car-following gaps
@@ -765,6 +766,9 @@ def buildFout(config, dStat_forgaps, dStat_oppLCgaps, dStat_manLCgaps):
             lists.append(dStat_manLCgaps)
         if config.cmp_opp_lcgaps:
             lists.append(dStat_oppLCgaps)
+
+    if config.output_travel_times:
+        lists.append(ttms)
 
     if 'DNE' in lists:
         return 'inf'
@@ -1128,32 +1132,34 @@ def treatVissimOutputs(files, inputs):
 
     return outputs
 
-def remove_unwanted_lanes(filename, links):
-    stack  = ''
-    linkCountDict = {}
+def convert_fzp_to_sqlite(folderpath, filename):
+    #create the sqlite3 create_table file
+    name, num = write.Sqlite.create_table(folderpath, filename)
 
-    inputfile = open(filename, 'r')
+    #save current working directory
+    saved_cwd = os.getcwd()
 
-    line = storage.readline(inputfile, '*$')
+    #move current working directory
+    os.chdir(os.path.join(folderpath))
 
-    while len(line) > 0:
-        data = line.strip().split(';')
-        objNum = int(data[1])
-        link = data[2]
-        if link in links:
-            stack += line+'\n'
+    #call sqlite3 to create the actual table
+    out = open('sqlite_error_file_'+str(num)+'.txt','w')
+    subprocess.check_call('sqlite3.exe ' + os.path.splitext(filename)[0] +'.sqlite' + ' < ' + name, stderr = out, shell = True)
+    out.close()
 
-        line = storage.readline(inputfile, '*$')
+    #move back the current working directory
+    os.chdir(saved_cwd)
 
-    return stack, linkCountDict
+    #delete fzp
+    os.remove(os.path.join(folderpath, filename))
 
-@contextmanager
-def tempinput(data):
-    temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.write(data)
-    temp.close()
-    yield temp.name
-    os.unlink(temp.name)
+    #delete create_table.sql
+    os.remove(os.path.join(folderpath, name))
+
+    #delete sqlite_error_file.txt
+    os.remove(os.path.join(folderpath, 'sqlite_error_file_'+str(num)+'.txt'))
+
+    return os.path.join(folderpath, os.path.splitext(filename)[0] +'.sqlite')
 
 def treat_Single_VissimOutput(filename, inputs):
     '''Treat outputs in the given folder '''
@@ -1164,6 +1170,7 @@ def treat_Single_VissimOutput(filename, inputs):
     outputs                    = inputs[3]
     config                     = inputs[4]
     VehiculeInputs             = inputs[5]
+    SignalHeads                = inputs[6]
 
     if verbose:
         print ' === Starting calculations for ' + filename + ' ===  |'
@@ -1175,20 +1182,17 @@ def treat_Single_VissimOutput(filename, inputs):
     for s in xrange(len(config.saturation_values)):
         if config.saturation_values[s][1] not in to_eval:
             to_eval.append(config.saturation_values[s][1])
-    #for v in xrange(len(VehiculeInputs)):
-    #    if int(VehiculeInputs[v].link) not in to_eval:
-    #        to_eval.append(VehiculeInputs[v].link)
-    #TODO: add alignments
 
-    #split outputs
-    tmp_str, linkDict = remove_unwanted_lanes(os.path.join(folderpath,filename), [str(ln) for ln in to_eval])
+    if filename.endswith('fzp'):
+        sqlite_db_path = convert_fzp_to_sqlite(folderpath, filename)
+    else:
+        sqlite_db_path = os.path.join(folderpath, filename)
 
-    print '0'
-    with tempinput(tmp_str) as tempFilename:
-        objects = storage.loadTrajectoriesFromVissimFile(tempFilename, config.sim_steps, nObjects = -1, warmUpLastInstant = config.warm_up_time, usePandas = False, lowMemory = False)
+    objNums = storage.loadObjectNumbersInLinkFromVissimFile(sqlite_db_path, to_eval)
+
+    objects = storage.loadTrajectoriesFromVissimFile(sqlite_db_path, config.sim_steps, objectNumbers = objNums, warmUpLastInstant = config.warm_up_time, usePandas = False, lowMemory = False)
     outputs.addSingleOutput('flow', len(objects), filename)
-    import pdb;pdb.set_trace()
-    print '1'
+
     #lane building block
     lanes = {}
     all_lanes = {}
@@ -1215,7 +1219,6 @@ def treat_Single_VissimOutput(filename, inputs):
                 elif s > all_lanes[str(lane)][1]:
                     all_lanes[str(lane)][1] = s
 
-    import pdb;pdb.set_trace()
     #lane change count by type
     oppObjDict, manObjDict, laneDict = laneChange(objects,corridors)
 
@@ -1224,11 +1227,13 @@ def treat_Single_VissimOutput(filename, inputs):
 
     #constraint
     if 'flowPasses' in outputs.getActiveConstraintNames():
+        linkDict = {}
+        for vehInput in VehiculeInputs:
+            linkDict[int(vehInput.link)] = len(storage.loadObjectNumbersInLinkFromVissimFile(sqlite_db_path, [int(vehInput.link)]))
         outputs.addConstraintValue('flowPasses', compareSimAndInputFlows(linkDict, VehiculeInputs, config.diFlow_constraint[1]), filename)
     if 'collisions' in outputs.getActiveConstraintNames():
         outputs.addConstraintValue('collisions', smartCountCollisionsVissim(folderpath, filename, config.fzp_maxLines), filename)
-    print '2'
-    import pdb;pdb.set_trace()
+
     if os.path.isfile(os.path.join(folderpath, filename.strip('.fzp')+'.err')):
         num, dp, a0 = read_error_file(folderpath, filename.strip('.fzp')+'.err')
     else:
@@ -1237,8 +1242,7 @@ def treat_Single_VissimOutput(filename, inputs):
     outputs.addConstraintValue('nonGen', num, filename)
     outputs.addConstraintValue('deceleration', dp, filename)
     outputs.addConstraintValue('acceleration', a0, filename)
-    print '3'
-    import pdb;pdb.set_trace()
+
     #saturation volume constraint
     #
     #the calculation is done lane by lane and we return the maximum observed on any lane of the link at any given point in the simulation
@@ -1247,7 +1251,15 @@ def treat_Single_VissimOutput(filename, inputs):
     for i in xrange(len(config.saturation_values)):
         for index,lane in enumerate(all_lanes):
             if int(lane.split('_')[0]) in lanes_to_process:
-                s = (0.5*all_lanes[str(lane)][1]-0.5*all_lanes[str(lane)][0])
+
+                #if lane has a Signal head, we use the signal head position
+                sh_lanes = [str(sh[1].split('-')[0])+'_'+str(sh[1].split('-')[1]) for sh in SignalHeads]
+                if lane in sh_lanes:
+                    s = SignalHeads[sh_lanes.index(lane)][2]
+
+                #otherwise, we use the middle of the link
+                else:
+                    s = (0.5*all_lanes[str(lane)][1]-0.5*all_lanes[str(lane)][0])
                 lane_saturation_flow[lanes_to_process.index(int(lane.split('_')[0]))].append(saturationFlow(objects, s, lane, config.saturation_centile, config.saturation_max_tiv, config.saturation_min_nb_tiv, config.sim_steps))
 
     for i in xrange(len(lane_saturation_flow)):
@@ -1261,8 +1273,7 @@ def treat_Single_VissimOutput(filename, inputs):
 
     outputs.addSingleOutput('oppLCcount', sum([len(oppObjDict[i]) for i in oppObjDict]), filename)
     outputs.addSingleOutput('manLCcount', sum([len(manObjDict[i]) for i in manObjDict]), filename)
-    print '4'
-    import pdb;pdb.set_trace()
+
     #Forward GAPS
     if config.cmp_for_gaps:
         raw_forward_gaps = []
@@ -1306,12 +1317,15 @@ def treat_Single_VissimOutput(filename, inputs):
         outputs.addSingleOutput('oppLCbgap', raw_opp_LC_bgaps, filename)
 
     if config.cmp_travel_times:
-        if os.path.isfile(os.path.join(folderpath,filename.strip('.fzp')+'.rsr')):
-            travelTimes, keys = getTTFromVissimFile(os.path.join(folderpath,filename.strip('.fzp')+'.rsr'), warmUpLastInstant = config.warm_up_time, lowMemory = False)
+        if os.path.isfile(os.path.splitext(sqlite_db_path)[0]+'.rsr'):
+            travelTimes, keys = getTTFromVissimFile(os.path.splitext(sqlite_db_path)[0]+'.rsr', warmUpLastInstant = config.warm_up_time, lowMemory = False)
             outputs.addSingleOutput('travelTms', travelTimes, filename)
             outputs.addInfos('travelTms',keys)
 
     if verbose:
         print ' === Calculations for ' + filename + ' done ===  |' + str(time.clock()) + '\n'
+
+    if config.delete_simulated_data is True:
+        os.remove(sqlite_db_path)
 
     return outputs
