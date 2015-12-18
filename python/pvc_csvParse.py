@@ -41,12 +41,28 @@ def create_class(data, c_type):
         return SpeedZones(vissim_num = data[0], startingSpeed = data[1], obj_type = data[2], availaibleSpeedDist = data[3].strip('[').strip(']').split(','))
 
     if c_type == 'Travel Times Data' or c_type == 'TravelTimes':
-        TravelTimes = Struct('vissim_num', 'observedTT')
-        return TravelTimes(vissim_num = data[0], observedTT = data[1])
+        return TravelTimes(data[0], data[1])
 
     if c_type == 'VehiclesInputs':
-        VehiclesInputs = Struct('link', 'vissim_num', 'vehInput')
-        return VehiclesInputs(link = data[0], vissim_num = data[1], vehInput = data[2])
+        return VehiclesInputs(data[0], data[1], data[2])
+
+class SpeedZones:
+    def __init__(self, vissim_num, startingSpeed, obj_type, availaibleSpeedDist):
+        self.vissim_num = vissim_num
+        self.startingSpeed = startingSpeed
+        self.obj_type = obj_type
+        self.availaibleSpeedDist = availaibleSpeedDist
+
+class TravelTimes:
+    def __init__(self, vissim_num, observedTT):
+        self.vissim_num = vissim_num
+        self.observedTT = observedTT
+
+class VehiclesInputs:
+    def __init__(self, link, vissim_num, vehInput):
+        self.link = link
+        self.vissim_num = vissim_num
+        self.vehInput = vehInput
 
 def convertSpeedZoneToVariable(speedZone):
     tmp = Variable(include = 'True', name = 'SpeedZone', vissim_name = str(speedZone.obj_type)+'&'+str(speedZone.vissim_num), desired_value = speedZone.startingSpeed, value_type = 'C')
